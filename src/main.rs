@@ -9,7 +9,10 @@ fn main() {
         E: Pitch::E2,
     };
     match Guitar::new(tuning, 18) {
-        Ok(_g) => todo!(),
+        // Ok(_) => {}
+        Ok(g) => {
+            dbg!(g);
+        }
         Err(e) => println!("There is an error: {}", e),
     };
     // dbg!(x);

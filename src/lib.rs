@@ -132,8 +132,16 @@ pub struct Guitar {
     pub tuning: StringCollection<Pitch>,
     pub num_frets: usize,
     pub range: Vec<Pitch>,
+    pub string_ranges: StringCollection<Vec<Pitch>>,
 }
 impl Guitar {
+    fn create_string_range(open_string_pitch: &Pitch, num_frets: usize) -> Vec<Pitch> {
+        let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
+
+        Pitch::iter().collect::<Vec<_>>()[lowest_pitch_index..=lowest_pitch_index + num_frets]
+            .to_vec()
+    }
+
     pub fn new(tuning: StringCollection<Pitch>, num_frets: usize) -> Result<Self, Box<dyn Error>> {
         let max_num_frets = 18;
         if num_frets > max_num_frets {
@@ -160,13 +168,21 @@ impl Guitar {
 
         let range =
             &all_pitches.collect::<Vec<_>>()[lowest_pitch_index..=highest_pitch_index + num_frets];
-        dbg!(range);
 
-        dbg!(&tuning);
+        let string_ranges = StringCollection {
+            e: Guitar::create_string_range(&tuning.e, num_frets),
+            B: Guitar::create_string_range(&tuning.B, num_frets),
+            G: Guitar::create_string_range(&tuning.G, num_frets),
+            D: Guitar::create_string_range(&tuning.D, num_frets),
+            A: Guitar::create_string_range(&tuning.A, num_frets),
+            E: Guitar::create_string_range(&tuning.E, num_frets),
+        };
+
         Ok(Guitar {
             tuning,
             num_frets,
             range: range.to_vec(),
+            string_ranges,
         })
     }
 }
