@@ -1,9 +1,8 @@
-use std::error::Error;
-
+use std::{collections::HashSet, error::Error};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, EnumIter)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, EnumIter)]
 pub enum Pitch {
     A1,
     A1Sharp,
@@ -125,7 +124,7 @@ impl Fingering {
 pub struct Guitar {
     pub tuning: StringCollection<Pitch>,
     pub num_frets: usize,
-    pub range: Vec<Pitch>,
+    pub range: HashSet<Pitch>,
     pub string_ranges: StringCollection<Vec<Pitch>>,
 }
 impl Guitar {
@@ -137,28 +136,14 @@ impl Guitar {
     }
 
     pub fn new(tuning: StringCollection<Pitch>, num_frets: usize) -> Result<Self, Box<dyn Error>> {
-        let max_num_frets = 18;
-        if num_frets > max_num_frets {
+        const MAX_NUM_FRETS: usize = 18;
+        if num_frets > MAX_NUM_FRETS {
             return Err(format!(
                 "Too many frets ({}). The maximum is {}.",
-                num_frets, max_num_frets
+                num_frets, MAX_NUM_FRETS
             )
             .into());
         }
-
-        let all_pitches = Pitch::iter();
-
-        let lowest_pitch = tuning.as_array().into_iter().min().unwrap().to_owned();
-        let lowest_pitch_index = all_pitches.clone().position(|x| x == lowest_pitch).unwrap();
-
-        let highest_pitch = tuning.as_array().into_iter().max().unwrap().to_owned();
-        let highest_pitch_index = all_pitches
-            .clone()
-            .position(|x| x == highest_pitch)
-            .unwrap();
-
-        let range =
-            &all_pitches.collect::<Vec<_>>()[lowest_pitch_index..=highest_pitch_index + num_frets];
 
         let string_ranges = StringCollection {
             e: Guitar::create_string_range(&tuning.e, num_frets),
@@ -169,12 +154,18 @@ impl Guitar {
             E: Guitar::create_string_range(&tuning.E, num_frets),
         };
 
-        // TODO range should be the unique elements from string_ranges
+        let range = string_ranges.clone().into_array().into_iter().fold(
+            HashSet::new(),
+            |mut all_pitches, string_pitches| {
+                all_pitches.extend(string_pitches);
+                all_pitches
+            },
+        );
 
         Ok(Guitar {
             tuning,
             num_frets,
-            range: range.to_vec(),
+            range,
             string_ranges,
         })
     }
