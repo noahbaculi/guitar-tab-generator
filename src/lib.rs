@@ -1,8 +1,12 @@
-use std::{collections::HashSet, error::Error};
+use std::{
+    collections::{BTreeMap, HashSet},
+    error::Error,
+    fmt,
+};
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd, EnumIter)]
+#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq, Ord, PartialOrd, EnumIter)]
 pub enum Pitch {
     A1,
     A1Sharp,
@@ -66,66 +70,97 @@ pub enum Pitch {
     G6Sharp,
 }
 
-#[derive(Debug)]
-pub enum GuitarString {
-    #[allow(non_camel_case_types)]
-    e = 1,
-    B = 2,
-    G = 3,
-    D = 4,
-    A = 5,
-    E = 6,
-}
-#[derive(Debug, Clone)]
-#[allow(non_snake_case)]
-pub struct StringCollection<T> {
-    pub e: T,
-    pub B: T,
-    pub G: T,
-    pub D: T,
-    pub A: T,
-    pub E: T,
-}
-impl<T: std::cmp::Ord + Clone> StringCollection<T> {
-    pub fn as_array(&self) -> [&T; 6] {
-        [&self.e, &self.B, &self.G, &self.D, &self.A, &self.E]
-    }
-    pub fn into_array(self) -> [T; 6] {
-        [self.e, self.B, self.G, self.D, self.A, self.E]
-    }
-}
+// #[derive(Debug)]
+// pub enum GuitarString {
+//     #[allow(non_camel_case_types)]
+//     e = 1,
+//     B = 2,
+//     G = 3,
+//     D = 4,
+//     A = 5,
+//     E = 6,
+// }
+// #[derive(Debug, Clone)]
+// #[allow(non_snake_case)]
+// pub struct StringCollection<T> {
+//     pub e: T,
+//     pub B: T,
+//     pub G: T,
+//     pub D: T,
+//     pub A: T,
+//     pub E: T,
+// }
+// impl<T: std::cmp::Ord + Clone> StringCollection<T> {
+//     pub fn as_array(&self) -> [&T; 6] {
+//         [&self.e, &self.B, &self.G, &self.D, &self.A, &self.E]
+//     }
+//     pub fn into_array(self) -> [T; 6] {
+//         [self.e, self.B, self.G, self.D, self.A, self.E]
+//     }
+// }
 
-#[derive(Debug)]
-pub struct Fingering {
-    pub guitar_string: GuitarString,
-    pub fret: u8,
-}
+// #[derive(Debug)]
+// pub struct Fingering {
+//     pub guitar_string: GuitarString,
+//     pub fret: u8,
+// }
 
-#[derive(Debug, Clone)]
-pub struct InvalidFretError {
-    pub fret: u8,
-}
+// #[derive(Debug, Clone)]
+// pub struct InvalidFretError {
+//     pub fret: u8,
+// }
 
-impl Fingering {
-    pub fn new(guitar_string: GuitarString, fret: u8) -> Result<Self, InvalidFretError> {
-        match fret {
-            0..=18 => Ok(Fingering {
-                guitar_string,
-                fret,
-            }),
-            _ => Err(InvalidFretError { fret }),
+// impl Fingering {
+//     pub fn new(guitar_string: GuitarString, fret: u8) -> Result<Self, InvalidFretError> {
+//         match fret {
+//             0..=18 => Ok(Fingering {
+//                 guitar_string,
+//                 fret,
+//             }),
+//             _ => Err(InvalidFretError { fret }),
+//         }
+//     }
+// }
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct StringNumber(usize);
+impl StringNumber {
+    pub fn new(string_number: usize) -> Result<Self, Box<dyn Error>> {
+        const MAX_NUM_STRINGS: usize = 12;
+        if string_number > MAX_NUM_STRINGS {
+            return Err(format!(
+                "The string number ({}) is too high. The maximum is {}.",
+                string_number, MAX_NUM_STRINGS
+            )
+            .into());
         }
+        Ok(StringNumber(string_number))
     }
 }
+impl fmt::Debug for StringNumber {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // write!(f, "{}", self.0)
+        let string_number = self.0;
+        let string_pitch_letter = match string_number {
+            1 => "e".to_owned(),
+            2 => "B".to_owned(),
+            3 => "G".to_owned(),
+            4 => "D".to_owned(),
+            5 => "A".to_owned(),
+            6 => "E".to_owned(),
+            string_number => string_number.to_string(),
+        };
 
-// use anyhow::Result;
+        write!(f, "{}", string_pitch_letter)
+    }
+}
 
 #[derive(Debug)]
 pub struct Guitar {
-    pub tuning: StringCollection<Pitch>,
+    pub tuning: BTreeMap<StringNumber, Pitch>,
     pub num_frets: usize,
     pub range: HashSet<Pitch>,
-    pub string_ranges: StringCollection<Vec<Pitch>>,
+    pub string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
 }
 impl Guitar {
     fn create_string_range(open_string_pitch: &Pitch, num_frets: usize) -> Vec<Pitch> {
@@ -135,7 +170,10 @@ impl Guitar {
             .to_vec()
     }
 
-    pub fn new(tuning: StringCollection<Pitch>, num_frets: usize) -> Result<Self, Box<dyn Error>> {
+    pub fn new(
+        tuning: BTreeMap<StringNumber, Pitch>,
+        num_frets: usize,
+    ) -> Result<Self, Box<dyn Error>> {
         const MAX_NUM_FRETS: usize = 18;
         if num_frets > MAX_NUM_FRETS {
             return Err(format!(
@@ -145,19 +183,20 @@ impl Guitar {
             .into());
         }
 
-        let string_ranges = StringCollection {
-            e: Guitar::create_string_range(&tuning.e, num_frets),
-            B: Guitar::create_string_range(&tuning.B, num_frets),
-            G: Guitar::create_string_range(&tuning.G, num_frets),
-            D: Guitar::create_string_range(&tuning.D, num_frets),
-            A: Guitar::create_string_range(&tuning.A, num_frets),
-            E: Guitar::create_string_range(&tuning.E, num_frets),
-        };
+        let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
+        for (string_number, string_open_pitch) in tuning.iter() {
+            string_ranges.insert(
+                string_number.clone().to_owned(),
+                Guitar::create_string_range(string_open_pitch, num_frets),
+            );
+        }
+        dbg!(&tuning);
+        dbg!(&string_ranges);
 
-        let range = string_ranges.clone().into_array().into_iter().fold(
+        let range = string_ranges.clone().into_iter().fold(
             HashSet::new(),
             |mut all_pitches, string_pitches| {
-                all_pitches.extend(string_pitches);
+                all_pitches.extend(string_pitches.1);
                 all_pitches
             },
         );
@@ -171,15 +210,35 @@ impl Guitar {
     }
 }
 
-pub struct Arrangement {}
+// pub struct Arrangement {}
 
-impl Arrangement {
-    pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
-        dbg!(input_pitches);
-        dbg!(guitar);
-        Ok(Arrangement {})
-    }
-}
+// impl Arrangement {
+//     pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
+//         for beat_pitches in input_pitches[0..1].to_vec() {
+//             for beat_pitch in beat_pitches {
+//                 // for string_range in guitar.string_ranges.as_array() {
+//                 //     dbg!(string_range);
+//                 // }
+//                 // let x = guitar.string_ranges.e.iter().position(|&x| x == beat_pitch);
+//                 let x = StringCollection {
+//                     e: guitar.string_ranges.e.iter().position(|&x| x == beat_pitch),
+//                     B: guitar.string_ranges.B.iter().position(|&x| x == beat_pitch),
+//                     G: guitar.string_ranges.G.iter().position(|&x| x == beat_pitch),
+//                     D: guitar.string_ranges.D.iter().position(|&x| x == beat_pitch),
+//                     A: guitar.string_ranges.A.iter().position(|&x| x == beat_pitch),
+//                     E: guitar.string_ranges.E.iter().position(|&x| x == beat_pitch),
+//                 };
+
+//                 dbg!(beat_pitch, x);
+//             }
+//             println!();
+//         }
+
+//         // dbg!(input_pitches);
+//         // dbg!(guitar);
+//         Ok(Arrangement {})
+//     }
+// }
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
