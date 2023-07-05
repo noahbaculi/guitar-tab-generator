@@ -163,9 +163,6 @@ impl Guitar {
             .position(|x| x == highest_pitch)
             .unwrap();
 
-        dbg!(lowest_pitch_index);
-        dbg!(highest_pitch_index);
-
         let range =
             &all_pitches.collect::<Vec<_>>()[lowest_pitch_index..=highest_pitch_index + num_frets];
 
@@ -184,6 +181,16 @@ impl Guitar {
             range: range.to_vec(),
             string_ranges,
         })
+    }
+}
+
+pub struct Arrangement {}
+
+impl Arrangement {
+    pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
+        dbg!(input_pitches);
+        dbg!(guitar);
+        Ok(Arrangement {})
     }
 }
 

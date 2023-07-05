@@ -8,12 +8,11 @@ fn main() {
         A: Pitch::A2,
         E: Pitch::E2,
     };
-    match Guitar::new(tuning, 18) {
-        // Ok(_) => {}
-        Ok(g) => {
-            dbg!(g);
-        }
-        Err(e) => println!("There is an error: {}", e),
-    };
-    // dbg!(x);
+    let _g = Guitar::new(tuning, 16).unwrap();
+    // dbg!(_g);
+
+    let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
+
+    let _arr = Arrangement::new(_g, input_pitches);
+    // dbg!(_arr);
 }
