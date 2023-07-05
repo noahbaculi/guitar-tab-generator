@@ -70,58 +70,6 @@ pub enum Pitch {
     G6Sharp,
 }
 
-// #[derive(Debug)]
-// pub enum GuitarString {
-//     #[allow(non_camel_case_types)]
-//     e = 1,
-//     B = 2,
-//     G = 3,
-//     D = 4,
-//     A = 5,
-//     E = 6,
-// }
-// #[derive(Debug, Clone)]
-// #[allow(non_snake_case)]
-// pub struct StringCollection<T> {
-//     pub e: T,
-//     pub B: T,
-//     pub G: T,
-//     pub D: T,
-//     pub A: T,
-//     pub E: T,
-// }
-// impl<T: std::cmp::Ord + Clone> StringCollection<T> {
-//     pub fn as_array(&self) -> [&T; 6] {
-//         [&self.e, &self.B, &self.G, &self.D, &self.A, &self.E]
-//     }
-//     pub fn into_array(self) -> [T; 6] {
-//         [self.e, self.B, self.G, self.D, self.A, self.E]
-//     }
-// }
-
-// #[derive(Debug)]
-// pub struct Fingering {
-//     pub guitar_string: GuitarString,
-//     pub fret: u8,
-// }
-
-// #[derive(Debug, Clone)]
-// pub struct InvalidFretError {
-//     pub fret: u8,
-// }
-
-// impl Fingering {
-//     pub fn new(guitar_string: GuitarString, fret: u8) -> Result<Self, InvalidFretError> {
-//         match fret {
-//             0..=18 => Ok(Fingering {
-//                 guitar_string,
-//                 fret,
-//             }),
-//             _ => Err(InvalidFretError { fret }),
-//         }
-//     }
-// }
-
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StringNumber(usize);
 impl StringNumber {
@@ -140,17 +88,17 @@ impl StringNumber {
 impl fmt::Debug for StringNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // write!(f, "{}", self.0)
+
         let string_number = self.0;
         let string_pitch_letter = match string_number {
-            1 => "e".to_owned(),
-            2 => "B".to_owned(),
-            3 => "G".to_owned(),
-            4 => "D".to_owned(),
-            5 => "A".to_owned(),
-            6 => "E".to_owned(),
+            1 => "1 (e)".to_owned(),
+            2 => "2 (B)".to_owned(),
+            3 => "3 (G)".to_owned(),
+            4 => "4 (D)".to_owned(),
+            5 => "5 (A)".to_owned(),
+            6 => "6 (E)".to_owned(),
             string_number => string_number.to_string(),
         };
-
         write!(f, "{}", string_pitch_letter)
     }
 }
@@ -163,13 +111,6 @@ pub struct Guitar {
     pub string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
 }
 impl Guitar {
-    fn create_string_range(open_string_pitch: &Pitch, num_frets: usize) -> Vec<Pitch> {
-        let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
-
-        Pitch::iter().collect::<Vec<_>>()[lowest_pitch_index..=lowest_pitch_index + num_frets]
-            .to_vec()
-    }
-
     pub fn new(
         tuning: BTreeMap<StringNumber, Pitch>,
         num_frets: usize,
@@ -190,8 +131,6 @@ impl Guitar {
                 Guitar::create_string_range(string_open_pitch, num_frets),
             );
         }
-        dbg!(&tuning);
-        dbg!(&string_ranges);
 
         let range = string_ranges.clone().into_iter().fold(
             HashSet::new(),
@@ -208,37 +147,50 @@ impl Guitar {
             string_ranges,
         })
     }
+
+    fn create_string_range(open_string_pitch: &Pitch, num_frets: usize) -> Vec<Pitch> {
+        let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
+
+        Pitch::iter().collect::<Vec<_>>()[lowest_pitch_index..=lowest_pitch_index + num_frets]
+            .to_vec()
+    }
+
+    fn generate_pitch_fingering(&self, beat_pitch: &Pitch) -> BTreeMap<StringNumber, usize> {
+        let mut pitch_fingerings: BTreeMap<StringNumber, usize> = BTreeMap::new();
+        for (string_number, string_range) in self.string_ranges.iter() {
+            match string_range.iter().position(|x| x == beat_pitch) {
+                None => (),
+                Some(fret_number) => {
+                    pitch_fingerings.insert(string_number.clone().to_owned(), fret_number);
+                }
+            }
+        }
+
+        pitch_fingerings
+    }
 }
 
-// pub struct Arrangement {}
+pub struct Arrangement {}
 
-// impl Arrangement {
-//     pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
-//         for beat_pitches in input_pitches[0..1].to_vec() {
-//             for beat_pitch in beat_pitches {
-//                 // for string_range in guitar.string_ranges.as_array() {
-//                 //     dbg!(string_range);
-//                 // }
-//                 // let x = guitar.string_ranges.e.iter().position(|&x| x == beat_pitch);
-//                 let x = StringCollection {
-//                     e: guitar.string_ranges.e.iter().position(|&x| x == beat_pitch),
-//                     B: guitar.string_ranges.B.iter().position(|&x| x == beat_pitch),
-//                     G: guitar.string_ranges.G.iter().position(|&x| x == beat_pitch),
-//                     D: guitar.string_ranges.D.iter().position(|&x| x == beat_pitch),
-//                     A: guitar.string_ranges.A.iter().position(|&x| x == beat_pitch),
-//                     E: guitar.string_ranges.E.iter().position(|&x| x == beat_pitch),
-//                 };
+impl Arrangement {
+    pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
+        let fingerings: Vec<Vec<BTreeMap<StringNumber, usize>>> = input_pitches[0..]
+            .iter()
+            .map(|beat_pitches| {
+                beat_pitches
+                    .iter()
+                    .map(|beat_pitch| guitar.generate_pitch_fingering(beat_pitch))
+                    .collect()
+            })
+            .collect();
 
-//                 dbg!(beat_pitch, x);
-//             }
-//             println!();
-//         }
+        dbg!(fingerings);
 
-//         // dbg!(input_pitches);
-//         // dbg!(guitar);
-//         Ok(Arrangement {})
-//     }
-// }
+        // dbg!(input_pitches);
+        // dbg!(guitar);
+        Ok(Arrangement {})
+    }
+}
 
 pub fn add(left: usize, right: usize) -> usize {
     left + right
@@ -251,7 +203,6 @@ mod tests {
     #[test]
     fn it_works() {
         let result = add(2, 2);
-        dbg!(GuitarString::E);
         assert_eq!(result, 4);
     }
 }
