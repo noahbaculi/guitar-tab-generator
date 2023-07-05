@@ -88,17 +88,11 @@ pub struct StringCollection<T> {
     pub E: T,
 }
 impl<T: std::cmp::Ord + Clone> StringCollection<T> {
-    pub fn min(&self) -> Option<T> {
+    pub fn as_array(&self) -> [&T; 6] {
         [&self.e, &self.B, &self.G, &self.D, &self.A, &self.E]
-            .into_iter()
-            .min()
-            .cloned()
     }
-    pub fn max(&self) -> Option<T> {
-        [&self.e, &self.B, &self.G, &self.D, &self.A, &self.E]
-            .into_iter()
-            .max()
-            .cloned()
+    pub fn into_array(self) -> [T; 6] {
+        [self.e, self.B, self.G, self.D, self.A, self.E]
     }
 }
 
@@ -154,10 +148,10 @@ impl Guitar {
 
         let all_pitches = Pitch::iter();
 
-        let lowest_pitch = tuning.min().unwrap();
+        let lowest_pitch = tuning.as_array().into_iter().min().unwrap().to_owned();
         let lowest_pitch_index = all_pitches.clone().position(|x| x == lowest_pitch).unwrap();
 
-        let highest_pitch = tuning.max().unwrap();
+        let highest_pitch = tuning.as_array().into_iter().max().unwrap().to_owned();
         let highest_pitch_index = all_pitches
             .clone()
             .position(|x| x == highest_pitch)
@@ -174,6 +168,8 @@ impl Guitar {
             A: Guitar::create_string_range(&tuning.A, num_frets),
             E: Guitar::create_string_range(&tuning.E, num_frets),
         };
+
+        // TODO range should be the unique elements from string_ranges
 
         Ok(Guitar {
             tuning,
