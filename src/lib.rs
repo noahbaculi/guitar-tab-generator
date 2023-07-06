@@ -155,40 +155,98 @@ impl Guitar {
             .to_vec()
     }
 
-    fn generate_pitch_fingering(&self, beat_pitch: &Pitch) -> BTreeMap<StringNumber, usize> {
-        let mut pitch_fingerings: BTreeMap<StringNumber, usize> = BTreeMap::new();
+    fn generate_pitch_fingering(&self, pitch: Pitch) -> Fingering {
+        let mut fingering: BTreeMap<StringNumber, usize> = BTreeMap::new();
         for (string_number, string_range) in self.string_ranges.iter() {
-            match string_range.iter().position(|x| x == beat_pitch) {
+            match string_range.iter().position(|x| x == &pitch) {
                 None => (),
                 Some(fret_number) => {
-                    pitch_fingerings.insert(string_number.clone().to_owned(), fret_number);
+                    fingering.insert(string_number.clone().to_owned(), fret_number);
                 }
             }
         }
 
-        pitch_fingerings
+        Fingering { pitch, fingering }
     }
 }
 
+#[derive(Debug)]
+pub struct Fingering {
+    pitch: Pitch,
+    fingering: BTreeMap<StringNumber, usize>,
+}
+
+#[derive(Debug)]
+pub struct InvalidInput {
+    value: String,
+    line_number: usize,
+}
 pub struct Arrangement {}
 
 impl Arrangement {
     pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
-        let fingerings: Vec<Vec<BTreeMap<StringNumber, usize>>> = input_pitches[0..]
+        let fingerings: Vec<Vec<Fingering>> = input_pitches[0..]
             .iter()
             .map(|beat_pitches| {
                 beat_pitches
                     .iter()
-                    .map(|beat_pitch| guitar.generate_pitch_fingering(beat_pitch))
+                    .map(|beat_pitch| guitar.generate_pitch_fingering(beat_pitch.clone()))
                     .collect()
             })
             .collect();
 
-        dbg!(fingerings);
+        Arrangement::check_for_invalid_pitches(fingerings)?;
 
-        // dbg!(input_pitches);
-        // dbg!(guitar);
         Ok(Arrangement {})
+    }
+
+    fn check_for_invalid_pitches(fingerings: Vec<Vec<Fingering>>) -> Result<(), Box<dyn Error>> {
+        let impossible_pitches: Vec<Vec<Pitch>> = fingerings
+            .iter()
+            .map(|beat_fingerings| {
+                {
+                    beat_fingerings
+                        .iter()
+                        .filter(|beat_fingering| beat_fingering.fingering.is_empty())
+                        .map(|beat_fingering| beat_fingering.pitch)
+                        .collect()
+                }
+            })
+            .collect();
+        let invalid_inputs: Vec<InvalidInput> = impossible_pitches
+            .iter()
+            .filter(|beat_impossible_pitches| !beat_impossible_pitches.is_empty())
+            .flat_map(|beat_impossible_pitches| {
+                let line_number = impossible_pitches
+                    .iter()
+                    .position(|x| x == beat_impossible_pitches)
+                    .unwrap();
+
+                beat_impossible_pitches
+                    .iter()
+                    .map(move |beat_impossible_pitch| InvalidInput {
+                        value: format!("{:?}", beat_impossible_pitch),
+                        line_number,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        if !invalid_inputs.is_empty() {
+            let error_string = invalid_inputs
+                .iter()
+                .map(|invalid_input| {
+                    format!(
+                        "Invalid pitch {} on line {}.",
+                        invalid_input.value, invalid_input.line_number
+                    )
+                })
+                .collect::<Vec<String>>()
+                .join("\n");
+
+            return Err(error_string.into());
+        }
+        Ok(())
     }
 }
 

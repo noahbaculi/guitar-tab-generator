@@ -12,15 +12,23 @@ fn main() {
     ]);
     // dbg!(&tuning);
 
-    let _g = Guitar::new(tuning, 18).unwrap();
-    // dbg!(_g);
+    let _guitar = Guitar::new(tuning, 18).unwrap();
+    // dbg!(&_guitar);
 
     let input_pitches = vec![
         vec![Pitch::A1],
         vec![Pitch::G3],
         vec![Pitch::B3],
+        vec![Pitch::A1, Pitch::B1],
+        vec![Pitch::G3, Pitch::D2],
         vec![Pitch::D4, Pitch::G4],
     ];
-    let _arr = Arrangement::new(_g, input_pitches);
-    // dbg!(_arr);
+    // let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
+    let _arrangement = match Arrangement::new(_guitar, input_pitches) {
+        Ok(arrangement) => arrangement,
+        Err(err) => {
+            panic!("{}", err);
+        }
+    };
+    // dbg!(&_arrangement);
 }
