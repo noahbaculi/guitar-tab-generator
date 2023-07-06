@@ -88,7 +88,6 @@ impl StringNumber {
 impl fmt::Debug for StringNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // write!(f, "{}", self.0)
-
         let string_number = self.0;
         let string_pitch_letter = match string_number {
             1 => "1 (e)".to_owned(),
@@ -115,14 +114,7 @@ impl Guitar {
         tuning: BTreeMap<StringNumber, Pitch>,
         num_frets: usize,
     ) -> Result<Self, Box<dyn Error>> {
-        const MAX_NUM_FRETS: usize = 18;
-        if num_frets > MAX_NUM_FRETS {
-            return Err(format!(
-                "Too many frets ({}). The maximum is {}.",
-                num_frets, MAX_NUM_FRETS
-            )
-            .into());
-        }
+        Guitar::check_fret_number(num_frets)?;
 
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
         for (string_number, string_open_pitch) in tuning.iter() {
@@ -148,6 +140,28 @@ impl Guitar {
         })
     }
 
+    /// Check if the number of frets is within a maximum limit and returns an error if it exceeds the limit.
+    fn check_fret_number(num_frets: usize) -> Result<(), Box<dyn Error>> {
+        const MAX_NUM_FRETS: usize = 20;
+        if num_frets > MAX_NUM_FRETS {
+            return Err(format!(
+                "Too many frets ({}). The maximum is {}.",
+                num_frets, MAX_NUM_FRETS
+            )
+            .into());
+        }
+
+        Ok(())
+    }
+
+    /// Generates a vector of pitches representing the range of the string.
+    ///
+    /// Arguments:
+    ///
+    /// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
+    /// string.
+    /// * `num_frets`: The `num_frets` parameter represents the number of
+    ///   subsequent number of half steps to include in the range.
     fn create_string_range(open_string_pitch: &Pitch, num_frets: usize) -> Vec<Pitch> {
         let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
 
@@ -155,6 +169,7 @@ impl Guitar {
             .to_vec()
     }
 
+    /// Takes a pitch as input and returns a fingering for that pitch on the guitar given its tuning.
     fn generate_pitch_fingering(&self, pitch: Pitch) -> Fingering {
         let mut fingering: BTreeMap<StringNumber, usize> = BTreeMap::new();
         for (string_number, string_range) in self.string_ranges.iter() {
@@ -167,6 +182,53 @@ impl Guitar {
         }
 
         Fingering { pitch, fingering }
+    }
+}
+
+#[cfg(test)]
+mod test_check_fret_number {
+    use super::Guitar;
+    #[test]
+    fn valid_frets() {
+        assert!(Guitar::check_fret_number(0).is_ok());
+        assert!(Guitar::check_fret_number(2).is_ok());
+        assert!(Guitar::check_fret_number(7).is_ok());
+        assert!(Guitar::check_fret_number(20).is_ok());
+    }
+    #[test]
+    fn invalid_frets() {
+        assert!(Guitar::check_fret_number(21).is_err());
+        assert!(Guitar::check_fret_number(100).is_err());
+    }
+}
+#[cfg(test)]
+mod test_create_string_range {
+    use super::*;
+    #[test]
+    fn correct_string_range() {
+        assert_eq!(Guitar::create_string_range(&Pitch::E2, 0), vec![Pitch::E2]);
+        assert_eq!(
+            Guitar::create_string_range(&Pitch::E2, 3),
+            vec![Pitch::E2, Pitch::F2, Pitch::F2Sharp, Pitch::G2]
+        );
+        assert_eq!(
+            Guitar::create_string_range(&Pitch::E2, 12),
+            vec![
+                Pitch::E2,
+                Pitch::F2,
+                Pitch::F2Sharp,
+                Pitch::G2,
+                Pitch::G2Sharp,
+                Pitch::A2,
+                Pitch::A2Sharp,
+                Pitch::B2,
+                Pitch::C3,
+                Pitch::C3Sharp,
+                Pitch::D3,
+                Pitch::D3Sharp,
+                Pitch::E3
+            ]
+        );
     }
 }
 
@@ -247,20 +309,5 @@ impl Arrangement {
             return Err(error_string.into());
         }
         Ok(())
-    }
-}
-
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
     }
 }
