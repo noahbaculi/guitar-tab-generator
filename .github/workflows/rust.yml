@@ -1,0 +1,29 @@
+name: Rust
+
+on: push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-clippy:
+    name: Build and Clippy
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - run: cargo build
+      - run: cargo clippy -- -D warnings
+
+  test:
+    name: Test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download testing comprehensive repo
+      - run: cargo test
