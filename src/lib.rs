@@ -73,16 +73,8 @@ pub enum Pitch {
 }
 
 impl Pitch {
-    fn index(&self) -> usize {
-        *self as usize
-    }
-}
-impl std::ops::Sub for Pitch {
-    type Output = isize;
-    fn sub(self, pitch_2: Self) -> Self::Output {
-        let pitch_1_index = self.index() as isize;
-        let pitch_2_index = pitch_2.index() as isize;
-        pitch_1_index - pitch_2_index
+    fn index(&self) -> u8 {
+        *self as u8
     }
 }
 
@@ -194,7 +186,7 @@ impl Guitar {
                 let highest_pitch = all_pitches_vec
                     .last()
                     .expect("The Pitch enum should not be empty.");
-                let highest_pitch_fret = *highest_pitch - *open_string_pitch;
+                let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
                 let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch:?}. \
                 The highest pitch is {highest_pitch:?}, which would only exist at fret number {highest_pitch_fret}.");
 
@@ -246,13 +238,6 @@ mod test_guitar_new {
         let tuning = create_default_tuning();
 
         const NUM_FRETS: usize = 3;
-
-        // // Sort range hashset
-        // let g = Guitar::new(tuning.clone(), NUM_FRETS).unwrap();
-        // let mut total_range = g.range.iter().collect::<Vec<_>>();
-        // total_range.sort();
-        // dbg!(total_range);
-        // panic!();
 
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
