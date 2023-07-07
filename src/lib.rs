@@ -79,10 +79,10 @@ impl Pitch {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct StringNumber(usize);
+pub struct StringNumber(u8);
 impl StringNumber {
-    pub fn new(string_number: usize) -> Result<Self, Box<dyn Error>> {
-        const MAX_NUM_STRINGS: usize = 12;
+    pub fn new(string_number: u8) -> Result<Self, Box<dyn Error>> {
+        const MAX_NUM_STRINGS: u8 = 12;
         if string_number > MAX_NUM_STRINGS {
             return Err(format!(
                 "The string number ({}) is too high. The maximum is {}.",
@@ -113,14 +113,14 @@ impl fmt::Debug for StringNumber {
 #[derive(Debug, PartialEq)]
 pub struct Guitar {
     pub tuning: BTreeMap<StringNumber, Pitch>,
-    pub num_frets: usize,
+    pub num_frets: u8,
     pub range: HashSet<Pitch>,
     pub string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
 }
 impl Guitar {
     pub fn new(
         tuning: BTreeMap<StringNumber, Pitch>,
-        num_frets: usize,
+        num_frets: u8,
     ) -> Result<Self, Box<dyn Error>> {
         Guitar::check_fret_number(num_frets)?;
 
@@ -149,8 +149,8 @@ impl Guitar {
     }
 
     /// Check if the number of frets is within a maximum limit and returns an error if it exceeds the limit.
-    fn check_fret_number(num_frets: usize) -> Result<(), Box<dyn Error>> {
-        const MAX_NUM_FRETS: usize = 30;
+    fn check_fret_number(num_frets: u8) -> Result<(), Box<dyn Error>> {
+        const MAX_NUM_FRETS: u8 = 30;
         if num_frets > MAX_NUM_FRETS {
             return Err(format!(
                 "Too many frets ({}). The maximum is {}.",
@@ -172,13 +172,13 @@ impl Guitar {
     ///   subsequent number of half steps to include in the range.
     fn create_string_range(
         open_string_pitch: &Pitch,
-        num_frets: usize,
+        num_frets: u8,
     ) -> Result<Vec<Pitch>, Box<dyn Error>> {
         let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
 
         let all_pitches_vec = Pitch::iter().collect::<Vec<_>>();
         let string_range_result =
-            all_pitches_vec.get(lowest_pitch_index..=lowest_pitch_index + num_frets);
+            all_pitches_vec.get(lowest_pitch_index..=lowest_pitch_index + num_frets as usize);
 
         match string_range_result {
             Some(string_range_slice) => Ok(string_range_slice.to_vec()),
@@ -201,12 +201,12 @@ impl Guitar {
         string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
         pitch: &Pitch,
     ) -> Fingering {
-        let mut fingering: BTreeMap<StringNumber, usize> = BTreeMap::new();
+        let mut fingering: BTreeMap<StringNumber, u8> = BTreeMap::new();
         for (string_number, string_range) in string_ranges.iter() {
             match string_range.iter().position(|x| x == pitch) {
                 None => (),
                 Some(fret_number) => {
-                    fingering.insert(string_number.clone().to_owned(), fret_number);
+                    fingering.insert(string_number.clone().to_owned(), fret_number as u8);
                 }
             }
         }
@@ -237,7 +237,7 @@ mod test_guitar_new {
     fn few_strings_and_few_frets() -> Result<(), Box<dyn Error>> {
         let tuning = create_default_tuning();
 
-        const NUM_FRETS: usize = 3;
+        const NUM_FRETS: u8 = 3;
 
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
@@ -304,7 +304,7 @@ mod test_guitar_new {
     fn normal() -> Result<(), Box<dyn Error>> {
         let tuning = create_default_tuning();
 
-        const NUM_FRETS: usize = 18;
+        const NUM_FRETS: u8 = 18;
 
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
@@ -567,7 +567,7 @@ mod test_generate_pitch_fingering {
     use super::*;
     #[test]
     fn normal() -> Result<(), Box<dyn Error>> {
-        const NUM_FRETS: usize = 12;
+        const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
@@ -629,7 +629,7 @@ mod test_generate_pitch_fingering {
 
     #[test]
     fn few_strings() -> Result<(), Box<dyn Error>> {
-        const NUM_FRETS: usize = 12;
+        const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
@@ -663,7 +663,7 @@ mod test_generate_pitch_fingering {
 
     #[test]
     fn few_frets() -> Result<(), Box<dyn Error>> {
-        const NUM_FRETS: usize = 2;
+        const NUM_FRETS: u8 = 2;
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
@@ -703,7 +703,7 @@ mod test_generate_pitch_fingering {
 
     #[test]
     fn impossible_pitch() -> Result<(), Box<dyn Error>> {
-        const NUM_FRETS: usize = 12;
+        const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
@@ -752,14 +752,16 @@ mod test_generate_pitch_fingering {
 #[derive(Debug, PartialEq)]
 pub struct Fingering {
     pitch: Pitch,
-    fingering: BTreeMap<StringNumber, usize>,
+    fingering: BTreeMap<StringNumber, u8>,
 }
 
 #[derive(Debug)]
 pub struct InvalidInput {
     value: String,
-    line_number: usize,
+    line_number: u8,
 }
+
+#[derive(Debug)]
 pub struct Arrangement {}
 
 impl Arrangement {
@@ -801,7 +803,7 @@ impl Arrangement {
                 let line_number = impossible_pitches
                     .iter()
                     .position(|x| x == beat_impossible_pitches)
-                    .unwrap();
+                    .unwrap() as u8;
 
                 beat_impossible_pitches
                     .iter()
