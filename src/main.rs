@@ -12,7 +12,7 @@ fn main() {
     ]);
     // dbg!(&tuning);
 
-    dbg!(Pitch::E2, Pitch::C2Sharp);
+    println!("{} {}", Pitch::E2, Pitch::CSharp2);
 
     let _guitar = match Guitar::new(tuning, 18) {
         Ok(guitar) => guitar,
