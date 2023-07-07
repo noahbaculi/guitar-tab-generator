@@ -71,6 +71,27 @@ pub enum Pitch {
     G6,
     G6Sharp,
 }
+impl fmt::Display for Pitch {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let pitch_w_pretty_sharp = format!("{:?}", self).replace("Sharp", "#");
+        let mut chars: Vec<char> = pitch_w_pretty_sharp.chars().collect();
+        if chars.len() >= 3 {
+            chars.swap(2, 1);
+        }
+        let pitch_output: String = chars.into_iter().collect();
+
+        write!(f, "{}", pitch_output)
+    }
+}
+#[cfg(test)]
+mod test_pitch_debug {
+    use super::*;
+    #[test]
+    fn valid_simple() {
+        assert_eq!(format!("{}", Pitch::E2), "E2");
+        assert_eq!(format!("{}", Pitch::D3Sharp), "D#3");
+    }
+}
 impl Pitch {
     fn index(&self) -> u8 {
         *self as u8
@@ -196,8 +217,8 @@ impl Guitar {
                     .last()
                     .expect("The Pitch enum should not be empty.");
                 let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
-                let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch:?}. \
-                The highest pitch is {highest_pitch:?}, which would only exist at fret number {highest_pitch_fret}.");
+                let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
+                The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
 
                 Err(anyhow!(err_msg))
             }
@@ -570,6 +591,8 @@ mod test_create_string_range {
         );
         Ok(())
     }
+
+    // TODO! add test for error message
 }
 #[cfg(test)]
 mod test_generate_pitch_fingering {

@@ -12,6 +12,8 @@ fn main() {
     ]);
     // dbg!(&tuning);
 
+    dbg!(Pitch::E2, Pitch::C2Sharp);
+
     let _guitar = match Guitar::new(tuning, 18) {
         Ok(guitar) => guitar,
         Err(err) => {
