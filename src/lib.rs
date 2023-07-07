@@ -1,6 +1,6 @@
+use anyhow::{anyhow, Result};
 use std::{
     collections::{BTreeMap, HashSet},
-    error::Error,
     fmt,
 };
 use strum::IntoEnumIterator;
@@ -81,14 +81,10 @@ impl Pitch {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StringNumber(u8);
 impl StringNumber {
-    pub fn new(string_number: u8) -> Result<Self, Box<dyn Error>> {
+    pub fn new(string_number: u8) -> Result<Self> {
         const MAX_NUM_STRINGS: u8 = 12;
         if string_number > MAX_NUM_STRINGS {
-            return Err(format!(
-                "The string number ({}) is too high. The maximum is {}.",
-                string_number, MAX_NUM_STRINGS
-            )
-            .into());
+            return Err(anyhow!("The string number ({string_number}) is too high. The maximum is {MAX_NUM_STRINGS}."));
         }
         Ok(StringNumber(string_number))
     }
@@ -118,10 +114,7 @@ pub struct Guitar {
     pub string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
 }
 impl Guitar {
-    pub fn new(
-        tuning: BTreeMap<StringNumber, Pitch>,
-        num_frets: u8,
-    ) -> Result<Self, Box<dyn Error>> {
+    pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8) -> Result<Self> {
         Guitar::check_fret_number(num_frets)?;
 
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
@@ -149,14 +142,12 @@ impl Guitar {
     }
 
     /// Check if the number of frets is within a maximum limit and returns an error if it exceeds the limit.
-    fn check_fret_number(num_frets: u8) -> Result<(), Box<dyn Error>> {
+    fn check_fret_number(num_frets: u8) -> Result<()> {
         const MAX_NUM_FRETS: u8 = 30;
         if num_frets > MAX_NUM_FRETS {
-            return Err(format!(
-                "Too many frets ({}). The maximum is {}.",
-                num_frets, MAX_NUM_FRETS
-            )
-            .into());
+            return Err(anyhow!(
+                "Too many frets ({num_frets}). The maximum is {MAX_NUM_FRETS}."
+            ));
         }
 
         Ok(())
@@ -170,10 +161,7 @@ impl Guitar {
     /// string.
     /// * `num_frets`: The `num_frets` parameter represents the number of
     ///   subsequent number of half steps to include in the range.
-    fn create_string_range(
-        open_string_pitch: &Pitch,
-        num_frets: u8,
-    ) -> Result<Vec<Pitch>, Box<dyn Error>> {
+    fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
         let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
 
         let all_pitches_vec = Pitch::iter().collect::<Vec<_>>();
@@ -190,7 +178,7 @@ impl Guitar {
                 let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch:?}. \
                 The highest pitch is {highest_pitch:?}, which would only exist at fret number {highest_pitch_fret}.");
 
-                Err(err_msg.into())
+                Err(anyhow!(err_msg))
             }
         }
     }
@@ -234,7 +222,7 @@ mod test_guitar_new {
     }
 
     #[test]
-    fn few_strings_and_few_frets() -> Result<(), Box<dyn Error>> {
+    fn few_strings_and_few_frets() -> Result<()> {
         let tuning = create_default_tuning();
 
         const NUM_FRETS: u8 = 3;
@@ -301,7 +289,7 @@ mod test_guitar_new {
         Ok(())
     }
     #[test]
-    fn normal() -> Result<(), Box<dyn Error>> {
+    fn normal() -> Result<()> {
         let tuning = create_default_tuning();
 
         const NUM_FRETS: u8 = 18;
@@ -535,7 +523,7 @@ mod test_check_fret_number {
 mod test_create_string_range {
     use super::*;
     #[test]
-    fn correct_string_range() -> Result<(), Box<dyn Error>> {
+    fn correct_string_range() -> Result<()> {
         assert_eq!(Guitar::create_string_range(&Pitch::E2, 0)?, vec![Pitch::E2]);
         assert_eq!(
             Guitar::create_string_range(&Pitch::E2, 3)?,
@@ -566,7 +554,7 @@ mod test_create_string_range {
 mod test_generate_pitch_fingering {
     use super::*;
     #[test]
-    fn normal() -> Result<(), Box<dyn Error>> {
+    fn normal() -> Result<()> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -628,7 +616,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn few_strings() -> Result<(), Box<dyn Error>> {
+    fn few_strings() -> Result<()> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -662,7 +650,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn few_frets() -> Result<(), Box<dyn Error>> {
+    fn few_frets() -> Result<()> {
         const NUM_FRETS: u8 = 2;
         let string_ranges = BTreeMap::from([
             (
@@ -702,7 +690,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn impossible_pitch() -> Result<(), Box<dyn Error>> {
+    fn impossible_pitch() -> Result<()> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -749,7 +737,7 @@ mod test_generate_pitch_fingering {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Fingering {
     pitch: Pitch,
     fingering: BTreeMap<StringNumber, u8>,
@@ -765,7 +753,7 @@ pub struct InvalidInput {
 pub struct Arrangement {}
 
 impl Arrangement {
-    pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self, Box<dyn Error>> {
+    pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self> {
         let fingerings: Vec<Vec<Fingering>> = input_pitches[0..]
             .iter()
             .map(|beat_pitches| {
@@ -783,7 +771,7 @@ impl Arrangement {
         Ok(Arrangement {})
     }
 
-    fn check_for_invalid_pitches(fingerings: Vec<Vec<Fingering>>) -> Result<(), Box<dyn Error>> {
+    fn check_for_invalid_pitches(fingerings: Vec<Vec<Fingering>>) -> Result<()> {
         let impossible_pitches: Vec<Vec<Pitch>> = fingerings
             .iter()
             .map(|beat_fingerings| {
@@ -827,8 +815,174 @@ impl Arrangement {
                 .collect::<Vec<String>>()
                 .join("\n");
 
-            return Err(error_string.into());
+            return Err(anyhow!(error_string));
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_check_for_invalid_pitches {
+    use super::*;
+    #[test]
+    fn valid_simple() {
+        let fingerings = vec![vec![Fingering {
+            pitch: Pitch::G3,
+            fingering: BTreeMap::from([
+                (StringNumber::new(3).unwrap(), 0),
+                (StringNumber::new(4).unwrap(), 5),
+                (StringNumber::new(5).unwrap(), 10),
+            ]),
+        }]];
+
+        assert!(Arrangement::check_for_invalid_pitches(fingerings).is_ok());
+    }
+    #[test]
+    fn valid_complex() {
+        let fingerings = vec![
+            vec![Fingering {
+                pitch: Pitch::G3,
+                fingering: BTreeMap::from([
+                    (StringNumber::new(3).unwrap(), 0),
+                    (StringNumber::new(4).unwrap(), 5),
+                    (StringNumber::new(5).unwrap(), 10),
+                    (StringNumber::new(6).unwrap(), 15),
+                ]),
+            }],
+            vec![Fingering {
+                pitch: Pitch::B3,
+                fingering: BTreeMap::from([
+                    (StringNumber::new(2).unwrap(), 0),
+                    (StringNumber::new(3).unwrap(), 4),
+                    (StringNumber::new(4).unwrap(), 9),
+                    (StringNumber::new(5).unwrap(), 14),
+                ]),
+            }],
+            vec![
+                Fingering {
+                    pitch: Pitch::D4,
+                    fingering: BTreeMap::from([
+                        (StringNumber::new(2).unwrap(), 3),
+                        (StringNumber::new(3).unwrap(), 7),
+                        (StringNumber::new(4).unwrap(), 12),
+                        (StringNumber::new(5).unwrap(), 17),
+                    ]),
+                },
+                Fingering {
+                    pitch: Pitch::G4,
+                    fingering: BTreeMap::from([
+                        (StringNumber::new(1).unwrap(), 3),
+                        (StringNumber::new(2).unwrap(), 8),
+                        (StringNumber::new(3).unwrap(), 12),
+                        (StringNumber::new(4).unwrap(), 17),
+                    ]),
+                },
+            ],
+        ];
+
+        assert!(Arrangement::check_for_invalid_pitches(fingerings).is_ok());
+    }
+    #[test]
+    fn invalid_simple() {
+        let fingerings = vec![vec![
+            Fingering {
+                pitch: Pitch::G3,
+                fingering: BTreeMap::from([
+                    (StringNumber::new(3).unwrap(), 0),
+                    (StringNumber::new(4).unwrap(), 5),
+                    (StringNumber::new(5).unwrap(), 10),
+                    (StringNumber::new(6).unwrap(), 15),
+                ]),
+            },
+            Fingering {
+                pitch: Pitch::C6Sharp,
+                fingering: BTreeMap::from([]),
+            },
+        ]];
+
+        // TODO! change pitch sharp displays
+        let expected_error_string = "Invalid pitch C6Sharp on line 0.";
+        let error = Arrangement::check_for_invalid_pitches(fingerings).unwrap_err();
+        let error_string = format!("{error}");
+
+        assert_eq!(error_string, expected_error_string);
+    }
+    #[test]
+    fn invalid_complex() {
+        let fingerings = vec![
+            vec![Fingering {
+                pitch: Pitch::A1,
+                fingering: BTreeMap::from([]),
+            }],
+            vec![Fingering {
+                pitch: Pitch::G3,
+                fingering: BTreeMap::from([
+                    (StringNumber::new(3).unwrap(), 0),
+                    (StringNumber::new(4).unwrap(), 5),
+                    (StringNumber::new(5).unwrap(), 10),
+                    (StringNumber::new(6).unwrap(), 15),
+                ]),
+            }],
+            vec![Fingering {
+                pitch: Pitch::B3,
+                fingering: BTreeMap::from([
+                    (StringNumber::new(2).unwrap(), 0),
+                    (StringNumber::new(3).unwrap(), 4),
+                    (StringNumber::new(4).unwrap(), 9),
+                    (StringNumber::new(5).unwrap(), 14),
+                ]),
+            }],
+            vec![
+                Fingering {
+                    pitch: Pitch::A1,
+                    fingering: BTreeMap::from([]),
+                },
+                Fingering {
+                    pitch: Pitch::B1,
+                    fingering: BTreeMap::from([]),
+                },
+            ],
+            vec![
+                Fingering {
+                    pitch: Pitch::G3,
+                    fingering: BTreeMap::from([
+                        (StringNumber::new(3).unwrap(), 0),
+                        (StringNumber::new(4).unwrap(), 5),
+                        (StringNumber::new(5).unwrap(), 10),
+                        (StringNumber::new(6).unwrap(), 15),
+                    ]),
+                },
+                Fingering {
+                    pitch: Pitch::D2,
+                    fingering: BTreeMap::from([]),
+                },
+            ],
+            vec![
+                Fingering {
+                    pitch: Pitch::D4,
+                    fingering: BTreeMap::from([
+                        (StringNumber::new(2).unwrap(), 3),
+                        (StringNumber::new(3).unwrap(), 7),
+                        (StringNumber::new(4).unwrap(), 12),
+                        (StringNumber::new(5).unwrap(), 17),
+                    ]),
+                },
+                Fingering {
+                    pitch: Pitch::G4,
+                    fingering: BTreeMap::from([
+                        (StringNumber::new(1).unwrap(), 3),
+                        (StringNumber::new(2).unwrap(), 8),
+                        (StringNumber::new(3).unwrap(), 12),
+                        (StringNumber::new(4).unwrap(), 17),
+                    ]),
+                },
+            ],
+        ];
+
+        let expected_error_string = "Invalid pitch A1 on line 0.\nInvalid pitch A1 on line 3.\nInvalid pitch B1 on line 3.\nInvalid pitch D2 on line 4.";
+        let error = Arrangement::check_for_invalid_pitches(fingerings).unwrap_err();
+        let error_string = format!("{error}");
+
+        assert_eq!(error_string, expected_error_string);
     }
 }
