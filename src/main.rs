@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use guitar_tab_generator::guitar::Guitar;
 use guitar_tab_generator::pitch::Pitch;
 use guitar_tab_generator::string_number::StringNumber;
 use guitar_tab_generator::*;
