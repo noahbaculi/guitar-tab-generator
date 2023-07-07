@@ -20,15 +20,15 @@ fn main() {
     };
     // dbg!(&_guitar);
 
-    let input_pitches = vec![
-        vec![Pitch::A1],
-        vec![Pitch::G3],
-        vec![Pitch::B3],
-        vec![Pitch::A1, Pitch::B1],
-        vec![Pitch::G3, Pitch::D2],
-        vec![Pitch::D4, Pitch::G4],
-    ];
-    // let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
+    // let input_pitches = vec![
+    //     vec![Pitch::A1],
+    //     vec![Pitch::G3],
+    //     vec![Pitch::B3],
+    //     vec![Pitch::A1, Pitch::B1],
+    //     vec![Pitch::G3, Pitch::D2],
+    //     vec![Pitch::D4, Pitch::G4],
+    // ];
+    let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
     let _arrangement = match Arrangement::new(_guitar, input_pitches) {
         Ok(arrangement) => arrangement,
         Err(err) => {
