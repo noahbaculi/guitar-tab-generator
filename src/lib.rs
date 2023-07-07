@@ -82,10 +82,12 @@ pub struct StringNumber(u8);
 impl StringNumber {
     pub fn new(string_number: u8) -> Result<Self> {
         const MAX_NUM_STRINGS: u8 = 12;
-        if string_number > MAX_NUM_STRINGS {
-            return Err(anyhow!("The string number ({string_number}) is too high. The maximum is {MAX_NUM_STRINGS}."));
+        match string_number {
+            0 => Err(anyhow!("A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1).")),
+            1..=MAX_NUM_STRINGS => Ok(StringNumber(string_number)),
+            _ => Err(anyhow!("The string number ({string_number}) is too high. The maximum is {MAX_NUM_STRINGS}."))
+
         }
-        Ok(StringNumber(string_number))
     }
 }
 #[cfg(test)]
@@ -96,10 +98,15 @@ mod test_create_string_number {
         assert!(StringNumber::new(1).is_ok());
     }
     #[test]
+    fn invalid_zero() {
+        let expected_error_string = "A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1).";
+        let error = StringNumber::new(0).unwrap_err();
+        assert_eq!(format!("{error}"), expected_error_string);
+    }
+    #[test]
     fn invalid_too_high() {
         let expected_error_string = "The string number (15) is too high. The maximum is 12.";
         let error = StringNumber::new(15).unwrap_err();
-
         assert_eq!(format!("{error}"), expected_error_string);
     }
 }
@@ -236,6 +243,7 @@ mod test_guitar_new {
     }
 
     #[test]
+    // TODO! rename test to valid_simple / invalid_complex pattern
     fn few_strings_and_few_frets() -> Result<()> {
         let tuning = create_default_tuning();
 
