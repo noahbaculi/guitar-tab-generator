@@ -243,8 +243,7 @@ mod test_guitar_new {
     }
 
     #[test]
-    // TODO! rename test to valid_simple / invalid_complex pattern
-    fn few_strings_and_few_frets() -> Result<()> {
+    fn valid_simple() -> Result<()> {
         let tuning = create_default_tuning();
 
         const NUM_FRETS: u8 = 3;
@@ -311,7 +310,7 @@ mod test_guitar_new {
         Ok(())
     }
     #[test]
-    fn normal() -> Result<()> {
+    fn valid_normal() -> Result<()> {
         let tuning = create_default_tuning();
 
         const NUM_FRETS: u8 = 18;
@@ -525,14 +524,14 @@ mod test_guitar_new {
 mod test_check_fret_number {
     use super::Guitar;
     #[test]
-    fn valid_frets() {
+    fn valid() {
         assert!(Guitar::check_fret_number(0).is_ok());
         assert!(Guitar::check_fret_number(2).is_ok());
         assert!(Guitar::check_fret_number(7).is_ok());
         assert!(Guitar::check_fret_number(20).is_ok());
     }
     #[test]
-    fn invalid_frets() {
+    fn invalid() {
         assert!(Guitar::check_fret_number(0).is_ok());
         assert!(Guitar::check_fret_number(12).is_ok());
         assert!(Guitar::check_fret_number(18).is_ok());
@@ -576,7 +575,7 @@ mod test_create_string_range {
 mod test_generate_pitch_fingering {
     use super::*;
     #[test]
-    fn normal() -> Result<()> {
+    fn valid_normal() -> Result<()> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -638,7 +637,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn few_strings() -> Result<()> {
+    fn valid_simple() -> Result<()> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -672,7 +671,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn few_frets() -> Result<()> {
+    fn valid_few_frets() -> Result<()> {
         const NUM_FRETS: u8 = 2;
         let string_ranges = BTreeMap::from([
             (
@@ -712,7 +711,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn impossible_pitch() -> Result<()> {
+    fn valid_impossible_pitch() -> Result<()> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
