@@ -1,6 +1,8 @@
 use std::collections::BTreeMap;
 
+use guitar_tab_generator::pitch::Pitch;
 use guitar_tab_generator::*;
+
 fn main() {
     let tuning = BTreeMap::from([
         (StringNumber::new(1).unwrap(), Pitch::E4),
