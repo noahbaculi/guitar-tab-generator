@@ -12,7 +12,12 @@ fn main() {
     ]);
     // dbg!(&tuning);
 
-    let _guitar = Guitar::new(tuning, 18).unwrap();
+    let _guitar = match Guitar::new(tuning, 30) {
+        Ok(guitar) => guitar,
+        Err(err) => {
+            panic!("{}", err);
+        }
+    };
     // dbg!(&_guitar);
 
     // let input_pitches = vec![
