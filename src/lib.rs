@@ -260,7 +260,7 @@ impl Guitar {
     fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
         let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
 
-        let all_pitches_vec = Pitch::iter().collect::<Vec<_>>();
+        let all_pitches_vec: Vec<Pitch> = Pitch::iter().collect();
         let string_range_result =
             all_pitches_vec.get(lowest_pitch_index..=lowest_pitch_index + num_frets as usize);
 
@@ -646,34 +646,17 @@ mod test_create_string_range {
         Ok(())
     }
     #[test]
-    fn correct_string_range() -> Result<()> {
-        assert_eq!(Guitar::create_string_range(&Pitch::E2, 0)?, vec![Pitch::E2]);
-        assert_eq!(
-            Guitar::create_string_range(&Pitch::E2, 3)?,
-            vec![Pitch::E2, Pitch::F2, Pitch::FSharp2, Pitch::G2]
-        );
-        assert_eq!(
-            Guitar::create_string_range(&Pitch::E2, 12)?,
-            vec![
-                Pitch::E2,
-                Pitch::F2,
-                Pitch::FSharp2,
-                Pitch::G2,
-                Pitch::GSharp2,
-                Pitch::A2,
-                Pitch::ASharp2,
-                Pitch::B2,
-                Pitch::C3,
-                Pitch::CSharp3,
-                Pitch::D3,
-                Pitch::DSharp3,
-                Pitch::E3
-            ]
-        );
-        Ok(())
-    }
+    fn invalid() {
+        let error = Guitar::create_string_range(&Pitch::G9, 5).unwrap_err();
+        let error_string = format!("{error}");
+        let expected_error_string = "Too many frets (5) for string starting at pitch G9. The highest pitch is B9, which would only exist at fret number 4.";
+        assert_eq!(error_string, expected_error_string);
 
-    // TODO! add test for error message
+        let error = Guitar::create_string_range(&Pitch::E2, 100).unwrap_err();
+        let error_string = format!("{error}");
+        let expected_error_string = "Too many frets (100) for string starting at pitch E2. The highest pitch is B9, which would only exist at fret number 91.";
+        assert_eq!(error_string, expected_error_string);
+    }
 }
 #[cfg(test)]
 mod test_generate_pitch_fingering {
