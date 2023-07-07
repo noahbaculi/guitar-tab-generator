@@ -1,5 +1,4 @@
-use crate::Pitch;
-use crate::StringNumber;
+use crate::{Pitch, StringNumber};
 use anyhow::{anyhow, Result};
 use std::collections::{BTreeMap, HashSet};
 use strum::IntoEnumIterator;

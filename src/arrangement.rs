@@ -1,13 +1,5 @@
+use crate::{guitar::Fingering, Guitar, Pitch};
 use anyhow::{anyhow, Result};
-
-pub mod pitch;
-use pitch::Pitch;
-
-pub mod string_number;
-use string_number::StringNumber;
-
-pub mod guitar;
-use guitar::{Fingering, Guitar};
 
 #[derive(Debug)]
 pub struct InvalidInput {
@@ -90,6 +82,7 @@ impl Arrangement {
 #[cfg(test)]
 mod test_check_for_invalid_pitches {
     use super::*;
+    use crate::StringNumber;
     use std::collections::BTreeMap;
 
     #[test]

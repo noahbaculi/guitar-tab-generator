@@ -1,9 +1,16 @@
 use std::collections::BTreeMap;
 
-use guitar_tab_generator::guitar::Guitar;
-use guitar_tab_generator::pitch::Pitch;
-use guitar_tab_generator::string_number::StringNumber;
-use guitar_tab_generator::*;
+pub mod pitch;
+use pitch::Pitch;
+
+pub mod string_number;
+use string_number::StringNumber;
+
+pub mod guitar;
+use guitar::Guitar;
+
+pub mod arrangement;
+use arrangement::Arrangement;
 
 fn main() {
     let tuning = BTreeMap::from([
