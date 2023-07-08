@@ -3,10 +3,11 @@ use anyhow::{anyhow, Result};
 use std::collections::{BTreeMap, HashSet};
 use strum::IntoEnumIterator;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Fingering {
     pub pitch: Pitch,
-    pub fingering: BTreeMap<StringNumber, u8>,
+    pub string_number: StringNumber,
+    pub fret: u8,
 }
 
 #[derive(Debug, PartialEq)]
@@ -35,6 +36,36 @@ impl Guitar {
                 all_pitches
             },
         );
+
+        const NUM_FRETS: u8 = 12;
+        let string_ranges_2 = BTreeMap::from([
+            (
+                StringNumber::new(1).unwrap(),
+                Guitar::create_string_range(&Pitch::E4, NUM_FRETS)?,
+            ),
+            (
+                StringNumber::new(2).unwrap(),
+                Guitar::create_string_range(&Pitch::B3, NUM_FRETS)?,
+            ),
+            (
+                StringNumber::new(3).unwrap(),
+                Guitar::create_string_range(&Pitch::G3, NUM_FRETS)?,
+            ),
+            (
+                StringNumber::new(4).unwrap(),
+                Guitar::create_string_range(&Pitch::D3, NUM_FRETS)?,
+            ),
+            (
+                StringNumber::new(5).unwrap(),
+                Guitar::create_string_range(&Pitch::A2, NUM_FRETS)?,
+            ),
+            (
+                StringNumber::new(6).unwrap(),
+                Guitar::create_string_range(&Pitch::E2, NUM_FRETS)?,
+            ),
+        ]);
+
+        Guitar::generate_pitch_fingerings(&string_ranges_2, &Pitch::A4);
 
         Ok(Guitar {
             tuning,
@@ -86,26 +117,41 @@ impl Guitar {
         }
     }
 
-    /// Takes a pitch as input and returns a fingering for that pitch on the guitar given its tuning.
+    /// Takes a pitch as input and returns the fingerings for that pitch on the guitar given its tuning.
     // TODO benchmark memoization
-    pub fn generate_pitch_fingering(
+    pub fn generate_pitch_fingerings(
         string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
         pitch: &Pitch,
-    ) -> Fingering {
-        let mut fingering: BTreeMap<StringNumber, u8> = BTreeMap::new();
-        for (string_number, string_range) in string_ranges.iter() {
-            match string_range.iter().position(|x| x == pitch) {
-                None => (),
-                Some(fret_number) => {
-                    fingering.insert(string_number.clone().to_owned(), fret_number as u8);
-                }
-            }
-        }
+    ) -> Vec<Fingering> {
+        // let mut fingering: BTreeMap<StringNumber, u8> = BTreeMap::new();
+        // for (string_number, string_range) in string_ranges.iter() {
+        //     match string_range.iter().position(|x| x == pitch) {
+        //         None => (),
+        //         Some(fret_number) => {
+        //             fingering.insert(string_number.clone().to_owned(), fret_number as u8);
+        //         }
+        //     }
+        // }
 
-        Fingering {
-            pitch: *pitch,
-            fingering,
-        }
+        let fingerings: Vec<Fingering> = string_ranges
+            .iter()
+            .filter_map(|(string_number, string_range)| {
+                match string_range.iter().position(|x| x == pitch) {
+                    None => None,
+                    Some(fret_number) => Some(Fingering {
+                        pitch: *pitch,
+                        string_number: string_number.clone().to_owned(),
+                        fret: fret_number as u8,
+                    }),
+                }
+            })
+            .collect();
+        // dbg!(&fingerings);
+
+        // let non_zero_fret_avg =
+        //     non_zero_frets.iter().sum::<usize>() as f32 / non_zero_frets.len() as f32;
+
+        fingerings
     }
 }
 
@@ -468,6 +514,7 @@ mod test_create_string_range {
 #[cfg(test)]
 mod test_generate_pitch_fingering {
     use super::*;
+
     #[test]
     fn valid_normal() -> Result<()> {
         const NUM_FRETS: u8 = 12;
@@ -499,33 +546,52 @@ mod test_generate_pitch_fingering {
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::E2),
-            Fingering {
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::E2),
+            vec![Fingering {
                 pitch: Pitch::E2,
-                fingering: BTreeMap::from([(StringNumber::new(6).unwrap(), 0)])
-            }
+                string_number: StringNumber::new(6).unwrap(),
+                fret: 0
+            }]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::D3),
-            Fingering {
-                pitch: Pitch::D3,
-                fingering: BTreeMap::from([
-                    (StringNumber::new(4).unwrap(), 0),
-                    (StringNumber::new(5).unwrap(), 5),
-                    (StringNumber::new(6).unwrap(), 10)
-                ])
-            }
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::D3),
+            vec![
+                Fingering {
+                    pitch: Pitch::D3,
+                    string_number: StringNumber::new(4).unwrap(),
+                    fret: 0
+                },
+                Fingering {
+                    pitch: Pitch::D3,
+                    string_number: StringNumber::new(5).unwrap(),
+                    fret: 5
+                },
+                Fingering {
+                    pitch: Pitch::D3,
+                    string_number: StringNumber::new(6).unwrap(),
+                    fret: 10
+                }
+            ]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::CSharp4),
-            Fingering {
-                pitch: Pitch::CSharp4,
-                fingering: BTreeMap::from([
-                    (StringNumber::new(2).unwrap(), 2),
-                    (StringNumber::new(3).unwrap(), 6),
-                    (StringNumber::new(4).unwrap(), 11)
-                ])
-            }
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::CSharp4),
+            vec![
+                Fingering {
+                    pitch: Pitch::CSharp4,
+                    string_number: StringNumber::new(2).unwrap(),
+                    fret: 2
+                },
+                Fingering {
+                    pitch: Pitch::CSharp4,
+                    string_number: StringNumber::new(3).unwrap(),
+                    fret: 6
+                },
+                Fingering {
+                    pitch: Pitch::CSharp4,
+                    string_number: StringNumber::new(4).unwrap(),
+                    fret: 11
+                }
+            ]
         );
         Ok(())
     }
@@ -545,21 +611,27 @@ mod test_generate_pitch_fingering {
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::DSharp4),
-            Fingering {
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::DSharp4),
+            vec![Fingering {
                 pitch: Pitch::DSharp4,
-                fingering: BTreeMap::from([(StringNumber::new(2).unwrap(), 0)])
-            }
+                string_number: StringNumber::new(2).unwrap(),
+                fret: 0
+            }]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::ASharp4),
-            Fingering {
-                pitch: Pitch::ASharp4,
-                fingering: BTreeMap::from([
-                    (StringNumber::new(1).unwrap(), 3),
-                    (StringNumber::new(2).unwrap(), 7)
-                ])
-            }
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::ASharp4),
+            vec![
+                Fingering {
+                    pitch: Pitch::ASharp4,
+                    string_number: StringNumber::new(1).unwrap(),
+                    fret: 3
+                },
+                Fingering {
+                    pitch: Pitch::ASharp4,
+                    string_number: StringNumber::new(2).unwrap(),
+                    fret: 7
+                }
+            ]
         );
         Ok(())
     }
@@ -595,11 +667,12 @@ mod test_generate_pitch_fingering {
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::E3),
-            Fingering {
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::E3),
+            vec![Fingering {
                 pitch: Pitch::E3,
-                fingering: BTreeMap::from([(StringNumber::new(4).unwrap(), 2)])
-            }
+                string_number: StringNumber::new(4).unwrap(),
+                fret: 2
+            }]
         );
         Ok(())
     }
@@ -635,18 +708,12 @@ mod test_generate_pitch_fingering {
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::D2),
-            Fingering {
-                pitch: Pitch::D2,
-                fingering: BTreeMap::from([])
-            }
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::D2),
+            vec![]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingering(&string_ranges, &Pitch::F5),
-            Fingering {
-                pitch: Pitch::F5,
-                fingering: BTreeMap::from([])
-            }
+            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::F5),
+            vec![]
         );
         Ok(())
     }
