@@ -12,95 +12,56 @@ pub struct Arrangement {}
 
 impl Arrangement {
     pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self> {
-        let fingerings: Vec<Vec<Vec<Fingering>>> = input_pitches[0..]
-            .iter()
-            .map(|beat_pitches| {
-                beat_pitches
-                    .iter()
-                    .map(|beat_pitch| {
-                        Guitar::generate_pitch_fingerings(&guitar.string_ranges, beat_pitch)
-                    })
-                    .collect()
-            })
-            .collect();
+        // TODO! add type alias for BeatVec, PitchVec, Candidates, ...
+        // https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
 
-        Arrangement::check_for_invalid_pitches(&fingerings, &input_pitches)?;
-
-        // dbg!(&input_pitches, &fingerings);
+        let pitch_fingering_options = Arrangement::validate_fingerings(&guitar, &input_pitches)?;
+        dbg!(&pitch_fingering_options);
 
         Ok(Arrangement {})
     }
 
-    fn check_for_invalid_pitches(
-        fingerings: &[Vec<Vec<Fingering>>],
-        input_pitches: &Vec<Vec<Pitch>>,
-    ) -> Result<()> {
-        // let impossible_pitches: Vec<Vec<Vec<Fingering>>> = fingerings
-        //     .iter()
-        //     .enumerate()
-        //     .map(|(beat_index, beat_fingerings)| {
-        //         {
-        //             beat_fingerings
-        //                 .clone()
-        //                 .iter()
-        //                 .filter(|pitch_fingering| pitch_fingering.is_empty())
-        //                 .map(|beat_fingering| beat_fingering.clone())
-        //                 .collect()
-        //         }
-        //     })
-        //     .collect();
-
-        // let x: Vec<(usize, &Vec<Vec<Fingering>>)> = fingerings
-        //     .iter()
-        //     .enumerate()
-        //     .filter(|(beat_index, beat_fingerings)| {
-        //         !beat_fingerings
-        //             .clone()
-        //             .iter()
-        //             .filter(|pitch_fingering| pitch_fingering.is_empty())
-        //             .collect::<Vec<_>>()
-        //             .is_empty()
-        //     })
-        //     .collect();
-
+    /// Generates fingerings for each pitch, and returns a result containing the fingerings or
+    /// an error message if any impossible pitches (with no fingerings) are found.
+    ///
+    /// Arguments:
+    ///
+    /// * `guitar`: A reference to a `Guitar` object, which contains information about the guitar's
+    /// string ranges.
+    /// * `input_pitches`: A slice of vectors, where each vector represents a beat and contains a
+    /// vector of pitches.
+    ///
+    /// Returns:
+    ///
+    /// The function `validate_fingerings` returns a `Result` containing either a
+    /// `Vec<Vec<Vec<Fingering>>>` if the input pitches are valid, or an `Err` containing an error
+    /// message if there are invalid pitches.
+    /// TODO! write tests
+    fn validate_fingerings(
+        guitar: &Guitar,
+        input_pitches: &[Vec<Pitch>],
+    ) -> Result<Vec<Vec<Vec<Fingering>>>> {
         let mut impossible_pitches: Vec<InvalidInput> = vec![];
-        // InvalidInput {
-        //                 value: format!("{:?}", beat_impossible_pitch),
-        //                 line_number,
-        //             }
-        // dbg!(&x);
-
-        for (beat_index, (beat_fingerings, beat_pitches)) in
-            fingerings.iter().zip(input_pitches.iter()).enumerate()
-        {
-            for (pitch_fingering, pitch) in beat_fingerings.iter().zip(beat_pitches.iter()) {
-                if pitch_fingering.is_empty() {
-                    impossible_pitches.push(InvalidInput {
-                        value: format!("{:?}", pitch),
-                        line_number: beat_index as u16,
+        let fingerings: Vec<Vec<Vec<Fingering>>> = input_pitches[0..]
+            .iter()
+            .enumerate()
+            .map(|(beat_index, beat_pitches)| {
+                beat_pitches
+                    .iter()
+                    .map(|beat_pitch| {
+                        let pitch_fingerings =
+                            Guitar::generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
+                        if pitch_fingerings.is_empty() {
+                            impossible_pitches.push(InvalidInput {
+                                value: format!("{:?}", beat_pitch),
+                                line_number: beat_index as u16,
+                            })
+                        }
+                        pitch_fingerings
                     })
-                }
-            }
-        }
-
-        // let invalid_inputs: Vec<InvalidInput> = impossible_pitches
-        //     .iter()
-        //     .filter(|beat_impossible_pitches| !beat_impossible_pitches.is_empty())
-        //     .flat_map(|beat_impossible_pitches| {
-        //         let line_number = impossible_pitches
-        //             .iter()
-        //             .position(|x| x == beat_impossible_pitches)
-        //             .unwrap() as u8;
-
-        //         beat_impossible_pitches
-        //             .iter()
-        //             .map(move |beat_impossible_pitch| InvalidInput {
-        //                 value: format!("{:?}", beat_impossible_pitch),
-        //                 line_number,
-        //             })
-        //             .collect::<Vec<_>>()
-        //     })
-        //     .collect();
+                    .collect()
+            })
+            .collect();
 
         if !impossible_pitches.is_empty() {
             let error_string = impossible_pitches
@@ -116,7 +77,8 @@ impl Arrangement {
 
             return Err(anyhow!(error_string));
         }
-        Ok(())
+
+        Ok(fingerings)
     }
 }
 
