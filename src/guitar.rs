@@ -123,27 +123,17 @@ impl Guitar {
         string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
         pitch: &Pitch,
     ) -> PitchOptionsVec<Fingering> {
-        // let mut fingering: BTreeMap<StringNumber, u8> = BTreeMap::new();
-        // for (string_number, string_range) in string_ranges.iter() {
-        //     match string_range.iter().position(|x| x == pitch) {
-        //         None => (),
-        //         Some(fret_number) => {
-        //             fingering.insert(string_number.clone().to_owned(), fret_number as u8);
-        //         }
-        //     }
-        // }
-
         let fingerings: PitchOptionsVec<Fingering> = string_ranges
             .iter()
             .filter_map(|(string_number, string_range)| {
-                match string_range.iter().position(|x| x == pitch) {
-                    None => None,
-                    Some(fret_number) => Some(Fingering {
+                string_range
+                    .iter()
+                    .position(|x| x == pitch)
+                    .map(|fret_number| Fingering {
                         pitch: *pitch,
-                        string_number: string_number.clone().to_owned(),
+                        string_number: string_number.clone(),
                         fret: fret_number as u8,
-                    }),
-                }
+                    })
             })
             .collect();
         // dbg!(&fingerings);
