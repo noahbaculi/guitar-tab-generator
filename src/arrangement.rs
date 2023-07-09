@@ -7,15 +7,19 @@ pub struct InvalidInput {
     line_number: u16,
 }
 
+pub type PitchOptionsVec<T> = Vec<T>;
+type BeatVec<T> = Vec<T>;
+
 #[derive(Debug)]
 pub struct Arrangement {}
 
 impl Arrangement {
-    pub fn new(guitar: Guitar, input_pitches: Vec<Vec<Pitch>>) -> Result<Self> {
+    pub fn new(guitar: Guitar, input_pitches: Vec<BeatVec<Pitch>>) -> Result<Self> {
         // TODO! add type alias for BeatVec, PitchVec, Candidates, ...
         // https://doc.rust-lang.org/book/ch19-04-advanced-types.html#creating-type-synonyms-with-type-aliases
 
-        let pitch_fingering_options = Arrangement::validate_fingerings(&guitar, &input_pitches)?;
+        let pitch_fingering_options: Vec<BeatVec<PitchOptionsVec<Fingering>>> =
+            Arrangement::validate_fingerings(&guitar, &input_pitches)?;
         dbg!(&pitch_fingering_options);
 
         Ok(Arrangement {})
@@ -39,17 +43,17 @@ impl Arrangement {
     /// TODO! write tests
     fn validate_fingerings(
         guitar: &Guitar,
-        input_pitches: &[Vec<Pitch>],
-    ) -> Result<Vec<Vec<Vec<Fingering>>>> {
+        input_pitches: &[BeatVec<Pitch>],
+    ) -> Result<Vec<BeatVec<PitchOptionsVec<Fingering>>>> {
         let mut impossible_pitches: Vec<InvalidInput> = vec![];
-        let fingerings: Vec<Vec<Vec<Fingering>>> = input_pitches[0..]
+        let fingerings: Vec<BeatVec<PitchOptionsVec<Fingering>>> = input_pitches[0..]
             .iter()
             .enumerate()
             .map(|(beat_index, beat_pitches)| {
                 beat_pitches
                     .iter()
                     .map(|beat_pitch| {
-                        let pitch_fingerings =
+                        let pitch_fingerings: PitchOptionsVec<Fingering> =
                             Guitar::generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                         if pitch_fingerings.is_empty() {
                             impossible_pitches.push(InvalidInput {
