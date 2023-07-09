@@ -1,4 +1,4 @@
-use crate::{arrangement::PitchOptionsVec, Pitch, StringNumber};
+use crate::{arrangement::PitchVec, Pitch, StringNumber};
 use anyhow::{anyhow, Result};
 use std::collections::{BTreeMap, HashSet};
 use strum::IntoEnumIterator;
@@ -126,8 +126,8 @@ impl Guitar {
     pub fn generate_pitch_fingerings(
         string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
         pitch: &Pitch,
-    ) -> PitchOptionsVec<Fingering> {
-        let fingerings: PitchOptionsVec<Fingering> = string_ranges
+    ) -> PitchVec<Fingering> {
+        let fingerings: PitchVec<Fingering> = string_ranges
             .iter()
             .filter_map(|(string_number, string_range)| {
                 string_range
