@@ -40,7 +40,6 @@ impl Arrangement {
     /// The function `validate_fingerings` returns a `Result` containing either a
     /// `Vec<Vec<Vec<Fingering>>>` if the input pitches are valid, or an `Err` containing an error
     /// message if there are invalid pitches.
-    /// TODO! write tests
     fn validate_fingerings(
         guitar: &Guitar,
         input_pitches: &[BeatVec<Pitch>],
@@ -58,7 +57,7 @@ impl Arrangement {
                         if pitch_fingerings.is_empty() {
                             impossible_pitches.push(InvalidInput {
                                 value: format!("{:?}", beat_pitch),
-                                line_number: beat_index as u16,
+                                line_number: (beat_index as u16) + 1,
                             })
                         }
                         pitch_fingerings
@@ -72,7 +71,7 @@ impl Arrangement {
                 .iter()
                 .map(|invalid_input| {
                     format!(
-                        "Invalid pitch {} on line {}.",
+                        "Pitch {} on line {} cannot be played on any strings of the configured guitar.",
                         invalid_input.value, invalid_input.line_number
                     )
                 })
@@ -86,186 +85,146 @@ impl Arrangement {
     }
 }
 
-// #[cfg(test)]
-// mod test_check_for_invalid_pitches {
-//     use super::*;
-//     use crate::StringNumber;
-//     use std::collections::BTreeMap;
+#[cfg(test)]
+mod test_validate_fingerings {
+    use super::*;
+    use crate::StringNumber;
+    use std::collections::{BTreeMap, HashSet};
 
-//     #[test]
-//     fn valid_simple() {
-//         let fingerings = vec![vec![PitchFingerings {
-//             pitch: Pitch::G3,
-//             fingering: BTreeMap::from([
-//                 (StringNumber::new(3).unwrap(), 0),
-//                 (StringNumber::new(4).unwrap(), 5),
-//                 (StringNumber::new(5).unwrap(), 10),
-//             ]),
-//             non_zero_fret_avg: 0.0,
-//         }]];
+    fn generate_standard_guitar() -> Guitar {
+        Guitar {
+            tuning: BTreeMap::from([
+                (StringNumber::new(1).unwrap(), Pitch::E4),
+                (StringNumber::new(2).unwrap(), Pitch::B3),
+                (StringNumber::new(3).unwrap(), Pitch::G3),
+                (StringNumber::new(4).unwrap(), Pitch::D3),
+                (StringNumber::new(5).unwrap(), Pitch::A2),
+                (StringNumber::new(6).unwrap(), Pitch::E2),
+            ]),
+            num_frets: 12,
+            range: HashSet::from([
+                Pitch::E2,
+                Pitch::F2,
+                Pitch::FSharp2,
+                Pitch::G2,
+                Pitch::A2,
+                Pitch::ASharp2,
+                Pitch::B2,
+                Pitch::C3,
+                Pitch::D3,
+                Pitch::DSharp3,
+                Pitch::E3,
+                Pitch::F3,
+                Pitch::G3,
+                Pitch::GSharp3,
+                Pitch::A3,
+                Pitch::ASharp3,
+                Pitch::B3,
+                Pitch::C4,
+                Pitch::CSharp4,
+                Pitch::D4,
+                Pitch::E4,
+                Pitch::F4,
+                Pitch::FSharp4,
+                Pitch::G4,
+            ]),
+            string_ranges: BTreeMap::from([
+                (
+                    StringNumber::new(1).unwrap(),
+                    vec![Pitch::E4, Pitch::F4, Pitch::FSharp4, Pitch::G4],
+                ),
+                (
+                    StringNumber::new(2).unwrap(),
+                    vec![Pitch::B3, Pitch::C4, Pitch::CSharp4, Pitch::D4],
+                ),
+                (
+                    StringNumber::new(3).unwrap(),
+                    vec![Pitch::G3, Pitch::GSharp3, Pitch::A3, Pitch::ASharp3],
+                ),
+                (
+                    StringNumber::new(4).unwrap(),
+                    vec![Pitch::D3, Pitch::DSharp3, Pitch::E3, Pitch::F3],
+                ),
+                (
+                    StringNumber::new(5).unwrap(),
+                    vec![Pitch::A2, Pitch::ASharp2, Pitch::B2, Pitch::C3],
+                ),
+                (
+                    StringNumber::new(6).unwrap(),
+                    vec![Pitch::E2, Pitch::F2, Pitch::FSharp2, Pitch::G2],
+                ),
+            ]),
+        }
+    }
 
-//         assert!(Arrangement::check_for_invalid_pitches(&fingerings).is_ok());
-//     }
-//     #[test]
-//     fn valid_complex() {
-//         let fingerings = vec![
-//             vec![PitchFingerings {
-//                 pitch: Pitch::G3,
-//                 fingering: BTreeMap::from([
-//                     (StringNumber::new(3).unwrap(), 0),
-//                     (StringNumber::new(4).unwrap(), 5),
-//                     (StringNumber::new(5).unwrap(), 10),
-//                     (StringNumber::new(6).unwrap(), 15),
-//                 ]),
-//                 non_zero_fret_avg: 0.0,
-//             }],
-//             vec![PitchFingerings {
-//                 pitch: Pitch::B3,
-//                 fingering: BTreeMap::from([
-//                     (StringNumber::new(2).unwrap(), 0),
-//                     (StringNumber::new(3).unwrap(), 4),
-//                     (StringNumber::new(4).unwrap(), 9),
-//                     (StringNumber::new(5).unwrap(), 14),
-//                 ]),
-//                 non_zero_fret_avg: 0.0,
-//             }],
-//             vec![
-//                 PitchFingerings {
-//                     pitch: Pitch::D4,
-//                     fingering: BTreeMap::from([
-//                         (StringNumber::new(2).unwrap(), 3),
-//                         (StringNumber::new(3).unwrap(), 7),
-//                         (StringNumber::new(4).unwrap(), 12),
-//                         (StringNumber::new(5).unwrap(), 17),
-//                     ]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//                 PitchFingerings {
-//                     pitch: Pitch::G4,
-//                     fingering: BTreeMap::from([
-//                         (StringNumber::new(1).unwrap(), 3),
-//                         (StringNumber::new(2).unwrap(), 8),
-//                         (StringNumber::new(3).unwrap(), 12),
-//                         (StringNumber::new(4).unwrap(), 17),
-//                     ]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//             ],
-//         ];
+    #[test]
+    fn valid_simple() {
+        let guitar = generate_standard_guitar();
+        let input_pitches = vec![vec![Pitch::G3]];
+        let expected_fingerings = vec![vec![Guitar::generate_pitch_fingerings(
+            &guitar.string_ranges,
+            &Pitch::G3,
+        )]];
 
-//         assert!(Arrangement::check_for_invalid_pitches(&fingerings).is_ok());
-//     }
-//     #[test]
-//     fn invalid_simple() {
-//         let fingerings = vec![vec![
-//             PitchFingerings {
-//                 pitch: Pitch::G3,
-//                 fingering: BTreeMap::from([
-//                     (StringNumber::new(3).unwrap(), 0),
-//                     (StringNumber::new(4).unwrap(), 5),
-//                     (StringNumber::new(5).unwrap(), 10),
-//                     (StringNumber::new(6).unwrap(), 15),
-//                 ]),
-//                 non_zero_fret_avg: 0.0,
-//             },
-//             PitchFingerings {
-//                 pitch: Pitch::CSharp6,
-//                 fingering: BTreeMap::from([]),
-//                 non_zero_fret_avg: 0.0,
-//             },
-//         ]];
+        assert_eq!(
+            Arrangement::validate_fingerings(&guitar, &input_pitches).unwrap(),
+            expected_fingerings
+        );
+    }
+    #[test]
+    fn valid_complex() {
+        let guitar = generate_standard_guitar();
+        let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
+        let expected_fingerings = vec![
+            vec![Guitar::generate_pitch_fingerings(
+                &guitar.string_ranges,
+                &Pitch::G3,
+            )],
+            vec![Guitar::generate_pitch_fingerings(
+                &guitar.string_ranges,
+                &Pitch::B3,
+            )],
+            vec![
+                Guitar::generate_pitch_fingerings(&guitar.string_ranges, &Pitch::D4),
+                Guitar::generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G4),
+            ],
+        ];
 
-//         let expected_error_string = "Invalid pitch CSharp6 on line 0.";
-//         let error = Arrangement::check_for_invalid_pitches(&fingerings).unwrap_err();
-//         let error_string = format!("{error}");
+        assert_eq!(
+            Arrangement::validate_fingerings(&guitar, &input_pitches).unwrap(),
+            expected_fingerings
+        );
+    }
+    #[test]
+    fn invalid_simple() {
+        let guitar = generate_standard_guitar();
+        let input_pitches = vec![vec![Pitch::B9]];
 
-//         assert_eq!(error_string, expected_error_string);
-//     }
-//     #[test]
-//     fn invalid_complex() {
-//         let fingerings = vec![
-//             vec![PitchFingerings {
-//                 pitch: Pitch::A1,
-//                 fingering: BTreeMap::from([]),
-//                 non_zero_fret_avg: 0.0,
-//             }],
-//             vec![PitchFingerings {
-//                 pitch: Pitch::G3,
-//                 fingering: BTreeMap::from([
-//                     (StringNumber::new(3).unwrap(), 0),
-//                     (StringNumber::new(4).unwrap(), 5),
-//                     (StringNumber::new(5).unwrap(), 10),
-//                     (StringNumber::new(6).unwrap(), 15),
-//                 ]),
-//                 non_zero_fret_avg: 0.0,
-//             }],
-//             vec![PitchFingerings {
-//                 pitch: Pitch::B3,
-//                 fingering: BTreeMap::from([
-//                     (StringNumber::new(2).unwrap(), 0),
-//                     (StringNumber::new(3).unwrap(), 4),
-//                     (StringNumber::new(4).unwrap(), 9),
-//                     (StringNumber::new(5).unwrap(), 14),
-//                 ]),
-//                 non_zero_fret_avg: 0.0,
-//             }],
-//             vec![
-//                 PitchFingerings {
-//                     pitch: Pitch::A1,
-//                     fingering: BTreeMap::from([]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//                 PitchFingerings {
-//                     pitch: Pitch::B1,
-//                     fingering: BTreeMap::from([]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//             ],
-//             vec![
-//                 PitchFingerings {
-//                     pitch: Pitch::G3,
-//                     fingering: BTreeMap::from([
-//                         (StringNumber::new(3).unwrap(), 0),
-//                         (StringNumber::new(4).unwrap(), 5),
-//                         (StringNumber::new(5).unwrap(), 10),
-//                         (StringNumber::new(6).unwrap(), 15),
-//                     ]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//                 PitchFingerings {
-//                     pitch: Pitch::D2,
-//                     fingering: BTreeMap::from([]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//             ],
-//             vec![
-//                 PitchFingerings {
-//                     pitch: Pitch::D4,
-//                     fingering: BTreeMap::from([
-//                         (StringNumber::new(2).unwrap(), 3),
-//                         (StringNumber::new(3).unwrap(), 7),
-//                         (StringNumber::new(4).unwrap(), 12),
-//                         (StringNumber::new(5).unwrap(), 17),
-//                     ]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//                 PitchFingerings {
-//                     pitch: Pitch::G4,
-//                     fingering: BTreeMap::from([
-//                         (StringNumber::new(1).unwrap(), 3),
-//                         (StringNumber::new(2).unwrap(), 8),
-//                         (StringNumber::new(3).unwrap(), 12),
-//                         (StringNumber::new(4).unwrap(), 17),
-//                     ]),
-//                     non_zero_fret_avg: 0.0,
-//                 },
-//             ],
-//         ];
+        let error = Arrangement::validate_fingerings(&guitar, &input_pitches).unwrap_err();
+        let error_string = format!("{error}");
+        let expected_error_string =
+            "Pitch B9 on line 1 cannot be played on any strings of the configured guitar.";
+        assert_eq!(error_string, expected_error_string);
+    }
+    #[test]
+    fn invalid_complex() {
+        let guitar = generate_standard_guitar();
+        let input_pitches = vec![
+            vec![Pitch::A1],
+            vec![Pitch::G3],
+            vec![Pitch::B3],
+            vec![Pitch::A1, Pitch::B1],
+            vec![Pitch::G3, Pitch::D2],
+            vec![Pitch::D4, Pitch::G4],
+        ];
 
-//         let expected_error_string = "Invalid pitch A1 on line 0.\nInvalid pitch A1 on line 3.\nInvalid pitch B1 on line 3.\nInvalid pitch D2 on line 4.";
-//         let error = Arrangement::check_for_invalid_pitches(&fingerings).unwrap_err();
-//         let error_string = format!("{error}");
-
-//         assert_eq!(error_string, expected_error_string);
-//     }
-// }
+        let error = Arrangement::validate_fingerings(&guitar, &input_pitches).unwrap_err();
+        let error_string = format!("{error}");
+        let expected_error_string =
+            "Pitch A1 on line 1 cannot be played on any strings of the configured guitar.\n\
+            Pitch A1 on line 4 cannot be played on any strings of the configured guitar.\n\
+            Pitch B1 on line 4 cannot be played on any strings of the configured guitar.\n\
+            Pitch D2 on line 5 cannot be played on any strings of the configured guitar.";
+        assert_eq!(error_string, expected_error_string);
+    }
+}

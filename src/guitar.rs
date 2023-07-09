@@ -117,7 +117,11 @@ impl Guitar {
         }
     }
 
-    /// Takes a pitch as input and returns the fingerings for that pitch on the guitar given its tuning.
+    /// Takes a pitch as input and returns the fingerings for that pitch on each
+    ///string of the guitar given its tuning.
+    ///
+    /// If no fingerings are possible on any of the strings of the guitar, an
+    /// empty vector is returned.
     // TODO benchmark memoization
     pub fn generate_pitch_fingerings(
         string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
