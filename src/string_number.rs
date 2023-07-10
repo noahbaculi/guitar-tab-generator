@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use std::fmt;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StringNumber(u8);
 impl StringNumber {
     pub fn new(string_number: u8) -> Result<Self> {

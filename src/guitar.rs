@@ -135,7 +135,7 @@ impl Guitar {
                     .position(|x| x == pitch)
                     .map(|fret_number| Fingering {
                         pitch: *pitch,
-                        string_number: string_number.clone(),
+                        string_number: *string_number,
                         fret: fret_number as u8,
                     })
             })

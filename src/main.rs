@@ -21,6 +21,7 @@ fn main() {
         (StringNumber::new(5).unwrap(), Pitch::A2),
         (StringNumber::new(6).unwrap(), Pitch::E2),
     ]);
+
     // dbg!(&tuning);
 
     let _guitar = match Guitar::new(tuning, 18) {
@@ -40,6 +41,7 @@ fn main() {
     //     vec![Pitch::D4, Pitch::G4],
     // ]; // invalid
     let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
+    // let input_pitches = vec![vec![Pitch::D4, Pitch::G4]];
     let _arrangement = match Arrangement::new(_guitar, input_pitches) {
         Ok(arrangement) => arrangement,
         Err(err) => {

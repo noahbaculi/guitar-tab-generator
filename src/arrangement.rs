@@ -1,11 +1,20 @@
+use std::collections::HashSet;
+
 use crate::{guitar::Fingering, Guitar, Pitch};
 use anyhow::{anyhow, Result};
+use itertools::Itertools;
 
 #[derive(Debug)]
 pub struct InvalidInput {
     value: String,
     line_number: u16,
 }
+
+// #[derive(Debug, Clone)]
+// pub struct BeatFingering {
+//     fingerings: BeatVec<Fingering>,
+//     non_zero_avg_fret: f32,
+// }
 
 pub type PitchVec<T> = Vec<T>;
 type BeatVec<T> = Vec<T>;
@@ -20,7 +29,26 @@ impl Arrangement {
 
         let pitch_fingering_options: Vec<BeatVec<PitchVec<Fingering>>> =
             Arrangement::validate_fingerings(&guitar, &input_pitches)?;
-        dbg!(&pitch_fingering_options);
+
+        // let x: Vec<_> = vec![vec![1, 2], vec![10, 20], vec![100, 200]]
+        //     .into_iter()
+        //     .multi_cartesian_product()
+        //     .collect();
+        // dbg!(&x);
+        // dbg!(&pitch_fingering_options);
+        let beat_fingering_options = pitch_fingering_options
+            .iter()
+            .map(|beat_pitch_options| {
+                beat_pitch_options
+                    .iter()
+                    .multi_cartesian_product()
+                    .filter(|beat_fingering_option| {
+                        Arrangement::no_duplicate_strings(beat_fingering_option)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        dbg!(&beat_fingering_options);
 
         Ok(Arrangement {})
     }
@@ -82,6 +110,20 @@ impl Arrangement {
         }
 
         Ok(fingerings)
+    }
+
+    /// Checks if there are any duplicate strings in a vector of `Fingering`
+    /// objects to ensure that all pitches can be played.
+    /// TODO! write tests
+    fn no_duplicate_strings(beat_fingering_option: &Vec<&Fingering>) -> bool {
+        let num_pitches = beat_fingering_option.len();
+        let num_strings = beat_fingering_option
+            .iter()
+            .map(|fingering| fingering.string_number)
+            .collect::<HashSet<_>>()
+            .len();
+
+        num_pitches == num_strings
     }
 }
 
