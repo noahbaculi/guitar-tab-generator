@@ -141,6 +141,7 @@ mod test_pitch_debug {
         assert_eq!(format!("{}", Pitch::DSharp3), "D#3");
     }
 }
+
 impl Pitch {
     pub fn index(&self) -> u8 {
         *self as u8

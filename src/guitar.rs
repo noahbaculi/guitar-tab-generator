@@ -19,13 +19,13 @@ pub struct Guitar {
 }
 impl Guitar {
     pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8) -> Result<Self> {
-        Guitar::check_fret_number(num_frets)?;
+        check_fret_number(num_frets)?;
 
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
         for (string_number, string_open_pitch) in tuning.iter() {
             string_ranges.insert(
                 string_number.clone().to_owned(),
-                Guitar::create_string_range(string_open_pitch, num_frets)?,
+                create_string_range(string_open_pitch, num_frets)?,
             );
         }
 
@@ -37,36 +37,6 @@ impl Guitar {
             },
         );
 
-        const NUM_FRETS: u8 = 12;
-        let string_ranges_2 = BTreeMap::from([
-            (
-                StringNumber::new(1).unwrap(),
-                Guitar::create_string_range(&Pitch::E4, NUM_FRETS)?,
-            ),
-            (
-                StringNumber::new(2).unwrap(),
-                Guitar::create_string_range(&Pitch::B3, NUM_FRETS)?,
-            ),
-            (
-                StringNumber::new(3).unwrap(),
-                Guitar::create_string_range(&Pitch::G3, NUM_FRETS)?,
-            ),
-            (
-                StringNumber::new(4).unwrap(),
-                Guitar::create_string_range(&Pitch::D3, NUM_FRETS)?,
-            ),
-            (
-                StringNumber::new(5).unwrap(),
-                Guitar::create_string_range(&Pitch::A2, NUM_FRETS)?,
-            ),
-            (
-                StringNumber::new(6).unwrap(),
-                Guitar::create_string_range(&Pitch::E2, NUM_FRETS)?,
-            ),
-        ]);
-
-        Guitar::generate_pitch_fingerings(&string_ranges_2, &Pitch::A4);
-
         Ok(Guitar {
             tuning,
             num_frets,
@@ -74,81 +44,7 @@ impl Guitar {
             string_ranges,
         })
     }
-
-    /// Check if the number of frets is within a maximum limit and returns an error if it exceeds the limit.
-    fn check_fret_number(num_frets: u8) -> Result<()> {
-        const MAX_NUM_FRETS: u8 = 30;
-        if num_frets > MAX_NUM_FRETS {
-            return Err(anyhow!(
-                "Too many frets ({num_frets}). The maximum is {MAX_NUM_FRETS}."
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Generates a vector of pitches representing the range of the string.
-    ///
-    /// Arguments:
-    ///
-    /// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
-    /// string.
-    /// * `num_frets`: The `num_frets` parameter represents the number of
-    ///   subsequent number of half steps to include in the range.
-    fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
-        let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
-
-        let all_pitches_vec: Vec<Pitch> = Pitch::iter().collect();
-        let string_range_result =
-            all_pitches_vec.get(lowest_pitch_index..=lowest_pitch_index + num_frets as usize);
-
-        match string_range_result {
-            Some(string_range_slice) => Ok(string_range_slice.to_vec()),
-            None => {
-                let highest_pitch = all_pitches_vec
-                    .last()
-                    .expect("The Pitch enum should not be empty.");
-                let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
-                let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
-                The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
-
-                Err(anyhow!(err_msg))
-            }
-        }
-    }
-
-    /// Takes a pitch as input and returns the fingerings for that pitch on each
-    ///string of the guitar given its tuning.
-    ///
-    /// If no fingerings are possible on any of the strings of the guitar, an
-    /// empty vector is returned.
-    // TODO benchmark memoization
-    pub fn generate_pitch_fingerings(
-        string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
-        pitch: &Pitch,
-    ) -> PitchVec<Fingering> {
-        let fingerings: PitchVec<Fingering> = string_ranges
-            .iter()
-            .filter_map(|(string_number, string_range)| {
-                string_range
-                    .iter()
-                    .position(|x| x == pitch)
-                    .map(|fret_number| Fingering {
-                        pitch: *pitch,
-                        string_number: *string_number,
-                        fret: fret_number as u8,
-                    })
-            })
-            .collect();
-        // dbg!(&fingerings);
-
-        // let non_zero_fret_avg =
-        //     non_zero_frets.iter().sum::<usize>() as f32 / non_zero_frets.len() as f32;
-
-        fingerings
-    }
 }
-
 #[cfg(test)]
 mod test_guitar_new {
     use super::*;
@@ -442,24 +338,66 @@ mod test_guitar_new {
         assert!(Guitar::new(create_default_tuning(), 35).is_err());
     }
 }
+
+/// Check if the number of frets is within a maximum limit and returns an error if it exceeds the limit.
+fn check_fret_number(num_frets: u8) -> Result<()> {
+    const MAX_NUM_FRETS: u8 = 30;
+    if num_frets > MAX_NUM_FRETS {
+        return Err(anyhow!(
+            "Too many frets ({num_frets}). The maximum is {MAX_NUM_FRETS}."
+        ));
+    }
+
+    Ok(())
+}
 #[cfg(test)]
 mod test_check_fret_number {
-    use super::Guitar;
+    use super::*;
     #[test]
     fn valid() {
-        assert!(Guitar::check_fret_number(0).is_ok());
-        assert!(Guitar::check_fret_number(2).is_ok());
-        assert!(Guitar::check_fret_number(7).is_ok());
-        assert!(Guitar::check_fret_number(20).is_ok());
+        assert!(check_fret_number(0).is_ok());
+        assert!(check_fret_number(2).is_ok());
+        assert!(check_fret_number(7).is_ok());
+        assert!(check_fret_number(20).is_ok());
     }
     #[test]
     fn invalid() {
-        assert!(Guitar::check_fret_number(0).is_ok());
-        assert!(Guitar::check_fret_number(12).is_ok());
-        assert!(Guitar::check_fret_number(18).is_ok());
-        assert!(Guitar::check_fret_number(27).is_ok());
-        assert!(Guitar::check_fret_number(31).is_err());
-        assert!(Guitar::check_fret_number(100).is_err());
+        assert!(check_fret_number(0).is_ok());
+        assert!(check_fret_number(12).is_ok());
+        assert!(check_fret_number(18).is_ok());
+        assert!(check_fret_number(27).is_ok());
+        assert!(check_fret_number(31).is_err());
+        assert!(check_fret_number(100).is_err());
+    }
+}
+
+/// Generates a vector of pitches representing the range of the string.
+///
+/// Arguments:
+///
+/// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
+/// string.
+/// * `num_frets`: The `num_frets` parameter represents the number of
+///   subsequent number of half steps to include in the range.
+fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
+    let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
+
+    let all_pitches_vec: Vec<Pitch> = Pitch::iter().collect();
+    let string_range_result =
+        all_pitches_vec.get(lowest_pitch_index..=lowest_pitch_index + num_frets as usize);
+
+    match string_range_result {
+        Some(string_range_slice) => Ok(string_range_slice.to_vec()),
+        None => {
+            let highest_pitch = all_pitches_vec
+                .last()
+                .expect("The Pitch enum should not be empty.");
+            let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
+            let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
+                The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
+
+            Err(anyhow!(err_msg))
+        }
     }
 }
 #[cfg(test)]
@@ -467,13 +405,13 @@ mod test_create_string_range {
     use super::*;
     #[test]
     fn valid() -> Result<()> {
-        assert_eq!(Guitar::create_string_range(&Pitch::E2, 0)?, vec![Pitch::E2]);
+        assert_eq!(create_string_range(&Pitch::E2, 0)?, vec![Pitch::E2]);
         assert_eq!(
-            Guitar::create_string_range(&Pitch::E2, 3)?,
+            create_string_range(&Pitch::E2, 3)?,
             vec![Pitch::E2, Pitch::F2, Pitch::FSharp2, Pitch::G2]
         );
         assert_eq!(
-            Guitar::create_string_range(&Pitch::E2, 12)?,
+            create_string_range(&Pitch::E2, 12)?,
             vec![
                 Pitch::E2,
                 Pitch::F2,
@@ -494,16 +432,47 @@ mod test_create_string_range {
     }
     #[test]
     fn invalid() {
-        let error = Guitar::create_string_range(&Pitch::G9, 5).unwrap_err();
+        let error = create_string_range(&Pitch::G9, 5).unwrap_err();
         let error_string = format!("{error}");
         let expected_error_string = "Too many frets (5) for string starting at pitch G9. The highest pitch is B9, which would only exist at fret number 4.";
         assert_eq!(error_string, expected_error_string);
 
-        let error = Guitar::create_string_range(&Pitch::E2, 100).unwrap_err();
+        let error = create_string_range(&Pitch::E2, 100).unwrap_err();
         let error_string = format!("{error}");
         let expected_error_string = "Too many frets (100) for string starting at pitch E2. The highest pitch is B9, which would only exist at fret number 91.";
         assert_eq!(error_string, expected_error_string);
     }
+}
+
+/// Takes a pitch as input and returns the fingerings for that pitch on each
+///string of the guitar given its tuning.
+///
+/// If no fingerings are possible on any of the strings of the guitar, an
+/// empty vector is returned.
+// TODO benchmark memoization
+pub fn generate_pitch_fingerings(
+    string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
+    pitch: &Pitch,
+) -> PitchVec<Fingering> {
+    let fingerings: PitchVec<Fingering> = string_ranges
+        .iter()
+        .filter_map(|(string_number, string_range)| {
+            string_range
+                .iter()
+                .position(|x| x == pitch)
+                .map(|fret_number| Fingering {
+                    pitch: *pitch,
+                    string_number: *string_number,
+                    fret: fret_number as u8,
+                })
+        })
+        .collect();
+    // dbg!(&fingerings);
+
+    // let non_zero_fret_avg =
+    //     non_zero_frets.iter().sum::<usize>() as f32 / non_zero_frets.len() as f32;
+
+    fingerings
 }
 #[cfg(test)]
 mod test_generate_pitch_fingering {
@@ -515,32 +484,32 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                Guitar::create_string_range(&Pitch::E4, NUM_FRETS)?,
+                create_string_range(&Pitch::E4, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(2).unwrap(),
-                Guitar::create_string_range(&Pitch::B3, NUM_FRETS)?,
+                create_string_range(&Pitch::B3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(3).unwrap(),
-                Guitar::create_string_range(&Pitch::G3, NUM_FRETS)?,
+                create_string_range(&Pitch::G3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(4).unwrap(),
-                Guitar::create_string_range(&Pitch::D3, NUM_FRETS)?,
+                create_string_range(&Pitch::D3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(5).unwrap(),
-                Guitar::create_string_range(&Pitch::A2, NUM_FRETS)?,
+                create_string_range(&Pitch::A2, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(6).unwrap(),
-                Guitar::create_string_range(&Pitch::E2, NUM_FRETS)?,
+                create_string_range(&Pitch::E2, NUM_FRETS)?,
             ),
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::E2),
+            generate_pitch_fingerings(&string_ranges, &Pitch::E2),
             vec![Fingering {
                 pitch: Pitch::E2,
                 string_number: StringNumber::new(6).unwrap(),
@@ -548,7 +517,7 @@ mod test_generate_pitch_fingering {
             }]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::D3),
+            generate_pitch_fingerings(&string_ranges, &Pitch::D3),
             vec![
                 Fingering {
                     pitch: Pitch::D3,
@@ -568,7 +537,7 @@ mod test_generate_pitch_fingering {
             ]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::CSharp4),
+            generate_pitch_fingerings(&string_ranges, &Pitch::CSharp4),
             vec![
                 Fingering {
                     pitch: Pitch::CSharp4,
@@ -596,16 +565,16 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                Guitar::create_string_range(&Pitch::G4, NUM_FRETS)?,
+                create_string_range(&Pitch::G4, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(2).unwrap(),
-                Guitar::create_string_range(&Pitch::DSharp4, NUM_FRETS)?,
+                create_string_range(&Pitch::DSharp4, NUM_FRETS)?,
             ),
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::DSharp4),
+            generate_pitch_fingerings(&string_ranges, &Pitch::DSharp4),
             vec![Fingering {
                 pitch: Pitch::DSharp4,
                 string_number: StringNumber::new(2).unwrap(),
@@ -613,7 +582,7 @@ mod test_generate_pitch_fingering {
             }]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::ASharp4),
+            generate_pitch_fingerings(&string_ranges, &Pitch::ASharp4),
             vec![
                 Fingering {
                     pitch: Pitch::ASharp4,
@@ -636,32 +605,32 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                Guitar::create_string_range(&Pitch::E4, NUM_FRETS)?,
+                create_string_range(&Pitch::E4, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(2).unwrap(),
-                Guitar::create_string_range(&Pitch::B3, NUM_FRETS)?,
+                create_string_range(&Pitch::B3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(3).unwrap(),
-                Guitar::create_string_range(&Pitch::G3, NUM_FRETS)?,
+                create_string_range(&Pitch::G3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(4).unwrap(),
-                Guitar::create_string_range(&Pitch::D3, NUM_FRETS)?,
+                create_string_range(&Pitch::D3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(5).unwrap(),
-                Guitar::create_string_range(&Pitch::A2, NUM_FRETS)?,
+                create_string_range(&Pitch::A2, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(6).unwrap(),
-                Guitar::create_string_range(&Pitch::E2, NUM_FRETS)?,
+                create_string_range(&Pitch::E2, NUM_FRETS)?,
             ),
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::E3),
+            generate_pitch_fingerings(&string_ranges, &Pitch::E3),
             vec![Fingering {
                 pitch: Pitch::E3,
                 string_number: StringNumber::new(4).unwrap(),
@@ -677,36 +646,36 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                Guitar::create_string_range(&Pitch::E4, NUM_FRETS)?,
+                create_string_range(&Pitch::E4, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(2).unwrap(),
-                Guitar::create_string_range(&Pitch::B3, NUM_FRETS)?,
+                create_string_range(&Pitch::B3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(3).unwrap(),
-                Guitar::create_string_range(&Pitch::G3, NUM_FRETS)?,
+                create_string_range(&Pitch::G3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(4).unwrap(),
-                Guitar::create_string_range(&Pitch::D3, NUM_FRETS)?,
+                create_string_range(&Pitch::D3, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(5).unwrap(),
-                Guitar::create_string_range(&Pitch::A2, NUM_FRETS)?,
+                create_string_range(&Pitch::A2, NUM_FRETS)?,
             ),
             (
                 StringNumber::new(6).unwrap(),
-                Guitar::create_string_range(&Pitch::E2, NUM_FRETS)?,
+                create_string_range(&Pitch::E2, NUM_FRETS)?,
             ),
         ]);
 
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::D2),
+            generate_pitch_fingerings(&string_ranges, &Pitch::D2),
             vec![]
         );
         assert_eq!(
-            Guitar::generate_pitch_fingerings(&string_ranges, &Pitch::F5),
+            generate_pitch_fingerings(&string_ranges, &Pitch::F5),
             vec![]
         );
         Ok(())

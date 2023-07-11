@@ -34,6 +34,7 @@ mod test_create_string_number {
         assert_eq!(format!("{error}"), expected_error_string);
     }
 }
+
 impl fmt::Debug for StringNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // write!(f, "{}", self.0)

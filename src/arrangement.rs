@@ -1,6 +1,9 @@
 use std::collections::HashSet;
 
-use crate::{guitar::Fingering, Guitar, Pitch};
+use crate::{
+    guitar::{generate_pitch_fingerings, Fingering},
+    Guitar, Pitch,
+};
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 
@@ -20,8 +23,8 @@ pub struct InvalidInput {
 // TODO! let non_zero_fret_avg = non_zero_frets.iter().sum::<usize>() as f32 /
 // non_zero_frets.len() as f32;
 // TODO! filter unplayable fingering options from beat_fingering_candidates (based
-// on the fret width and whether there are any candidates with smaller fret
-// widths)
+// on the fret span and whether there are any candidates with smaller fret
+// spans)
 // TODO! pathfinding (https://docs.rs/pathfinding/latest/pathfinding/)
 // TODO! investigate property testing (https://altsysrq.github.io/proptest-book/)
 // TODO! benchmarking via Criterion (https://crates.io/crates/criterion)
@@ -87,7 +90,7 @@ fn validate_fingerings(
                 .iter()
                 .map(|beat_pitch| {
                     let pitch_fingerings: PitchVec<Fingering> =
-                        Guitar::generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
+                        generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                     if pitch_fingerings.is_empty() {
                         impossible_pitches.push(InvalidInput {
                             value: format!("{:?}", beat_pitch),
@@ -117,7 +120,6 @@ fn validate_fingerings(
 
     Ok(fingerings)
 }
-
 #[cfg(test)]
 mod test_validate_fingerings {
     use super::*;
@@ -194,7 +196,7 @@ mod test_validate_fingerings {
     fn valid_simple() {
         let guitar = generate_standard_guitar();
         let input_pitches = vec![vec![Pitch::G3]];
-        let expected_fingerings = vec![vec![Guitar::generate_pitch_fingerings(
+        let expected_fingerings = vec![vec![generate_pitch_fingerings(
             &guitar.string_ranges,
             &Pitch::G3,
         )]];
@@ -209,17 +211,11 @@ mod test_validate_fingerings {
         let guitar = generate_standard_guitar();
         let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
         let expected_fingerings = vec![
-            vec![Guitar::generate_pitch_fingerings(
-                &guitar.string_ranges,
-                &Pitch::G3,
-            )],
-            vec![Guitar::generate_pitch_fingerings(
-                &guitar.string_ranges,
-                &Pitch::B3,
-            )],
+            vec![generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G3)],
+            vec![generate_pitch_fingerings(&guitar.string_ranges, &Pitch::B3)],
             vec![
-                Guitar::generate_pitch_fingerings(&guitar.string_ranges, &Pitch::D4),
-                Guitar::generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G4),
+                generate_pitch_fingerings(&guitar.string_ranges, &Pitch::D4),
+                generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G4),
             ],
         ];
 
