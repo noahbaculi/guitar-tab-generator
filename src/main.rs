@@ -11,7 +11,7 @@ use guitar::Guitar;
 
 pub mod arrangement;
 use arrangement::Arrangement;
-use arrangement::Beat::Playable;
+use arrangement::Line::Playable;
 
 fn main() {
     let tuning = BTreeMap::from([
