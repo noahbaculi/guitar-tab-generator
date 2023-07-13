@@ -19,12 +19,11 @@ pub struct InvalidInput {
 //     non_zero_avg_fret: f32,
 // }
 
-// TODO! re-examine namespace of functions (object functions vs standalone) (public vs private)
-// TODO! let non_zero_fret_avg = non_zero_frets.iter().sum::<usize>() as f32 /
-// non_zero_frets.len() as f32;
 // TODO! filter unplayable fingering options from beat_fingering_candidates (based
 // on the fret span and whether there are any candidates with smaller fret
 // spans)
+// TODO! let non_zero_fret_avg = non_zero_frets.iter().sum::<usize>() as f32 /
+// non_zero_frets.len() as f32;
 // TODO! pathfinding (https://docs.rs/pathfinding/latest/pathfinding/)
 // TODO! investigate property testing (https://altsysrq.github.io/proptest-book/)
 // TODO! benchmarking via Criterion (https://crates.io/crates/criterion)
@@ -46,17 +45,21 @@ impl Arrangement {
         //     .collect();
         // dbg!(&x);
         // dbg!(&pitch_fingering_candidates);
-        let beat_fingering_candidates = pitch_fingering_candidates
+
+        const PLAYABLE_FRET_SPAN: u8 = 5;
+        let _beat_fingering_candidates = pitch_fingering_candidates
             .iter()
             .map(|beat_pitch_candidates| {
                 beat_pitch_candidates
                     .iter()
                     .multi_cartesian_product()
                     .filter(no_duplicate_strings)
+                    .filter(|beat_fingering_option| {
+                        calc_fret_span(beat_fingering_option).unwrap_or(0) <= PLAYABLE_FRET_SPAN
+                    })
                     .collect::<Vec<_>>()
             })
             .collect::<Vec<_>>();
-        dbg!(&beat_fingering_candidates);
 
         Ok(Arrangement {})
     }
@@ -270,7 +273,6 @@ fn no_duplicate_strings(beat_fingering_option: &Vec<&Fingering>) -> bool {
 
     num_pitches == num_strings
 }
-
 #[cfg(test)]
 mod test_no_duplicate_strings {
     use super::*;
@@ -356,5 +358,75 @@ mod test_no_duplicate_strings {
             &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
         assert!(!no_duplicate_strings(beat_fingering_option));
+    }
+    #[test]
+    fn empty_input() {
+        assert!(no_duplicate_strings(&vec![]));
+    }
+}
+
+fn calc_fret_span(beat_fingering_option: &Vec<&Fingering>) -> Option<u8> {
+    let beat_fingering_option_fret_numbers = beat_fingering_option
+        .iter()
+        .filter(|fingering| fingering.fret != 0)
+        .map(|fingering| fingering.fret);
+
+    let min_non_zero_fret = match beat_fingering_option_fret_numbers.clone().min() {
+        None => return None,
+        Some(fret_num) => fret_num,
+    };
+    let max_non_zero_fret = match beat_fingering_option_fret_numbers.clone().max() {
+        None => return None,
+        Some(fret_num) => fret_num,
+    };
+
+    Some(max_non_zero_fret - min_non_zero_fret)
+}
+#[cfg(test)]
+mod test_calc_fret_span {
+    use super::*;
+    use crate::StringNumber;
+
+    #[test]
+    fn simple() {
+        let fingering_1 = Fingering {
+            pitch: Pitch::B6,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 3,
+        };
+        let beat_fingering_option: &Vec<&Fingering> = &vec![&fingering_1];
+
+        assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 0);
+    }
+    #[test]
+    fn complex() {
+        let fingering_1 = Fingering {
+            pitch: Pitch::CSharp2,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 1,
+        };
+        let fingering_2 = Fingering {
+            pitch: Pitch::F4,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 3,
+        };
+        let fingering_3 = Fingering {
+            pitch: Pitch::A5,
+            string_number: StringNumber::new(4).unwrap(),
+            fret: 4,
+        };
+        let fingering_4 = Fingering {
+            pitch: Pitch::DSharp6,
+            string_number: StringNumber::new(11).unwrap(),
+            fret: 0,
+        };
+        let beat_fingering_option: &Vec<&Fingering> =
+            &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
+
+        assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 3);
+    }
+    #[test]
+    fn empty_input() {
+        assert!(calc_fret_span(&vec![]).is_none());
     }
 }

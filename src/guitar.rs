@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use std::collections::{BTreeMap, HashSet};
 use strum::IntoEnumIterator;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Fingering {
     pub pitch: Pitch,
     pub string_number: StringNumber,
