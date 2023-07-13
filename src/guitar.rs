@@ -1,13 +1,25 @@
 use crate::{arrangement::PitchVec, Pitch, StringNumber};
 use anyhow::{anyhow, Result};
-use std::collections::{BTreeMap, HashSet};
+use std::{
+    collections::{BTreeMap, HashSet},
+    fmt,
+};
 use strum::IntoEnumIterator;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Fingering {
     pub pitch: Pitch,
     pub string_number: StringNumber,
     pub fret: u8,
+}
+impl fmt::Debug for Fingering {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} | {:?} ⇒ {}",
+            self.pitch, self.string_number, self.fret
+        )
+    }
 }
 
 #[derive(Debug, PartialEq)]

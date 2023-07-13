@@ -13,30 +13,31 @@ pub struct InvalidInput {
     line_number: u16,
 }
 
-// #[derive(Debug, Clone)]
-// pub struct BeatFingering {
-//     fingerings: BeatVec<Fingering>,
-//     non_zero_avg_fret: f32,
-// }
+#[derive(Debug, Clone)]
+pub struct BeatFingering<'a> {
+    fingering_combo: BeatVec<&'a Fingering>,
+    non_zero_avg_fret: f32,
+    non_zero_fret_span: u8,
+}
 
-// TODO! filter unplayable fingering options from beat_fingering_candidates (based
-// on the fret span and whether there are any candidates with smaller fret
-// spans)
-// TODO! let non_zero_fret_avg = non_zero_frets.iter().sum::<usize>() as f32 /
-// non_zero_frets.len() as f32;
-// TODO! pathfinding (https://docs.rs/pathfinding/latest/pathfinding/)
-// TODO! investigate property testing (https://altsysrq.github.io/proptest-book/)
-// TODO! benchmarking via Criterion (https://crates.io/crates/criterion)
+#[derive(Debug, PartialEq, Eq)]
+pub enum Beat<T> {
+    MeasureBreak,
+    Rest,
+    Playable(T),
+}
+use Beat::{MeasureBreak, Playable, Rest};
 
 pub type PitchVec<T> = Vec<T>;
 type BeatVec<T> = Vec<T>;
+// type Candidates<T> = Vec<T>;
 
 #[derive(Debug)]
 pub struct Arrangement {}
 
 impl Arrangement {
-    pub fn new(guitar: Guitar, input_pitches: Vec<BeatVec<Pitch>>) -> Result<Self> {
-        let pitch_fingering_candidates: Vec<BeatVec<PitchVec<Fingering>>> =
+    pub fn new(guitar: Guitar, input_pitches: Vec<Beat<BeatVec<Pitch>>>) -> Result<Self> {
+        let pitch_fingering_candidates: Vec<Beat<BeatVec<PitchVec<Fingering>>>> =
             validate_fingerings(&guitar, &input_pitches)?;
 
         // let x: Vec<_> = vec![vec![1, 2], vec![10, 20], vec![100, 200]]
@@ -45,21 +46,29 @@ impl Arrangement {
         //     .collect();
         // dbg!(&x);
         // dbg!(&pitch_fingering_candidates);
-
-        const PLAYABLE_FRET_SPAN: u8 = 5;
-        let _beat_fingering_candidates = pitch_fingering_candidates
+        let beat_fingering_candidates = pitch_fingering_candidates
             .iter()
-            .map(|beat_pitch_candidates| {
-                beat_pitch_candidates
-                    .iter()
-                    .multi_cartesian_product()
-                    .filter(no_duplicate_strings)
-                    .filter(|beat_fingering_option| {
-                        calc_fret_span(beat_fingering_option).unwrap_or(0) <= PLAYABLE_FRET_SPAN
-                    })
-                    .collect::<Vec<_>>()
+            .map(|beat_candidate| match beat_candidate {
+                MeasureBreak => MeasureBreak,
+                Rest => Rest,
+                Playable(beat_fingerings_per_pitch) => Playable(
+                    beat_fingerings_per_pitch
+                        .iter()
+                        .multi_cartesian_product()
+                        .filter(no_duplicate_strings)
+                        .map(|beat_fingering_candidate| BeatFingering {
+                            fingering_combo: beat_fingering_candidate,
+                            non_zero_avg_fret: 0.0,
+                            non_zero_fret_span: 0,
+                        })
+                        .collect::<Vec<_>>(),
+                ),
             })
             .collect::<Vec<_>>();
+        // dbg!(&pitch_fingering_candidates);
+        dbg!(&beat_fingering_candidates);
+
+        // const WARNING_FRET_SPAN: u8 = 4;
 
         Ok(Arrangement {})
     }
@@ -75,34 +84,36 @@ impl Arrangement {
 /// * `input_pitches`: A slice of vectors, where each vector represents a beat and contains a
 /// vector of pitches.
 ///
-/// Returns:
-///
-/// The function `validate_fingerings` returns a `Result` containing either a
+/// Returns a `Result` containing either a
 /// `Vec<Vec<Vec<Fingering>>>` if the input pitches are valid, or an `Err` containing an error
 /// message if there are invalid pitches.
 fn validate_fingerings(
     guitar: &Guitar,
-    input_pitches: &[BeatVec<Pitch>],
-) -> Result<Vec<BeatVec<PitchVec<Fingering>>>> {
+    input_pitches: &[Beat<BeatVec<Pitch>>],
+) -> Result<Vec<Beat<BeatVec<PitchVec<Fingering>>>>> {
     let mut impossible_pitches: Vec<InvalidInput> = vec![];
-    let fingerings: Vec<BeatVec<PitchVec<Fingering>>> = input_pitches[0..]
+    let fingerings: Vec<Beat<BeatVec<PitchVec<Fingering>>>> = input_pitches[0..]
         .iter()
         .enumerate()
-        .map(|(beat_index, beat_pitches)| {
-            beat_pitches
-                .iter()
-                .map(|beat_pitch| {
-                    let pitch_fingerings: PitchVec<Fingering> =
-                        generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
-                    if pitch_fingerings.is_empty() {
-                        impossible_pitches.push(InvalidInput {
-                            value: format!("{:?}", beat_pitch),
-                            line_number: (beat_index as u16) + 1,
-                        })
-                    }
-                    pitch_fingerings
-                })
-                .collect()
+        .map(|(beat_index, beat_input)| match beat_input {
+            MeasureBreak => MeasureBreak,
+            Rest => Rest,
+            Playable(beat_pitches) => Playable(
+                beat_pitches
+                    .iter()
+                    .map(|beat_pitch| {
+                        let pitch_fingerings: PitchVec<Fingering> =
+                            generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
+                        if pitch_fingerings.is_empty() {
+                            impossible_pitches.push(InvalidInput {
+                                value: format!("{:?}", beat_pitch),
+                                line_number: (beat_index as u16) + 1,
+                            })
+                        }
+                        pitch_fingerings
+                    })
+                    .collect(),
+            ),
         })
         .collect();
 
@@ -198,11 +209,11 @@ mod test_validate_fingerings {
     #[test]
     fn valid_simple() {
         let guitar = generate_standard_guitar();
-        let input_pitches = vec![vec![Pitch::G3]];
-        let expected_fingerings = vec![vec![generate_pitch_fingerings(
+        let input_pitches = vec![Playable(vec![Pitch::G3])];
+        let expected_fingerings = vec![Playable(vec![generate_pitch_fingerings(
             &guitar.string_ranges,
             &Pitch::G3,
-        )]];
+        )])];
 
         assert_eq!(
             validate_fingerings(&guitar, &input_pitches).unwrap(),
@@ -212,14 +223,24 @@ mod test_validate_fingerings {
     #[test]
     fn valid_complex() {
         let guitar = generate_standard_guitar();
-        let input_pitches = vec![vec![Pitch::G3], vec![Pitch::B3], vec![Pitch::D4, Pitch::G4]];
+        let input_pitches = vec![
+            Playable(vec![Pitch::G3]),
+            Playable(vec![Pitch::B3]),
+            Playable(vec![Pitch::D4, Pitch::G4]),
+        ];
         let expected_fingerings = vec![
-            vec![generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G3)],
-            vec![generate_pitch_fingerings(&guitar.string_ranges, &Pitch::B3)],
-            vec![
+            Playable(vec![generate_pitch_fingerings(
+                &guitar.string_ranges,
+                &Pitch::G3,
+            )]),
+            Playable(vec![generate_pitch_fingerings(
+                &guitar.string_ranges,
+                &Pitch::B3,
+            )]),
+            Playable(vec![
                 generate_pitch_fingerings(&guitar.string_ranges, &Pitch::D4),
                 generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G4),
-            ],
+            ]),
         ];
 
         assert_eq!(
@@ -230,7 +251,7 @@ mod test_validate_fingerings {
     #[test]
     fn invalid_simple() {
         let guitar = generate_standard_guitar();
-        let input_pitches = vec![vec![Pitch::B9]];
+        let input_pitches = vec![Playable(vec![Pitch::B9])];
 
         let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
         let error_string = format!("{error}");
@@ -242,12 +263,12 @@ mod test_validate_fingerings {
     fn invalid_complex() {
         let guitar = generate_standard_guitar();
         let input_pitches = vec![
-            vec![Pitch::A1],
-            vec![Pitch::G3],
-            vec![Pitch::B3],
-            vec![Pitch::A1, Pitch::B1],
-            vec![Pitch::G3, Pitch::D2],
-            vec![Pitch::D4, Pitch::G4],
+            Playable(vec![Pitch::A1]),
+            Playable(vec![Pitch::G3]),
+            Playable(vec![Pitch::B3]),
+            Playable(vec![Pitch::A1, Pitch::B1]),
+            Playable(vec![Pitch::G3, Pitch::D2]),
+            Playable(vec![Pitch::D4, Pitch::G4]),
         ];
 
         let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
@@ -365,7 +386,10 @@ mod test_no_duplicate_strings {
     }
 }
 
-fn calc_fret_span(beat_fingering_option: &Vec<&Fingering>) -> Option<u8> {
+#[allow(dead_code)]
+/// Calculates the difference between the maximum and minimum non-zero
+/// fret numbers in a given vector of fingerings.
+fn calc_fret_span(beat_fingering_option: &[&Fingering]) -> Option<u8> {
     let beat_fingering_option_fret_numbers = beat_fingering_option
         .iter()
         .filter(|fingering| fingering.fret != 0)
@@ -427,6 +451,6 @@ mod test_calc_fret_span {
     }
     #[test]
     fn empty_input() {
-        assert!(calc_fret_span(&vec![]).is_none());
+        assert!(calc_fret_span(&[]).is_none());
     }
 }
