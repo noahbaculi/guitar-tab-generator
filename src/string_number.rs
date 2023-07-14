@@ -55,13 +55,16 @@ impl fmt::Debug for StringNumber {
 mod test_pitch_debug {
     use super::*;
     #[test]
-    fn valid_simple() {
+    fn strings_1_to_6() {
         assert_eq!(format!("{:?}", StringNumber::new(1).unwrap()), "1_e");
         assert_eq!(format!("{:?}", StringNumber::new(2).unwrap()), "2_B");
         assert_eq!(format!("{:?}", StringNumber::new(3).unwrap()), "3_G");
         assert_eq!(format!("{:?}", StringNumber::new(4).unwrap()), "4_D");
         assert_eq!(format!("{:?}", StringNumber::new(5).unwrap()), "5_A");
         assert_eq!(format!("{:?}", StringNumber::new(6).unwrap()), "6_E");
+    }
+    #[test]
+    fn string_greater_than_6() {
         assert_eq!(format!("{:?}", StringNumber::new(8).unwrap()), "8");
     }
 }

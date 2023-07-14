@@ -16,13 +16,14 @@ Commands:
 bacon
 
 # Calculate code coverage
-cargo tarpaulin --exclude-files src/main.rs -out Html
+cargo tarpaulin --exclude-files src/main.rs --out Html
 cargo llvm-cov --ignore-filename-regex src/main.rs --open
 ```
 
 Running To-Dos:
 
 - [ ] re-examine namespace of functions (object functions vs standalone) (public vs private)
+- [ ] code coverage badge
 - [ ] handle measure breaks and commented lines and test
 - [ ] `let non_zero_fret_avg = non_zero_frets.iter().sum::<usize>() as f32 / non_zero_frets.len() as f32;`
 - [ ] filter unplayable fingering options from beat_fingering_candidates (based on the fret span and whether there are any candidates with smaller fret spans)

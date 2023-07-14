@@ -21,6 +21,20 @@ impl fmt::Debug for PitchFingering {
         )
     }
 }
+#[cfg(test)]
+mod test_pitch_fingering_debug {
+    use super::*;
+    #[test]
+    fn simple() {
+        let pitch_fingering = PitchFingering {
+            pitch: Pitch::ASharp4,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 3,
+        };
+
+        assert_eq!(format!("{:?}", pitch_fingering), "A#4 | 2_B ⇒ 3");
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct Guitar {
