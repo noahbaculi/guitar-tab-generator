@@ -503,9 +503,8 @@ mod test_calc_fret_span {
             string_number: StringNumber::new(2).unwrap(),
             fret: 3,
         };
-        let beat_fingering_option: &Vec<&PitchFingering> = &vec![&fingering_1];
 
-        assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 0);
+        assert_eq!(calc_fret_span(vec![&fingering_1]).unwrap(), 0);
     }
     #[test]
     fn complex() {
@@ -529,18 +528,18 @@ mod test_calc_fret_span {
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: &Vec<&PitchFingering> =
-            &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
+        let beat_fingering_option: Vec<&PitchFingering> =
+            vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
         assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 3);
     }
     #[test]
     fn empty_input() {
-        assert!(calc_fret_span(&[]).is_none());
+        assert!(calc_fret_span(vec![]).is_none());
     }
 }
 
-fn calc_next_nodes<'a>(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32)> {
+fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32)> {
     let next_node_index = match current_node {
         Node::Start => 0,
         Node::Rest { line_index } | Node::Note { line_index, .. } => line_index + 1,
