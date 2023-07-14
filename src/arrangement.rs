@@ -625,6 +625,51 @@ mod test_calculate_node_cost {
         assert_eq!(calculate_node_cost(&current_node, &next_node), 0);
     }
     #[test]
+    fn simple_from_start() {
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.5),
+                non_zero_fret_span: 0,
+            },
+        };
+
+        assert_eq!(calculate_node_cost(&Node::Start, &next_node), 0);
+    }
+    #[test]
+    fn simple_from_rest() {
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.5),
+                non_zero_fret_span: 0,
+            },
+        };
+
+        assert_eq!(
+            calculate_node_cost(&Node::Rest { line_index: 0 }, &next_node),
+            0
+        );
+    }
+    #[test]
+    fn simple_to_rest() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.5),
+                non_zero_fret_span: 0,
+            },
+        };
+
+        assert_eq!(
+            calculate_node_cost(&current_node, &Node::Rest { line_index: 1 }),
+            0
+        );
+    }
+    #[test]
     fn simple_avg_fret_diff() {
         let current_node = Node::Note {
             line_index: 0,
