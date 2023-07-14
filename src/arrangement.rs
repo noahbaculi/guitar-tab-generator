@@ -86,7 +86,7 @@ impl Arrangement {
             .filter(|(.., line_candidate)| line_candidate == &&MeasureBreak)
             .map(|(line_index, ..)| line_index);
 
-        let path_nodes_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
+        let path_node_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
             .iter()
             .filter(|&line_candidate| line_candidate != &MeasureBreak)
             .enumerate()
@@ -107,22 +107,22 @@ impl Arrangement {
             })
             .collect();
 
-        let num_path_node_groups = path_nodes_groups.len();
-        let path_nodes: Vec<Node> = path_nodes_groups.into_iter().flatten().collect_vec();
+        let num_path_node_groups = path_node_groups.len();
 
+        let path_nodes: Vec<Node> = path_node_groups.into_iter().flatten().collect_vec();
         let path_result = dijkstra(
             &Node::Start,
             |current_node| calc_next_nodes(current_node, path_nodes.clone()),
             |current_node| match current_node {
                 Node::Start => false,
                 Node::Rest { line_index } | Node::Note { line_index, .. } => {
+                    // Pathfinding goal is reached when the node is in the last node group
                     *line_index == (num_path_node_groups - 1) as u16
                 }
             },
         );
-        // dbg!(&path_result);
 
-        let mut path_lines = path_result
+        let mut path_lines: Vec<Line<BeatVec<PitchFingering>>> = path_result
             .expect("Path should exist.")
             .0
             .into_iter()
@@ -137,6 +137,7 @@ impl Arrangement {
             })
             .collect_vec();
 
+        // Add measure breaks back in
         for measure_break_index in measure_break_indices.sorted() {
             path_lines.insert(measure_break_index, Line::MeasureBreak);
         }
@@ -539,7 +540,12 @@ mod test_calc_fret_span {
     }
 }
 
-fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32)> {
+/// Calculates the next nodes and their costs based on the current node and a
+/// list of all path nodes.
+///
+/// Returns a vector of tuples, where each tuple contains a `Node` the `i16`
+/// cost of moving to that node.
+fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i16)> {
     let next_node_index = match current_node {
         Node::Start => 0,
         Node::Rest { line_index } | Node::Note { line_index, .. } => line_index + 1,
@@ -562,12 +568,12 @@ fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32
         })
         .collect_vec();
 
-    // dbg!(&next_nodes);
-
     next_nodes
 }
 
-fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i32 {
+/// Calculates the cost of transitioning from one node to another based on the
+/// average fret difference and fret span.
+fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i16 {
     let current_avg_fret = match current_node {
         Node::Start => return 0,
         Node::Rest { .. } => return 0,
@@ -578,7 +584,7 @@ fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i32 {
     };
 
     let (next_avg_fret, next_fret_span) = match next_node {
-        Node::Start => panic!("Start should never be a future node."),
+        Node::Start => unreachable!("Start should never be a future node."),
         Node::Rest { .. } => return 0,
         Node::Note {
             beat_fingering_combo,
@@ -591,5 +597,115 @@ fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i32 {
 
     let avg_fret_difference = (next_avg_fret - current_avg_fret).abs();
 
-    (avg_fret_difference * 10.0) as i32 + next_fret_span as i32
+    (avg_fret_difference * 10.0) as i16 + next_fret_span as i16
+}
+#[cfg(test)]
+mod test_calculate_node_cost {
+    use super::*;
+
+    #[test]
+    fn simple_no_diff() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.5),
+                non_zero_fret_span: 0,
+            },
+        };
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.5),
+                non_zero_fret_span: 0,
+            },
+        };
+
+        assert_eq!(calculate_node_cost(&current_node, &next_node), 0);
+    }
+    #[test]
+    fn simple_avg_fret_diff() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.0),
+                non_zero_fret_span: 0,
+            },
+        };
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(1.6),
+                non_zero_fret_span: 0,
+            },
+        };
+
+        assert_eq!(calculate_node_cost(&current_node, &next_node), 14);
+    }
+    #[test]
+    fn simple_fret_span() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(4.133333),
+                non_zero_fret_span: 0,
+            },
+        };
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(4.133333),
+                non_zero_fret_span: 3,
+            },
+        };
+
+        assert_eq!(calculate_node_cost(&current_node, &next_node), 3);
+    }
+    #[test]
+    fn compound() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(5.0),
+                non_zero_fret_span: 0,
+            },
+        };
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(2.0),
+                non_zero_fret_span: 5,
+            },
+        };
+
+        assert_eq!(calculate_node_cost(&current_node, &next_node), 35);
+    }
+    #[test]
+    fn complex() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(7.3333333),
+                non_zero_fret_span: 0,
+            },
+        };
+        let next_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(3.6666666),
+                non_zero_fret_span: 4,
+            },
+        };
+
+        assert_eq!(calculate_node_cost(&current_node, &next_node), 40);
+    }
 }

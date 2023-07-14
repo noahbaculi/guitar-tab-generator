@@ -9,6 +9,17 @@ Old versions:
 - [Java](https://github.com/noahbaculi/guitar-tab-generator_java) (2019 - 2022)
 - [Typescript](https://github.com/noahbaculi/guitar-tab-generator_typescript) (2022)
 
+Commands:
+
+```shell
+# Background code checker
+bacon
+
+# Calculate code coverage
+cargo tarpaulin --exclude-files src/main.rs -out Html
+cargo llvm-cov --ignore-filename-regex src/main.rs --open
+```
+
 Running To-Dos:
 
 - [ ] re-examine namespace of functions (object functions vs standalone) (public vs private)
