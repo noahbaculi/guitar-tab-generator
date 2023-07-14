@@ -133,7 +133,7 @@ impl fmt::Display for Pitch {
     }
 }
 #[cfg(test)]
-mod test_pitch_debug {
+mod test_pitch_display {
     use super::*;
     #[test]
     fn valid_simple() {

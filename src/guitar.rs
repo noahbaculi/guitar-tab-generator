@@ -58,7 +58,7 @@ impl Guitar {
     }
 }
 #[cfg(test)]
-mod test_guitar_new {
+mod test_create_guitar {
     use super::*;
 
     fn create_default_tuning() -> BTreeMap<StringNumber, Pitch> {

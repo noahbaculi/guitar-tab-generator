@@ -67,6 +67,76 @@ impl BeatFingeringCombo {
         }
     }
 }
+#[cfg(test)]
+mod test_create_beat_fingering_combo {
+    use super::*;
+    use crate::StringNumber;
+
+    #[test]
+    fn simple() {
+        let pitch_fingering_1 = PitchFingering {
+            pitch: Pitch::A0,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 2,
+        };
+
+        let BeatFingeringCombo {
+            fingering_combo,
+            non_zero_avg_fret,
+            non_zero_fret_span,
+        } = BeatFingeringCombo::new(vec![&pitch_fingering_1]);
+
+        assert_eq!(fingering_combo, vec![pitch_fingering_1]);
+        assert_eq!(non_zero_avg_fret, 2.0);
+        assert_eq!(non_zero_fret_span, 0);
+    }
+    #[test]
+    fn complex() {
+        let pitch_fingering_1 = PitchFingering {
+            pitch: Pitch::A0,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 2,
+        };
+        let pitch_fingering_2 = PitchFingering {
+            pitch: Pitch::B1,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 5,
+        };
+        let pitch_fingering_3 = PitchFingering {
+            pitch: Pitch::C2,
+            string_number: StringNumber::new(3).unwrap(),
+            fret: 0,
+        };
+        let pitch_fingering_4 = PitchFingering {
+            pitch: Pitch::D3,
+            string_number: StringNumber::new(4).unwrap(),
+            fret: 1,
+        };
+
+        let BeatFingeringCombo {
+            fingering_combo,
+            non_zero_avg_fret,
+            non_zero_fret_span,
+        } = BeatFingeringCombo::new(vec![
+            &pitch_fingering_1,
+            &pitch_fingering_2,
+            &pitch_fingering_3,
+            &pitch_fingering_4,
+        ]);
+
+        assert_eq!(
+            fingering_combo,
+            vec![
+                pitch_fingering_1,
+                pitch_fingering_2,
+                pitch_fingering_3,
+                pitch_fingering_4
+            ]
+        );
+        assert_eq!(non_zero_avg_fret, 8.0 / 3.0);
+        assert_eq!(non_zero_fret_span, 4);
+    }
+}
 
 #[derive(Debug)]
 pub struct Arrangement {}
@@ -124,7 +194,7 @@ impl Arrangement {
             .into_iter()
             .filter(|node| node != &Node::Start)
             .map(|node| match node {
-                Node::Start => panic!("Start node should already have been filtered out."),
+                Node::Start => unreachable!("Start node should already have been filtered out."),
                 Node::Rest { .. } => Line::Rest,
                 Node::Note {
                     beat_fingering_combo,
@@ -297,7 +367,9 @@ mod test_validate_fingerings {
         let guitar = generate_standard_guitar();
         let input_pitches = vec![
             Playable(vec![Pitch::G3]),
+            MeasureBreak,
             Playable(vec![Pitch::B3]),
+            Rest,
             Playable(vec![Pitch::D4, Pitch::G4]),
         ];
         let expected_fingerings = vec![
@@ -305,10 +377,12 @@ mod test_validate_fingerings {
                 &guitar.string_ranges,
                 &Pitch::G3,
             )]),
+            MeasureBreak,
             Playable(vec![generate_pitch_fingerings(
                 &guitar.string_ranges,
                 &Pitch::B3,
             )]),
+            Rest,
             Playable(vec![
                 generate_pitch_fingerings(&guitar.string_ranges, &Pitch::D4),
                 generate_pitch_fingerings(&guitar.string_ranges, &Pitch::G4),
@@ -552,7 +626,7 @@ fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i16
         .filter(|&node| {
             next_node_index
                 == match node {
-                    Node::Start => panic!("Start should never be a future node."),
+                    Node::Start => unreachable!("Start should never be a future node."),
                     Node::Rest { line_index } | Node::Note { line_index, .. } => *line_index,
                 }
         })
