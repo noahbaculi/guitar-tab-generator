@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use average::Mean;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
-use pathfinding::prelude::dijkstra;
+use pathfinding::prelude::yen;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -178,7 +178,9 @@ impl Arrangement {
         let num_path_node_groups = path_node_groups.len();
 
         let path_nodes: Vec<Node> = path_node_groups.into_iter().flatten().collect_vec();
-        let path_result = dijkstra(
+
+        const NUM_ARRANGEMENTS: usize = 5;
+        let path_result = yen(
             &Node::Start,
             |current_node| calc_next_nodes(current_node, path_nodes.clone()),
             |current_node| match current_node {
@@ -188,29 +190,23 @@ impl Arrangement {
                     *line_index == (num_path_node_groups - 1) as u16
                 }
             },
+            NUM_ARRANGEMENTS,
         );
+        dbg!(&path_result);
 
-        let mut path_lines: Vec<Line<BeatVec<PitchFingering>>> = path_result
-            .expect("Path should exist.")
-            .0
-            .into_iter()
-            .filter(|node| node != &Node::Start)
-            .map(|node| match node {
-                Node::Start => unreachable!("Start node should already have been filtered out."),
-                Node::Rest { .. } => Line::Rest,
-                Node::Note {
-                    beat_fingering_combo,
-                    ..
-                } => Line::Playable(beat_fingering_combo.fingering_combo),
-            })
-            .collect_vec();
-
-        // Add measure breaks back in
-        for measure_break_index in measure_break_indices.sorted() {
-            path_lines.insert(measure_break_index, Line::MeasureBreak);
+        if path_result.is_empty() {
+            return Err(anyhow!("No arrangements could be calculated."));
         }
 
-        dbg!(&path_lines);
+        // let mut path_lines: Vec<Line<BeatVec<PitchFingering>>> =
+        //     path_result.into_iter().map(process_path);
+
+        // // Add measure breaks back in
+        // for measure_break_index in measure_break_indices.sorted() {
+        //     path_lines.insert(measure_break_index, Line::MeasureBreak);
+        // }
+
+        // dbg!(&path_lines);
 
         // const WARNING_FRET_SPAN: u8 = 4;
 
@@ -913,29 +909,35 @@ mod test_calc_next_nodes {
 /// average fret difference and fret span.
 fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i16 {
     let current_avg_fret = match current_node {
-        Node::Start => return 0,
-        Node::Rest { .. } => return 0,
+        Node::Start => 0.0,
+        Node::Rest { .. } => 0.0,
         Node::Note {
             beat_fingering_combo,
             ..
-        } => beat_fingering_combo.non_zero_avg_fret,
+        } => beat_fingering_combo.non_zero_avg_fret.into_inner(),
     };
 
     let (next_avg_fret, next_fret_span) = match next_node {
         Node::Start => unreachable!("Start should never be a future node."),
-        Node::Rest { .. } => return 0,
+        Node::Rest { .. } => (0.0, 0.0),
         Node::Note {
             beat_fingering_combo,
             ..
         } => (
-            beat_fingering_combo.non_zero_avg_fret,
-            beat_fingering_combo.non_zero_fret_span,
+            beat_fingering_combo.non_zero_avg_fret.into_inner(),
+            beat_fingering_combo.non_zero_fret_span as f32,
         ),
     };
 
-    let avg_fret_difference = (next_avg_fret - current_avg_fret).abs();
+    let mut avg_fret_difference = (next_avg_fret - current_avg_fret).abs();
 
-    (avg_fret_difference * 10.0) as i16 + next_fret_span as i16
+    if matches!(current_node, Node::Start | Node::Rest { .. })
+        | matches!(next_node, Node::Rest { .. })
+    {
+        avg_fret_difference = 0.0;
+    }
+
+    ((avg_fret_difference * 100.0) + (next_fret_span * 10.0) + next_avg_fret) as i16
 }
 #[cfg(test)]
 mod test_calculate_node_cost {
