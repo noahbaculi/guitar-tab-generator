@@ -164,9 +164,11 @@ impl Arrangement {
                 Playable(beat_fingerings_per_pitch) => {
                     generate_fingering_combos(beat_fingerings_per_pitch)
                         .iter()
-                        .map(|beat_fingering_combo| Node::Note {
+                        .map(|pitch_fingering_group| Node::Note {
                             line_index: line_index as u16,
-                            beat_fingering_combo: beat_fingering_combo.clone(),
+                            beat_fingering_combo: BeatFingeringCombo::new(
+                                pitch_fingering_group.to_vec(),
+                            ),
                         })
                         .collect()
                 }
@@ -428,15 +430,95 @@ mod test_validate_fingerings {
     }
 }
 
+/// Generates all playable combinations of fingerings for all the pitches in a beat.
 fn generate_fingering_combos(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
-) -> BeatVec<BeatFingeringCombo> {
+) -> Vec<BeatVec<&PitchFingering>> {
+    if beat_fingerings_per_pitch.is_empty() {
+        unreachable!("Beat pitch fingerings should not be empty.")
+    }
+
     beat_fingerings_per_pitch
         .iter()
         .multi_cartesian_product()
         .filter(no_duplicate_strings)
-        .map(BeatFingeringCombo::new)
-        .collect::<Vec<_>>()
+        .collect_vec()
+}
+#[cfg(test)]
+mod test_generate_fingering_combos {
+    use super::*;
+    use crate::StringNumber;
+
+    #[test]
+    fn simple() {
+        let pitch_fingering = PitchFingering {
+            pitch: Pitch::B6,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 3,
+        };
+
+        let beat_fingerings_per_pitch = vec![vec![pitch_fingering]];
+        let expected_fingering_combos = vec![vec![&pitch_fingering]];
+
+        assert_eq!(
+            generate_fingering_combos(&beat_fingerings_per_pitch),
+            expected_fingering_combos
+        );
+    }
+    #[test]
+    fn complex() {
+        let pitch_fingering_a_string_2 = PitchFingering {
+            pitch: Pitch::B6,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 3,
+        };
+        let pitch_fingering_a_string_3 = PitchFingering {
+            pitch: Pitch::B6,
+            string_number: StringNumber::new(3).unwrap(),
+            fret: 8,
+        };
+        let pitch_fingering_b_string_2 = PitchFingering {
+            pitch: Pitch::C7,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 4,
+        };
+        let pitch_fingering_b_string_3 = PitchFingering {
+            pitch: Pitch::C7,
+            string_number: StringNumber::new(3).unwrap(),
+            fret: 9,
+        };
+        let pitch_fingering_b_string_4 = PitchFingering {
+            pitch: Pitch::C7,
+            string_number: StringNumber::new(4).unwrap(),
+            fret: 14,
+        };
+
+        let beat_fingerings_per_pitch = vec![
+            vec![pitch_fingering_a_string_2, pitch_fingering_a_string_3],
+            vec![
+                pitch_fingering_b_string_2,
+                pitch_fingering_b_string_3,
+                pitch_fingering_b_string_4,
+            ],
+        ];
+        let expected_fingering_combos = vec![
+            vec![&pitch_fingering_a_string_2, &pitch_fingering_b_string_3],
+            vec![&pitch_fingering_a_string_2, &pitch_fingering_b_string_4],
+            vec![&pitch_fingering_a_string_3, &pitch_fingering_b_string_2],
+            vec![&pitch_fingering_a_string_3, &pitch_fingering_b_string_4],
+        ];
+
+        assert_eq!(
+            generate_fingering_combos(&beat_fingerings_per_pitch),
+            expected_fingering_combos
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn empty_input() {
+        generate_fingering_combos(&[]);
+    }
 }
 
 /// Checks if there are any duplicate strings in a vector of `Fingering`
@@ -556,7 +638,7 @@ fn calc_fret_span(beat_fingering_candidate: Vec<&PitchFingering>) -> Option<u8> 
         Some(fret_num) => fret_num,
     };
     let max_non_zero_fret = match beat_fingering_option_fret_numbers.clone().max() {
-        None => return None,
+        None => unreachable!("A maximum should exist if a minimum exists."),
         Some(fret_num) => fret_num,
     };
 
@@ -644,7 +726,7 @@ fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i16
 mod test_calc_next_nodes {
     use super::*;
 
-    fn create_path_nodes() -> Vec<Node> {
+    fn create_test_path_nodes() -> Vec<Node> {
         vec![
             Node::Note {
                 line_index: 0,
@@ -718,7 +800,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_path_nodes()),
+            calc_next_nodes(&current_node, create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -746,7 +828,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_path_nodes()),
+            calc_next_nodes(&current_node, create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -767,7 +849,7 @@ mod test_calc_next_nodes {
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_path_nodes()),
+            calc_next_nodes(&current_node, create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -781,7 +863,7 @@ mod test_calc_next_nodes {
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_path_nodes()),
+            calc_next_nodes(&current_node, create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -812,8 +894,17 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_path_nodes()),
+            calc_next_nodes(&current_node, create_test_path_nodes()),
             expected_nodes_and_costs
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn to_start() {
+        calc_next_nodes(
+            &Node::Rest { line_index: 3 },
+            vec![Node::Rest { line_index: 4 }, Node::Start],
         );
     }
 }
