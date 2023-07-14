@@ -1,10 +1,11 @@
 use crate::{
-    guitar::{generate_pitch_fingerings, Fingering},
+    guitar::{generate_pitch_fingerings, PitchFingering},
     Guitar, Pitch,
 };
 use anyhow::{anyhow, Result};
 use average::Mean;
 use itertools::Itertools;
+use ordered_float::OrderedFloat;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -13,7 +14,7 @@ pub struct InvalidInput {
     line_number: u16,
 }
 
-#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Line<T> {
     MeasureBreak,
     Rest,
@@ -21,34 +22,51 @@ pub enum Line<T> {
 }
 use Line::{MeasureBreak, Playable, Rest};
 
-#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
-struct PathNode<T> {
-    line_index: u16,
-    line: Line<T>,
+// #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+// struct
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+enum Node {
+    Start,
+    Rest {
+        line_index: u16,
+    },
+    Note {
+        line_index: u16,
+        beat_fingering_combo: BeatFingeringCombo,
+    },
 }
 
 pub type PitchVec<T> = Vec<T>;
 type BeatVec<T> = Vec<T>;
 // type Candidates<T> = Vec<T>;
 
-#[derive(Debug, Clone)]
-pub struct BeatFingering<'a> {
-    fingering_combo: BeatVec<&'a Fingering>,
-    non_zero_avg_fret: f32,
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[allow(dead_code)]
+pub struct BeatFingeringCombo {
+    fingering_combo: BeatVec<PitchFingering>,
+    non_zero_avg_fret: OrderedFloat<f32>,
     non_zero_fret_span: u8,
 }
-impl<'a> BeatFingering<'a> {
-    pub fn new(beat_fingering_candidate: BeatVec<&'a Fingering>) -> Self {
-        BeatFingering {
-            fingering_combo: beat_fingering_candidate.clone(),
-            non_zero_avg_fret: beat_fingering_candidate
+impl BeatFingeringCombo {
+    pub fn new(beat_fingering_candidate: BeatVec<&PitchFingering>) -> Self {
+        BeatFingeringCombo {
+            fingering_combo: beat_fingering_candidate
                 .clone()
-                .iter()
-                .filter(|fingering| fingering.fret != 0)
-                .map(|fingering| fingering.fret as f64)
-                .collect::<Mean>()
-                .mean() as f32,
-            non_zero_fret_span: calc_fret_span(&beat_fingering_candidate).unwrap_or(0),
+                .into_iter()
+                .cloned()
+                .collect(),
+            non_zero_avg_fret: OrderedFloat(
+                beat_fingering_candidate
+                    .clone()
+                    .iter()
+                    .filter(|fingering| fingering.fret != 0)
+                    .map(|fingering| fingering.fret as f64)
+                    .collect::<Mean>()
+                    .mean() as f32,
+            ),
+
+            non_zero_fret_span: calc_fret_span(beat_fingering_candidate).unwrap_or(0),
         }
     }
 }
@@ -58,7 +76,7 @@ pub struct Arrangement {}
 
 impl Arrangement {
     pub fn new(guitar: Guitar, input_pitches: Vec<Line<BeatVec<Pitch>>>) -> Result<Self> {
-        let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<Fingering>>>> =
+        let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
             validate_fingerings(&guitar, &input_pitches)?;
 
         // let x: Vec<_> = vec![vec![1, 2], vec![10, 20], vec![100, 200]]
@@ -67,31 +85,75 @@ impl Arrangement {
         //     .collect();
         // dbg!(&x);
         // dbg!(&pitch_fingering_candidates);
-        let line_fingering_candidates = pitch_fingering_candidates
+        let path_nodes_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
             .iter()
+            .filter(|&line_candidate| line_candidate != &MeasureBreak)
             .enumerate()
             .map(|(line_index, line_candidate)| match line_candidate {
-                MeasureBreak => PathNode {
+                MeasureBreak => vec![],
+                Rest => vec![Node::Rest {
                     line_index: line_index as u16,
-                    line: MeasureBreak,
-                },
-                Rest => PathNode {
-                    line_index: line_index as u16,
-                    line: Rest,
-                },
-                Playable(beat_fingerings_per_pitch) => PathNode {
-                    line_index: line_index as u16,
-                    line: Playable(generate_fingering_combos(beat_fingerings_per_pitch)),
-                },
+                }],
+                Playable(beat_fingerings_per_pitch) => {
+                    generate_fingering_combos(beat_fingerings_per_pitch)
+                        .iter()
+                        .map(|beat_fingering_combo| Node::Note {
+                            line_index: line_index as u16,
+                            beat_fingering_combo: beat_fingering_combo.clone(),
+                        })
+                        .collect()
+                }
             })
-            .collect::<Vec<_>>();
-        // dbg!(&pitch_fingering_candidates);
-        dbg!(&line_fingering_candidates);
+            .collect();
+
+        let num_path_node_groups = path_nodes_groups.len();
+
+        let path_nodes: Vec<Node> = path_nodes_groups.into_iter().flatten().collect_vec();
+        // dbg!(&path_nodes);
+
+        // calc_next_nodes(
+        //     &Node::Note {
+        //         line_index: 1,
+        //         beat_fingering_combo: BeatFingeringCombo {
+        //             fingering_combo: vec![],
+        //             non_zero_avg_fret: OrderedFloat(4.3),
+        //             non_zero_fret_span: 3,
+        //         },
+        //     },
+        //     &path_nodes,
+        // );
+
+        use pathfinding::prelude::dijkstra;
+        let path_result = dijkstra(
+            &Node::Start,
+            |current_node| calc_next_nodes(current_node, path_nodes.clone()),
+            |current_node| {
+                // (path_nodes.len() - 2)
+                //     == match current_node {
+                //         Node::Start => 0,
+                //         Node::Rest { line_index } | Node::Note { line_index, .. } => {
+                //             *line_index as usize
+                //         }
+                //     }
+                match current_node {
+                    Node::Start => false,
+                    Node::Rest { line_index } | Node::Note { line_index, .. } => {
+                        *line_index == (num_path_node_groups - 1) as u16
+                    }
+                }
+            },
+        );
+        dbg!(&path_result);
 
         // const WARNING_FRET_SPAN: u8 = 4;
 
         Ok(Arrangement {})
     }
+}
+
+#[allow(dead_code)]
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
 }
 
 /// Generates fingerings for each pitch, and returns a result containing the fingerings or
@@ -110,9 +172,9 @@ impl Arrangement {
 fn validate_fingerings(
     guitar: &Guitar,
     input_pitches: &[Line<BeatVec<Pitch>>],
-) -> Result<Vec<Line<BeatVec<PitchVec<Fingering>>>>> {
+) -> Result<Vec<Line<BeatVec<PitchVec<PitchFingering>>>>> {
     let mut impossible_pitches: Vec<InvalidInput> = vec![];
-    let fingerings: Vec<Line<BeatVec<PitchVec<Fingering>>>> = input_pitches
+    let fingerings: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> = input_pitches
         .iter()
         .enumerate()
         .map(|(beat_index, beat_input)| match beat_input {
@@ -122,7 +184,7 @@ fn validate_fingerings(
                 beat_pitches
                     .iter()
                     .map(|beat_pitch| {
-                        let pitch_fingerings: PitchVec<Fingering> =
+                        let pitch_fingerings: PitchVec<PitchFingering> =
                             generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                         if pitch_fingerings.is_empty() {
                             impossible_pitches.push(InvalidInput {
@@ -303,19 +365,19 @@ mod test_validate_fingerings {
 }
 
 fn generate_fingering_combos(
-    beat_fingerings_per_pitch: &[Vec<Fingering>],
-) -> BeatVec<BeatFingering> {
+    beat_fingerings_per_pitch: &[Vec<PitchFingering>],
+) -> BeatVec<BeatFingeringCombo> {
     beat_fingerings_per_pitch
         .iter()
         .multi_cartesian_product()
         .filter(no_duplicate_strings)
-        .map(BeatFingering::new)
+        .map(BeatFingeringCombo::new)
         .collect::<Vec<_>>()
 }
 
 /// Checks if there are any duplicate strings in a vector of `Fingering`
 /// objects to ensure that all pitches can be played.
-fn no_duplicate_strings(beat_fingering_option: &Vec<&Fingering>) -> bool {
+fn no_duplicate_strings(beat_fingering_option: &Vec<&PitchFingering>) -> bool {
     let num_pitches = beat_fingering_option.len();
     let num_strings = beat_fingering_option
         .iter()
@@ -332,81 +394,81 @@ mod test_no_duplicate_strings {
 
     #[test]
     fn valid_simple() {
-        let fingering_1 = Fingering {
+        let fingering_1 = PitchFingering {
             pitch: Pitch::B6,
             string_number: StringNumber::new(2).unwrap(),
             fret: 3,
         };
-        let beat_fingering_option: &Vec<&Fingering> = &vec![&fingering_1];
+        let beat_fingering_option: &Vec<&PitchFingering> = &vec![&fingering_1];
 
         assert!(no_duplicate_strings(beat_fingering_option));
     }
     #[test]
     fn valid_complex() {
-        let fingering_1 = Fingering {
+        let fingering_1 = PitchFingering {
             pitch: Pitch::CSharp2,
             string_number: StringNumber::new(1).unwrap(),
             fret: 1,
         };
-        let fingering_2 = Fingering {
+        let fingering_2 = PitchFingering {
             pitch: Pitch::F4,
             string_number: StringNumber::new(2).unwrap(),
             fret: 3,
         };
-        let fingering_3 = Fingering {
+        let fingering_3 = PitchFingering {
             pitch: Pitch::A5,
             string_number: StringNumber::new(4).unwrap(),
             fret: 4,
         };
-        let fingering_4 = Fingering {
+        let fingering_4 = PitchFingering {
             pitch: Pitch::DSharp6,
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: &Vec<&Fingering> =
+        let beat_fingering_option: &Vec<&PitchFingering> =
             &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
         assert!(no_duplicate_strings(beat_fingering_option));
     }
     #[test]
     fn invalid_simple() {
-        let fingering_1 = Fingering {
+        let fingering_1 = PitchFingering {
             pitch: Pitch::CSharp2,
             string_number: StringNumber::new(4).unwrap(),
             fret: 1,
         };
-        let fingering_2 = Fingering {
+        let fingering_2 = PitchFingering {
             pitch: Pitch::F4,
             string_number: StringNumber::new(4).unwrap(),
             fret: 3,
         };
-        let beat_fingering_option: &Vec<&Fingering> = &vec![&fingering_1, &fingering_2];
+        let beat_fingering_option: &Vec<&PitchFingering> = &vec![&fingering_1, &fingering_2];
 
         assert!(!no_duplicate_strings(beat_fingering_option));
     }
     #[test]
     fn invalid_complex() {
-        let fingering_1 = Fingering {
+        let fingering_1 = PitchFingering {
             pitch: Pitch::CSharp2,
             string_number: StringNumber::new(1).unwrap(),
             fret: 1,
         };
-        let fingering_2 = Fingering {
+        let fingering_2 = PitchFingering {
             pitch: Pitch::F4,
             string_number: StringNumber::new(3).unwrap(),
             fret: 3,
         };
-        let fingering_3 = Fingering {
+        let fingering_3 = PitchFingering {
             pitch: Pitch::A5,
             string_number: StringNumber::new(6).unwrap(),
             fret: 4,
         };
-        let fingering_4 = Fingering {
+        let fingering_4 = PitchFingering {
             pitch: Pitch::DSharp6,
             string_number: StringNumber::new(3).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: &Vec<&Fingering> =
+        let beat_fingering_option: &Vec<&PitchFingering> =
             &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
         assert!(!no_duplicate_strings(beat_fingering_option));
@@ -419,7 +481,7 @@ mod test_no_duplicate_strings {
 
 /// Calculates the difference between the maximum and minimum non-zero
 /// fret numbers in a given vector of fingerings.
-fn calc_fret_span(beat_fingering_candidate: &[&Fingering]) -> Option<u8> {
+fn calc_fret_span(beat_fingering_candidate: Vec<&PitchFingering>) -> Option<u8> {
     let beat_fingering_option_fret_numbers = beat_fingering_candidate
         .iter()
         .filter(|fingering| fingering.fret != 0)
@@ -443,38 +505,38 @@ mod test_calc_fret_span {
 
     #[test]
     fn simple() {
-        let fingering_1 = Fingering {
+        let fingering_1 = PitchFingering {
             pitch: Pitch::B6,
             string_number: StringNumber::new(2).unwrap(),
             fret: 3,
         };
-        let beat_fingering_option: &Vec<&Fingering> = &vec![&fingering_1];
+        let beat_fingering_option: &Vec<&PitchFingering> = &vec![&fingering_1];
 
         assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 0);
     }
     #[test]
     fn complex() {
-        let fingering_1 = Fingering {
+        let fingering_1 = PitchFingering {
             pitch: Pitch::CSharp2,
             string_number: StringNumber::new(1).unwrap(),
             fret: 1,
         };
-        let fingering_2 = Fingering {
+        let fingering_2 = PitchFingering {
             pitch: Pitch::F4,
             string_number: StringNumber::new(2).unwrap(),
             fret: 3,
         };
-        let fingering_3 = Fingering {
+        let fingering_3 = PitchFingering {
             pitch: Pitch::A5,
             string_number: StringNumber::new(4).unwrap(),
             fret: 4,
         };
-        let fingering_4 = Fingering {
+        let fingering_4 = PitchFingering {
             pitch: Pitch::DSharp6,
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: &Vec<&Fingering> =
+        let beat_fingering_option: &Vec<&PitchFingering> =
             &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
         assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 3);
@@ -483,4 +545,59 @@ mod test_calc_fret_span {
     fn empty_input() {
         assert!(calc_fret_span(&[]).is_none());
     }
+}
+
+fn calc_next_nodes<'a>(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32)> {
+    let next_node_index = match current_node {
+        Node::Start => 0,
+        Node::Rest { line_index } | Node::Note { line_index, .. } => line_index + 1,
+    };
+
+    let next_nodes = path_nodes
+        .iter()
+        .filter(|&node| {
+            next_node_index
+                == match node {
+                    Node::Start => panic!("Start should never be a future node."),
+                    Node::Rest { line_index } | Node::Note { line_index, .. } => *line_index,
+                }
+        })
+        .map(|next_node| {
+            (
+                next_node.clone(),
+                calculate_node_cost(current_node, next_node),
+            )
+        })
+        .collect_vec();
+
+    // dbg!(&next_nodes);
+
+    next_nodes
+}
+
+fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i32 {
+    let current_avg_fret = match current_node {
+        Node::Start => return 0,
+        Node::Rest { .. } => return 0,
+        Node::Note {
+            beat_fingering_combo,
+            ..
+        } => beat_fingering_combo.non_zero_avg_fret,
+    };
+
+    let (next_avg_fret, next_fret_span) = match next_node {
+        Node::Start => panic!("Start should never be a future node."),
+        Node::Rest { .. } => return 0,
+        Node::Note {
+            beat_fingering_combo,
+            ..
+        } => (
+            beat_fingering_combo.non_zero_avg_fret,
+            beat_fingering_combo.non_zero_fret_span,
+        ),
+    };
+
+    let avg_fret_difference = (next_avg_fret - current_avg_fret).abs();
+
+    (avg_fret_difference * 10.0) as i32 + next_fret_span as i32
 }

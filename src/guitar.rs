@@ -6,13 +6,13 @@ use std::{
 };
 use strum::IntoEnumIterator;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Fingering {
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct PitchFingering {
     pub pitch: Pitch,
     pub string_number: StringNumber,
     pub fret: u8,
 }
-impl fmt::Debug for Fingering {
+impl fmt::Debug for PitchFingering {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -465,14 +465,14 @@ mod test_create_string_range {
 pub fn generate_pitch_fingerings(
     string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
     pitch: &Pitch,
-) -> PitchVec<Fingering> {
-    let fingerings: PitchVec<Fingering> = string_ranges
+) -> PitchVec<PitchFingering> {
+    let fingerings: PitchVec<PitchFingering> = string_ranges
         .iter()
         .filter_map(|(string_number, string_range)| {
             string_range
                 .iter()
                 .position(|x| x == pitch)
-                .map(|fret_number| Fingering {
+                .map(|fret_number| PitchFingering {
                     pitch: *pitch,
                     string_number: *string_number,
                     fret: fret_number as u8,
@@ -522,7 +522,7 @@ mod test_generate_pitch_fingering {
 
         assert_eq!(
             generate_pitch_fingerings(&string_ranges, &Pitch::E2),
-            vec![Fingering {
+            vec![PitchFingering {
                 pitch: Pitch::E2,
                 string_number: StringNumber::new(6).unwrap(),
                 fret: 0
@@ -531,17 +531,17 @@ mod test_generate_pitch_fingering {
         assert_eq!(
             generate_pitch_fingerings(&string_ranges, &Pitch::D3),
             vec![
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::D3,
                     string_number: StringNumber::new(4).unwrap(),
                     fret: 0
                 },
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::D3,
                     string_number: StringNumber::new(5).unwrap(),
                     fret: 5
                 },
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::D3,
                     string_number: StringNumber::new(6).unwrap(),
                     fret: 10
@@ -551,17 +551,17 @@ mod test_generate_pitch_fingering {
         assert_eq!(
             generate_pitch_fingerings(&string_ranges, &Pitch::CSharp4),
             vec![
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::CSharp4,
                     string_number: StringNumber::new(2).unwrap(),
                     fret: 2
                 },
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::CSharp4,
                     string_number: StringNumber::new(3).unwrap(),
                     fret: 6
                 },
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::CSharp4,
                     string_number: StringNumber::new(4).unwrap(),
                     fret: 11
@@ -587,7 +587,7 @@ mod test_generate_pitch_fingering {
 
         assert_eq!(
             generate_pitch_fingerings(&string_ranges, &Pitch::DSharp4),
-            vec![Fingering {
+            vec![PitchFingering {
                 pitch: Pitch::DSharp4,
                 string_number: StringNumber::new(2).unwrap(),
                 fret: 0
@@ -596,12 +596,12 @@ mod test_generate_pitch_fingering {
         assert_eq!(
             generate_pitch_fingerings(&string_ranges, &Pitch::ASharp4),
             vec![
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::ASharp4,
                     string_number: StringNumber::new(1).unwrap(),
                     fret: 3
                 },
-                Fingering {
+                PitchFingering {
                     pitch: Pitch::ASharp4,
                     string_number: StringNumber::new(2).unwrap(),
                     fret: 7
@@ -643,7 +643,7 @@ mod test_generate_pitch_fingering {
 
         assert_eq!(
             generate_pitch_fingerings(&string_ranges, &Pitch::E3),
-            vec![Fingering {
+            vec![PitchFingering {
                 pitch: Pitch::E3,
                 string_number: StringNumber::new(4).unwrap(),
                 fret: 2

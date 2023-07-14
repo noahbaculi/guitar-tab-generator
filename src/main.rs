@@ -11,7 +11,7 @@ use guitar::Guitar;
 
 pub mod arrangement;
 use arrangement::Arrangement;
-use arrangement::Line::Playable;
+use arrangement::Line::{MeasureBreak, Playable};
 
 fn main() {
     let tuning = BTreeMap::from([
@@ -43,6 +43,7 @@ fn main() {
     // ]; // invalid
     let input_pitches = vec![
         Playable(vec![Pitch::G3]),
+        MeasureBreak,
         Playable(vec![Pitch::B3]),
         Playable(vec![Pitch::D4, Pitch::G4]),
     ];
