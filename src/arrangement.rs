@@ -23,9 +23,6 @@ pub enum Line<T> {
 }
 use Line::{MeasureBreak, Playable, Rest};
 
-// #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-// struct
-
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 enum Node {
     Start,
@@ -40,7 +37,6 @@ enum Node {
 
 pub type PitchVec<T> = Vec<T>;
 type BeatVec<T> = Vec<T>;
-// type Candidates<T> = Vec<T>;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[allow(dead_code)]
@@ -569,6 +565,183 @@ fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i16
         .collect_vec();
 
     next_nodes
+}
+#[cfg(test)]
+mod test_calc_next_nodes {
+    use super::*;
+
+    fn create_path_nodes() -> Vec<Node> {
+        vec![
+            Node::Note {
+                line_index: 0,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(0.1),
+                    non_zero_fret_span: 0,
+                },
+            },
+            Node::Note {
+                line_index: 0,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(0.2),
+                    non_zero_fret_span: 0,
+                },
+            },
+            Node::Note {
+                line_index: 1,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(1.1),
+                    non_zero_fret_span: 1,
+                },
+            },
+            Node::Rest { line_index: 2 },
+            Node::Rest { line_index: 3 },
+            Node::Note {
+                line_index: 4,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(4.1),
+                    non_zero_fret_span: 4,
+                },
+            },
+            Node::Note {
+                line_index: 4,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(4.1),
+                    non_zero_fret_span: 4,
+                },
+            },
+        ]
+    }
+
+    #[test]
+    fn from_start_to_note() {
+        let current_node = Node::Start;
+
+        let expected_nodes_and_costs = vec![
+            Node::Note {
+                line_index: 0,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(0.1),
+                    non_zero_fret_span: 0,
+                },
+            },
+            Node::Note {
+                line_index: 0,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(0.2),
+                    non_zero_fret_span: 0,
+                },
+            },
+        ]
+        .iter()
+        .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+        .collect_vec();
+
+        assert_eq!(
+            calc_next_nodes(&current_node, create_path_nodes()),
+            expected_nodes_and_costs
+        );
+    }
+    #[test]
+    fn from_note_to_note() {
+        let current_node = Node::Note {
+            line_index: 0,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(0.1),
+                non_zero_fret_span: 0,
+            },
+        };
+
+        let expected_nodes_and_costs = vec![Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(1.1),
+                non_zero_fret_span: 1,
+            },
+        }]
+        .iter()
+        .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+        .collect_vec();
+
+        assert_eq!(
+            calc_next_nodes(&current_node, create_path_nodes()),
+            expected_nodes_and_costs
+        );
+    }
+    #[test]
+    fn from_note_to_rest() {
+        let current_node = Node::Note {
+            line_index: 1,
+            beat_fingering_combo: BeatFingeringCombo {
+                fingering_combo: vec![],
+                non_zero_avg_fret: OrderedFloat(1.1),
+                non_zero_fret_span: 1,
+            },
+        };
+
+        let expected_nodes_and_costs = vec![Node::Rest { line_index: 2 }]
+            .iter()
+            .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+            .collect_vec();
+
+        assert_eq!(
+            calc_next_nodes(&current_node, create_path_nodes()),
+            expected_nodes_and_costs
+        );
+    }
+    #[test]
+    fn from_rest_to_rest() {
+        let current_node = Node::Rest { line_index: 2 };
+
+        let expected_nodes_and_costs = vec![Node::Rest { line_index: 3 }]
+            .iter()
+            .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+            .collect_vec();
+
+        assert_eq!(
+            calc_next_nodes(&current_node, create_path_nodes()),
+            expected_nodes_and_costs
+        );
+    }
+    #[test]
+    fn from_rest_to_note() {
+        let current_node = Node::Rest { line_index: 3 };
+
+        let expected_nodes_and_costs = vec![
+            Node::Note {
+                line_index: 4,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(4.1),
+                    non_zero_fret_span: 4,
+                },
+            },
+            Node::Note {
+                line_index: 4,
+                beat_fingering_combo: BeatFingeringCombo {
+                    fingering_combo: vec![],
+                    non_zero_avg_fret: OrderedFloat(4.1),
+                    non_zero_fret_span: 4,
+                },
+            },
+        ]
+        .iter()
+        .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+        .collect_vec();
+
+        assert_eq!(
+            calc_next_nodes(&current_node, create_path_nodes()),
+            expected_nodes_and_costs
+        );
+    }
 }
 
 /// Calculates the cost of transitioning from one node to another based on the
