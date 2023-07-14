@@ -138,80 +138,83 @@ mod test_create_beat_fingering_combo {
     }
 }
 
-#[derive(Debug)]
-pub struct Arrangement {}
+#[derive(Debug, Eq, PartialEq)]
+pub struct Arrangement {
+    lines: Vec<Line<BeatVec<PitchFingering>>>,
+    difficulty: i32,
+}
 
-impl Arrangement {
-    pub fn new(guitar: Guitar, input_pitches: Vec<Line<BeatVec<Pitch>>>) -> Result<Self> {
-        let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
-            validate_fingerings(&guitar, &input_pitches)?;
+pub fn create_arrangements(
+    guitar: Guitar,
+    input_pitches: Vec<Line<BeatVec<Pitch>>>,
+) -> Result<Vec<Arrangement>> {
+    let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
+        validate_fingerings(&guitar, &input_pitches)?;
 
-        let measure_break_indices = pitch_fingering_candidates
-            .iter()
-            .enumerate()
-            .filter(|(.., line_candidate)| line_candidate == &&MeasureBreak)
-            .map(|(line_index, ..)| line_index);
+    let measure_break_indices: Vec<usize> = pitch_fingering_candidates
+        .iter()
+        .enumerate()
+        .filter(|(.., line_candidate)| line_candidate == &&MeasureBreak)
+        .map(|(line_index, ..)| line_index)
+        .collect_vec();
 
-        let path_node_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
-            .iter()
-            .filter(|&line_candidate| line_candidate != &MeasureBreak)
-            .enumerate()
-            .map(|(line_index, line_candidate)| match line_candidate {
-                MeasureBreak => vec![],
-                Rest => vec![Node::Rest {
-                    line_index: line_index as u16,
-                }],
-                Playable(beat_fingerings_per_pitch) => {
-                    generate_fingering_combos(beat_fingerings_per_pitch)
-                        .iter()
-                        .map(|pitch_fingering_group| Node::Note {
-                            line_index: line_index as u16,
-                            beat_fingering_combo: BeatFingeringCombo::new(
-                                pitch_fingering_group.to_vec(),
-                            ),
-                        })
-                        .collect()
-                }
-            })
-            .collect();
+    let path_node_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
+        .iter()
+        .filter(|&line_candidate| line_candidate != &MeasureBreak)
+        .enumerate()
+        .map(|(line_index, line_candidate)| match line_candidate {
+            MeasureBreak => vec![],
+            Rest => vec![Node::Rest {
+                line_index: line_index as u16,
+            }],
+            Playable(beat_fingerings_per_pitch) => {
+                generate_fingering_combos(beat_fingerings_per_pitch)
+                    .iter()
+                    .map(|pitch_fingering_group| Node::Note {
+                        line_index: line_index as u16,
+                        beat_fingering_combo: BeatFingeringCombo::new(
+                            pitch_fingering_group.to_vec(),
+                        ),
+                    })
+                    .collect()
+            }
+        })
+        .collect();
 
-        let num_path_node_groups = path_node_groups.len();
+    let num_path_node_groups = path_node_groups.len();
 
-        let path_nodes: Vec<Node> = path_node_groups.into_iter().flatten().collect_vec();
+    let path_nodes: Vec<Node> = path_node_groups.into_iter().flatten().collect_vec();
 
-        const NUM_ARRANGEMENTS: usize = 5;
-        let path_result = yen(
-            &Node::Start,
-            |current_node| calc_next_nodes(current_node, path_nodes.clone()),
-            |current_node| match current_node {
-                Node::Start => false,
-                Node::Rest { line_index } | Node::Note { line_index, .. } => {
-                    // Pathfinding goal is reached when the node is in the last node group
-                    *line_index == (num_path_node_groups - 1) as u16
-                }
-            },
-            NUM_ARRANGEMENTS,
-        );
-        dbg!(&path_result);
+    const NUM_ARRANGEMENTS: usize = 5;
+    let path_results: Vec<(Vec<Node>, i32)> = yen(
+        &Node::Start,
+        |current_node| calc_next_nodes(current_node, path_nodes.clone()),
+        |current_node| match current_node {
+            Node::Start => false,
+            Node::Rest { line_index } | Node::Note { line_index, .. } => {
+                // Pathfinding goal is reached when the node is in the last node group
+                *line_index == (num_path_node_groups - 1) as u16
+            }
+        },
+        NUM_ARRANGEMENTS,
+    );
+    dbg!(&path_results);
 
-        if path_result.is_empty() {
-            return Err(anyhow!("No arrangements could be calculated."));
-        }
-
-        // let mut path_lines: Vec<Line<BeatVec<PitchFingering>>> =
-        //     path_result.into_iter().map(process_path);
-
-        // // Add measure breaks back in
-        // for measure_break_index in measure_break_indices.sorted() {
-        //     path_lines.insert(measure_break_index, Line::MeasureBreak);
-        // }
-
-        // dbg!(&path_lines);
-
-        // const WARNING_FRET_SPAN: u8 = 4;
-
-        Ok(Arrangement {})
+    if path_results.is_empty() {
+        return Err(anyhow!("No arrangements could be calculated."));
     }
+
+    let arrangements = path_results.into_iter().map(|path_result| {
+        process_path(path_result.0, path_result.1, measure_break_indices.clone())
+    });
+    dbg!(&arrangements);
+
+    // const WARNING_FRET_SPAN: u8 = 4;
+
+    Ok(vec![Arrangement {
+        lines: vec![],
+        difficulty: 0,
+    }])
 }
 
 /// Generates fingerings for each pitch, and returns a result containing the fingerings or
@@ -691,15 +694,15 @@ mod test_calc_fret_span {
 /// Calculates the next nodes and their costs based on the current node and a
 /// list of all path nodes.
 ///
-/// Returns a vector of tuples, where each tuple contains a `Node` the `i16`
+/// Returns a vector of tuples, where each tuple contains a `Node` the `i32`
 /// cost of moving to that node.
-fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i16)> {
+fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32)> {
     let next_node_index = match current_node {
         Node::Start => 0,
         Node::Rest { line_index } | Node::Note { line_index, .. } => line_index + 1,
     };
 
-    let next_nodes = path_nodes
+    let next_nodes: Vec<(Node, i32)> = path_nodes
         .iter()
         .filter(|&node| {
             next_node_index
@@ -711,7 +714,7 @@ fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i16
         .map(|next_node| {
             (
                 next_node.clone(),
-                calculate_node_cost(current_node, next_node),
+                calculate_node_difficulty(current_node, next_node),
             )
         })
         .collect_vec();
@@ -792,7 +795,7 @@ mod test_calc_next_nodes {
             },
         ]
         .iter()
-        .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+        .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
         .collect_vec();
 
         assert_eq!(
@@ -820,7 +823,7 @@ mod test_calc_next_nodes {
             },
         }]
         .iter()
-        .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+        .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
         .collect_vec();
 
         assert_eq!(
@@ -841,7 +844,7 @@ mod test_calc_next_nodes {
 
         let expected_nodes_and_costs = vec![Node::Rest { line_index: 2 }]
             .iter()
-            .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+            .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
             .collect_vec();
 
         assert_eq!(
@@ -855,7 +858,7 @@ mod test_calc_next_nodes {
 
         let expected_nodes_and_costs = vec![Node::Rest { line_index: 3 }]
             .iter()
-            .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+            .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
             .collect_vec();
 
         assert_eq!(
@@ -886,7 +889,7 @@ mod test_calc_next_nodes {
             },
         ]
         .iter()
-        .map(|node| (node.clone(), calculate_node_cost(&current_node, node)))
+        .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
         .collect_vec();
 
         assert_eq!(
@@ -907,7 +910,7 @@ mod test_calc_next_nodes {
 
 /// Calculates the cost of transitioning from one node to another based on the
 /// average fret difference and fret span.
-fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i16 {
+fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
     let current_avg_fret = match current_node {
         Node::Start => 0.0,
         Node::Rest { .. } => 0.0,
@@ -937,10 +940,10 @@ fn calculate_node_cost(current_node: &Node, next_node: &Node) -> i16 {
         avg_fret_difference = 0.0;
     }
 
-    ((avg_fret_difference * 100.0) + (next_fret_span * 10.0) + next_avg_fret) as i16
+    ((avg_fret_difference * 100.0) + (next_fret_span * 10.0) + next_avg_fret) as i32
 }
 #[cfg(test)]
-mod test_calculate_node_cost {
+mod test_calculate_node_difficulty {
     use super::*;
 
     #[test]
@@ -962,7 +965,7 @@ mod test_calculate_node_cost {
             },
         };
 
-        assert_eq!(calculate_node_cost(&current_node, &next_node), 0);
+        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 3);
     }
     #[test]
     fn simple_from_start() {
@@ -975,7 +978,7 @@ mod test_calculate_node_cost {
             },
         };
 
-        assert_eq!(calculate_node_cost(&Node::Start, &next_node), 0);
+        assert_eq!(calculate_node_difficulty(&Node::Start, &next_node), 3);
     }
     #[test]
     fn simple_from_rest() {
@@ -989,8 +992,8 @@ mod test_calculate_node_cost {
         };
 
         assert_eq!(
-            calculate_node_cost(&Node::Rest { line_index: 0 }, &next_node),
-            0
+            calculate_node_difficulty(&Node::Rest { line_index: 0 }, &next_node),
+            3
         );
     }
     #[test]
@@ -1005,7 +1008,7 @@ mod test_calculate_node_cost {
         };
 
         assert_eq!(
-            calculate_node_cost(&current_node, &Node::Rest { line_index: 1 }),
+            calculate_node_difficulty(&current_node, &Node::Rest { line_index: 1 }),
             0
         );
     }
@@ -1028,7 +1031,7 @@ mod test_calculate_node_cost {
             },
         };
 
-        assert_eq!(calculate_node_cost(&current_node, &next_node), 14);
+        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 141);
     }
     #[test]
     fn simple_fret_span() {
@@ -1049,7 +1052,7 @@ mod test_calculate_node_cost {
             },
         };
 
-        assert_eq!(calculate_node_cost(&current_node, &next_node), 3);
+        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 34);
     }
     #[test]
     fn compound() {
@@ -1070,7 +1073,7 @@ mod test_calculate_node_cost {
             },
         };
 
-        assert_eq!(calculate_node_cost(&current_node, &next_node), 35);
+        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 352);
     }
     #[test]
     fn complex() {
@@ -1091,6 +1094,122 @@ mod test_calculate_node_cost {
             },
         };
 
-        assert_eq!(calculate_node_cost(&current_node, &next_node), 40);
+        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 410);
+    }
+}
+
+fn process_path(
+    path_nodes: Vec<Node>,
+    path_difficulty: i32,
+    measure_break_indices: Vec<usize>,
+) -> Arrangement {
+    let mut lines: Vec<Line<BeatVec<PitchFingering>>> = path_nodes
+        .into_iter()
+        .filter(|node| node != &Node::Start)
+        .map(|node| match node {
+            Node::Start => unreachable!("Start node should already have been filtered out."),
+            Node::Rest { .. } => Line::Rest,
+            Node::Note {
+                beat_fingering_combo,
+                ..
+            } => Line::Playable(beat_fingering_combo.fingering_combo),
+        })
+        .collect_vec();
+
+    // Add measure breaks back in
+    for measure_break_index in measure_break_indices.into_iter().sorted() {
+        lines.insert(measure_break_index, Line::MeasureBreak);
+    }
+
+    Arrangement {
+        lines,
+        difficulty: path_difficulty,
+    }
+}
+#[cfg(test)]
+mod test_process_path {
+    use super::*;
+    use crate::StringNumber;
+
+    #[test]
+    fn simple() {
+        let placeholder_beat_fingering_combo = BeatFingeringCombo {
+            fingering_combo: vec![PitchFingering {
+                pitch: Pitch::C4,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 3,
+            }],
+            non_zero_avg_fret: OrderedFloat(3.0),
+            non_zero_fret_span: 0,
+        };
+
+        let path_nodes = vec![
+            Node::Start,
+            Node::Note {
+                line_index: 0,
+                beat_fingering_combo: placeholder_beat_fingering_combo.clone(),
+            },
+        ];
+
+        let arrangement = process_path(path_nodes, 123, vec![]);
+
+        let expected_arrangement = Arrangement {
+            lines: vec![Playable(placeholder_beat_fingering_combo.fingering_combo)],
+            difficulty: 123,
+        };
+
+        assert_eq!(arrangement, expected_arrangement);
+    }
+    #[test]
+    fn complex() {
+        let placeholder_beat_fingering_combo = BeatFingeringCombo {
+            fingering_combo: vec![PitchFingering {
+                pitch: Pitch::C4,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 3,
+            }],
+            non_zero_avg_fret: OrderedFloat(3.0),
+            non_zero_fret_span: 0,
+        };
+
+        let path_nodes = vec![
+            Node::Start,
+            Node::Note {
+                line_index: 0,
+                beat_fingering_combo: placeholder_beat_fingering_combo.clone(),
+            },
+            Node::Note {
+                line_index: 1,
+                beat_fingering_combo: placeholder_beat_fingering_combo.clone(),
+            },
+            Node::Rest { line_index: 2 },
+            Node::Note {
+                line_index: 3,
+                beat_fingering_combo: placeholder_beat_fingering_combo.clone(),
+            },
+            Node::Note {
+                line_index: 4,
+                beat_fingering_combo: placeholder_beat_fingering_combo.clone(),
+            },
+        ];
+
+        let arrangement = process_path(path_nodes, 321, vec![0, 2, 5, 7]);
+
+        let expected_arrangement = Arrangement {
+            lines: vec![
+                MeasureBreak,
+                Playable(placeholder_beat_fingering_combo.clone().fingering_combo),
+                MeasureBreak,
+                Playable(placeholder_beat_fingering_combo.clone().fingering_combo),
+                Rest,
+                MeasureBreak,
+                Playable(placeholder_beat_fingering_combo.clone().fingering_combo),
+                MeasureBreak,
+                Playable(placeholder_beat_fingering_combo.fingering_combo),
+            ],
+            difficulty: 321,
+        };
+
+        assert_eq!(arrangement, expected_arrangement);
     }
 }

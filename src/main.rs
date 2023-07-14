@@ -10,7 +10,6 @@ pub mod guitar;
 use guitar::Guitar;
 
 pub mod arrangement;
-use arrangement::Arrangement;
 use arrangement::Line::{MeasureBreak, Playable, Rest};
 
 fn main() {
@@ -59,7 +58,7 @@ fn main() {
         Playable(vec![Pitch::D4, Pitch::G4]),
     ];
     // let input_pitches = vec![vec![Pitch::D4, Pitch::G4]];
-    let _arrangement = match Arrangement::new(_guitar, input_pitches) {
+    let _arrangement = match arrangement::create_arrangements(_guitar, input_pitches) {
         Ok(arrangement) => arrangement,
         Err(err) => {
             panic!("{}", err);
