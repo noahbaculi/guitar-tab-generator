@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use average::Mean;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
+use pathfinding::prelude::dijkstra;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -79,12 +80,12 @@ impl Arrangement {
         let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
             validate_fingerings(&guitar, &input_pitches)?;
 
-        // let x: Vec<_> = vec![vec![1, 2], vec![10, 20], vec![100, 200]]
-        //     .into_iter()
-        //     .multi_cartesian_product()
-        //     .collect();
-        // dbg!(&x);
-        // dbg!(&pitch_fingering_candidates);
+        let measure_break_indices = pitch_fingering_candidates
+            .iter()
+            .enumerate()
+            .filter(|(.., line_candidate)| line_candidate == &&MeasureBreak)
+            .map(|(line_index, ..)| line_index);
+
         let path_nodes_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
             .iter()
             .filter(|&line_candidate| line_candidate != &MeasureBreak)
@@ -107,53 +108,45 @@ impl Arrangement {
             .collect();
 
         let num_path_node_groups = path_nodes_groups.len();
-
         let path_nodes: Vec<Node> = path_nodes_groups.into_iter().flatten().collect_vec();
-        // dbg!(&path_nodes);
 
-        // calc_next_nodes(
-        //     &Node::Note {
-        //         line_index: 1,
-        //         beat_fingering_combo: BeatFingeringCombo {
-        //             fingering_combo: vec![],
-        //             non_zero_avg_fret: OrderedFloat(4.3),
-        //             non_zero_fret_span: 3,
-        //         },
-        //     },
-        //     &path_nodes,
-        // );
-
-        use pathfinding::prelude::dijkstra;
         let path_result = dijkstra(
             &Node::Start,
             |current_node| calc_next_nodes(current_node, path_nodes.clone()),
-            |current_node| {
-                // (path_nodes.len() - 2)
-                //     == match current_node {
-                //         Node::Start => 0,
-                //         Node::Rest { line_index } | Node::Note { line_index, .. } => {
-                //             *line_index as usize
-                //         }
-                //     }
-                match current_node {
-                    Node::Start => false,
-                    Node::Rest { line_index } | Node::Note { line_index, .. } => {
-                        *line_index == (num_path_node_groups - 1) as u16
-                    }
+            |current_node| match current_node {
+                Node::Start => false,
+                Node::Rest { line_index } | Node::Note { line_index, .. } => {
+                    *line_index == (num_path_node_groups - 1) as u16
                 }
             },
         );
-        dbg!(&path_result);
+        // dbg!(&path_result);
+
+        let mut path_lines = path_result
+            .expect("Path should exist.")
+            .0
+            .into_iter()
+            .filter(|node| node != &Node::Start)
+            .map(|node| match node {
+                Node::Start => panic!("Start node should already have been filtered out."),
+                Node::Rest { .. } => Line::Rest,
+                Node::Note {
+                    beat_fingering_combo,
+                    ..
+                } => Line::Playable(beat_fingering_combo.fingering_combo),
+            })
+            .collect_vec();
+
+        for measure_break_index in measure_break_indices.sorted() {
+            path_lines.insert(measure_break_index, Line::MeasureBreak);
+        }
+
+        dbg!(&path_lines);
 
         // const WARNING_FRET_SPAN: u8 = 4;
 
         Ok(Arrangement {})
     }
-}
-
-#[allow(dead_code)]
-fn print_type_of<T>(_: &T) {
-    println!("{}", std::any::type_name::<T>())
 }
 
 /// Generates fingerings for each pitch, and returns a result containing the fingerings or
