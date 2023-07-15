@@ -12,6 +12,8 @@ use guitar::Guitar;
 pub mod arrangement;
 use arrangement::Line::{MeasureBreak, Playable, Rest};
 
+mod parser;
+
 fn main() {
     let tuning = BTreeMap::from([
         (StringNumber::new(1).unwrap(), Pitch::E4),
@@ -58,11 +60,12 @@ fn main() {
         Playable(vec![Pitch::D4, Pitch::G4]),
     ];
     // let input_pitches = vec![vec![Pitch::D4, Pitch::G4]];
-    let _arrangement = match arrangement::create_arrangements(_guitar, input_pitches) {
-        Ok(arrangement) => arrangement,
-        Err(err) => {
-            panic!("{}", err);
-        }
+    let _arrangements = match arrangement::create_arrangements(_guitar, input_pitches) {
+        Ok(arrangements) => arrangements,
+        Err(err) => panic!("{}", err),
     };
-    // dbg!(&_arrangement);
+    // dbg!(&_arrangements);
+
+    let _arrangement_outputs = parser::parse_arrangements("G3\nb3\nD4G4".to_owned());
+    // dbg!(&_arrangement_outputs);
 }

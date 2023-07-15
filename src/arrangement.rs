@@ -198,7 +198,7 @@ pub fn create_arrangements(
         },
         NUM_ARRANGEMENTS,
     );
-    dbg!(&path_results);
+    // dbg!(&path_results);
 
     if path_results.is_empty() {
         return Err(anyhow!("No arrangements could be calculated."));
@@ -210,7 +210,6 @@ pub fn create_arrangements(
             process_path(path_result.0, path_result.1, measure_break_indices.clone())
         })
         .collect_vec();
-    dbg!(&arrangements);
 
     // const WARNING_FRET_SPAN: u8 = 4;
 
@@ -297,53 +296,58 @@ mod test_validate_fingerings {
             range: HashSet::from([
                 Pitch::E2,
                 Pitch::F2,
-                Pitch::FSharp2,
+                Pitch::FSharpGFlat2,
                 Pitch::G2,
                 Pitch::A2,
-                Pitch::ASharp2,
+                Pitch::ASharpBFlat2,
                 Pitch::B2,
                 Pitch::C3,
                 Pitch::D3,
-                Pitch::DSharp3,
+                Pitch::DSharpEFlat3,
                 Pitch::E3,
                 Pitch::F3,
                 Pitch::G3,
-                Pitch::GSharp3,
+                Pitch::GSharpAFlat3,
                 Pitch::A3,
-                Pitch::ASharp3,
+                Pitch::ASharpBFlat3,
                 Pitch::B3,
                 Pitch::C4,
-                Pitch::CSharp4,
+                Pitch::CSharpDFlat4,
                 Pitch::D4,
                 Pitch::E4,
                 Pitch::F4,
-                Pitch::FSharp4,
+                Pitch::FSharpGFlat4,
                 Pitch::G4,
             ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
-                    vec![Pitch::E4, Pitch::F4, Pitch::FSharp4, Pitch::G4],
+                    vec![Pitch::E4, Pitch::F4, Pitch::FSharpGFlat4, Pitch::G4],
                 ),
                 (
                     StringNumber::new(2).unwrap(),
-                    vec![Pitch::B3, Pitch::C4, Pitch::CSharp4, Pitch::D4],
+                    vec![Pitch::B3, Pitch::C4, Pitch::CSharpDFlat4, Pitch::D4],
                 ),
                 (
                     StringNumber::new(3).unwrap(),
-                    vec![Pitch::G3, Pitch::GSharp3, Pitch::A3, Pitch::ASharp3],
+                    vec![
+                        Pitch::G3,
+                        Pitch::GSharpAFlat3,
+                        Pitch::A3,
+                        Pitch::ASharpBFlat3,
+                    ],
                 ),
                 (
                     StringNumber::new(4).unwrap(),
-                    vec![Pitch::D3, Pitch::DSharp3, Pitch::E3, Pitch::F3],
+                    vec![Pitch::D3, Pitch::DSharpEFlat3, Pitch::E3, Pitch::F3],
                 ),
                 (
                     StringNumber::new(5).unwrap(),
-                    vec![Pitch::A2, Pitch::ASharp2, Pitch::B2, Pitch::C3],
+                    vec![Pitch::A2, Pitch::ASharpBFlat2, Pitch::B2, Pitch::C3],
                 ),
                 (
                     StringNumber::new(6).unwrap(),
-                    vec![Pitch::E2, Pitch::F2, Pitch::FSharp2, Pitch::G2],
+                    vec![Pitch::E2, Pitch::F2, Pitch::FSharpGFlat2, Pitch::G2],
                 ),
             ]),
         }
@@ -551,7 +555,7 @@ mod test_no_duplicate_strings {
     #[test]
     fn valid_complex() {
         let fingering_1 = PitchFingering {
-            pitch: Pitch::CSharp2,
+            pitch: Pitch::CSharpDFlat2,
             string_number: StringNumber::new(1).unwrap(),
             fret: 1,
         };
@@ -566,7 +570,7 @@ mod test_no_duplicate_strings {
             fret: 4,
         };
         let fingering_4 = PitchFingering {
-            pitch: Pitch::DSharp6,
+            pitch: Pitch::DSharpEFlat6,
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
@@ -578,7 +582,7 @@ mod test_no_duplicate_strings {
     #[test]
     fn invalid_simple() {
         let fingering_1 = PitchFingering {
-            pitch: Pitch::CSharp2,
+            pitch: Pitch::CSharpDFlat2,
             string_number: StringNumber::new(4).unwrap(),
             fret: 1,
         };
@@ -594,7 +598,7 @@ mod test_no_duplicate_strings {
     #[test]
     fn invalid_complex() {
         let fingering_1 = PitchFingering {
-            pitch: Pitch::CSharp2,
+            pitch: Pitch::CSharpDFlat2,
             string_number: StringNumber::new(1).unwrap(),
             fret: 1,
         };
@@ -609,7 +613,7 @@ mod test_no_duplicate_strings {
             fret: 4,
         };
         let fingering_4 = PitchFingering {
-            pitch: Pitch::DSharp6,
+            pitch: Pitch::DSharpEFlat6,
             string_number: StringNumber::new(3).unwrap(),
             fret: 0,
         };
@@ -661,7 +665,7 @@ mod test_calc_fret_span {
     #[test]
     fn complex() {
         let fingering_1 = PitchFingering {
-            pitch: Pitch::CSharp2,
+            pitch: Pitch::CSharpDFlat2,
             string_number: StringNumber::new(1).unwrap(),
             fret: 1,
         };
@@ -676,7 +680,7 @@ mod test_calc_fret_span {
             fret: 4,
         };
         let fingering_4 = PitchFingering {
-            pitch: Pitch::DSharp6,
+            pitch: Pitch::DSharpEFlat6,
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
