@@ -10,8 +10,13 @@ jobs:
       options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Generate code coverage
         run: |
-          cargo tarpaulin --exclude-files src/main.rs
+          cargo tarpaulin --exclude-files src/main.rs --out xml
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

@@ -204,17 +204,17 @@ pub fn create_arrangements(
         return Err(anyhow!("No arrangements could be calculated."));
     }
 
-    let arrangements = path_results.into_iter().map(|path_result| {
-        process_path(path_result.0, path_result.1, measure_break_indices.clone())
-    });
+    let arrangements = path_results
+        .into_iter()
+        .map(|path_result| {
+            process_path(path_result.0, path_result.1, measure_break_indices.clone())
+        })
+        .collect_vec();
     dbg!(&arrangements);
 
     // const WARNING_FRET_SPAN: u8 = 4;
 
-    Ok(vec![Arrangement {
-        lines: vec![],
-        difficulty: 0,
-    }])
+    Ok(arrangements)
 }
 
 /// Generates fingerings for each pitch, and returns a result containing the fingerings or
