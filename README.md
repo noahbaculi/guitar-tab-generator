@@ -33,6 +33,7 @@ Running To-Dos:
 
 - [ ] string parser
 - [ ] sharp pitches support
+- [ ] add filter for max_fret_span in `arrangements`
 - [ ] re-examine namespace of functions (object functions vs standalone) (public vs private)
 - [ ] code coverage badge
 - [ ] handle measure breaks and commented lines and test
@@ -43,4 +44,3 @@ Running To-Dos:
 - [ ] benchmarking via [Criterion](https://crates.io/crates/criterion)
 - [ ] borrowed types vs box vs RC
 - [ ] [Rayon](https://docs.rs/rayon/latest/rayon/#how-to-use-rayon) parallelism
-- [ ]
