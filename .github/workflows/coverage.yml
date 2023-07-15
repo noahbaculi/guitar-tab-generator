@@ -1,4 +1,4 @@
-name: coverage
+name: Test Coverage
 
 on: [push]
 jobs:
