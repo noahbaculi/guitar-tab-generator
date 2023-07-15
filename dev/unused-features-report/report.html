@@ -1,0 +1,140 @@
+
+    <html>
+        <head>
+            <title>Unused Feature Flag Finder Report</title>
+        
+            <style>
+                .styled-table {
+                    border-collapse: collapse;
+                    margin: 25px 0;
+                    font-size: 0.9em;
+                    font-family: sans-serif;
+                    min-width: 400px;
+                    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+                }
+                .styled-table thead tr {
+                    background-color: #009879;
+                    color: #ffffff;
+                    text-align: left;
+                }
+                .styled-table th,
+                .styled-table td {
+                    text-align: left;
+                    padding: 12px 15px;
+                }
+                .styled-table tbody tr {
+                    border-bottom: 1px solid #dddddd;
+                }                
+                .styled-table tbody tr:nth-of-type(even) {
+                    background-color: #f3f3f3;
+                }                
+                .styled-table tbody tr:last-of-type {
+                    border-bottom: 2px solid #009879;
+                }
+                .collapsible {
+                    background-color: #eee;
+                    color: #444;
+                    cursor: pointer;
+                    padding: 10px;
+                    width: 100%;
+                    border: none;
+                    text-align: left;
+                    outline: none;
+                    font-size: 15px;
+                    font-family: sans-serif;
+                }
+                .active,
+                .collapsible:hover {
+                    background-color: #ccc;
+                }
+                .content {
+                    padding: 10px 18px;
+                    display: none;
+                    overflow: hidden;
+                    background-color: #f1f1f1;
+                }
+            </style>
+        </head>
+        
+        <body>
+            
+    <table class="styled-table">
+       <tr>
+           <th>Total Crates</th>
+           <th>Total Features</th>
+           <th>Total Potential Removable Features</th>
+       </tr>
+       <tr>
+        <td>1</td>
+        <td>7</td>
+        <td>7</td>
+       </tr>
+    </table>
+       
+             
+        <button type='button' class='collapsible'><h3>guitar-tab-generator</h3></button>
+        <div class='content'>
+            <i style='margin: 5px' class='styled-table'>/Users/noahbaculi/github/guitar-tab-generator/Cargo.toml</i>
+            
+        <table class="styled-table">
+        <tr>
+            <th>Dependency</th>
+            <th>Original</th>
+            <th>Potential Removable</th>
+            <th>Unremovable</th>
+        </tr>
+        
+        <tr>
+            <td>ordered-float</td>
+            <td>std</td>
+            <td>std</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>anyhow</td>
+            <td>std</td>
+            <td>std</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>strum</td>
+            <td>std</td>
+            <td>std</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>average</td>
+            <td>rayon, libm</td>
+            <td>libm, rayon</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>wasm-bindgen</td>
+            <td>spans, std</td>
+            <td>std, spans</td>
+            <td></td>
+        </tr>
+        </table>       
+       
+        </div>
+        </body>
+        
+        </html>
+        
+        <script>
+            var coll = document.getElementsByClassName("collapsible");
+            var i;
+        
+            for (i = 0; i < coll.length; i++) {
+                coll[i].addEventListener("click", function () {
+                    this.classList.toggle("active");
+                    var content = this.nextElementSibling;
+                    if (content.style.display === "block") {
+                        content.style.display = "none";
+                    } else {
+                        content.style.display = "block";
+                    }
+                });
+            }
+        </script>
+    </html>

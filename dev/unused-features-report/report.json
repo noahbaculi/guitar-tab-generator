@@ -1,0 +1,60 @@
+{
+  "version": 0,
+  "root_name": "guitar-tab-generator",
+  "workspace_crates": {
+    "guitar-tab-generator": {
+      "full_path": "/Users/noahbaculi/github/guitar-tab-generator/Cargo.toml",
+      "dependencies": {
+        "strum": {
+          "original_features": [
+            "std"
+          ],
+          "successfully_removed_features": [
+            "std"
+          ],
+          "unsuccessfully_removed_features": []
+        },
+        "average": {
+          "original_features": [
+            "libm",
+            "rayon"
+          ],
+          "successfully_removed_features": [
+            "libm",
+            "rayon"
+          ],
+          "unsuccessfully_removed_features": []
+        },
+        "wasm-bindgen": {
+          "original_features": [
+            "std",
+            "spans"
+          ],
+          "successfully_removed_features": [
+            "std",
+            "spans"
+          ],
+          "unsuccessfully_removed_features": []
+        },
+        "anyhow": {
+          "original_features": [
+            "std"
+          ],
+          "successfully_removed_features": [
+            "std"
+          ],
+          "unsuccessfully_removed_features": []
+        },
+        "ordered-float": {
+          "original_features": [
+            "std"
+          ],
+          "successfully_removed_features": [
+            "std"
+          ],
+          "unsuccessfully_removed_features": []
+        }
+      }
+    }
+  }
+}

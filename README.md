@@ -17,16 +17,22 @@ Commands:
 bacon
 
 # Calculate code coverage
-cargo tarpaulin --exclude-files src/main.rs --out Html
+cargo tarpaulin --exclude-files src/main.rs --out Html --output-dir dev/tarpaulin-coverage
 cargo llvm-cov --ignore-filename-regex src/main.rs --open
+
+# Screen for potentially unused feature flags
+unused-features analyze --report-dir 'dev/unused-features-report'
+unused-features build-report --input 'dev/unused-features-report/report.json'
 
 # Build WASM binary using [wasm-pack](https://rustwasm.github.io/docs/wasm-pack/introduction.html) and [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/introduction.html)
 wasm-pack build --target web
-ls -l pkg\guitar_tab_generator_bg.wasm  # get size in bytes
+ls -l pkg/guitar_tab_generator_bg.wasm  # get size in bytes
 ```
 
 Running To-Dos:
 
+- [ ] string parser
+- [ ] sharp pitches support
 - [ ] re-examine namespace of functions (object functions vs standalone) (public vs private)
 - [ ] code coverage badge
 - [ ] handle measure breaks and commented lines and test
@@ -37,4 +43,4 @@ Running To-Dos:
 - [ ] benchmarking via [Criterion](https://crates.io/crates/criterion)
 - [ ] borrowed types vs box vs RC
 - [ ] [Rayon](https://docs.rs/rayon/latest/rayon/#how-to-use-rayon) parallelism
-- [ ] 
+- [ ]
