@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Test</title>
+</head>
+
+<body>
+    <button id="thisButton">Hi</button>
+
+
+    <script type="module">
+        // import { add } from './pkg/guitar_tab_generator.js';
+        import init, { add } from './pkg/guitar_tab_generator.js';
+
+        async function run() {
+            await init();
+        }
+
+        run();
+
+        document.getElementById("thisButton").addEventListener("click", () => {
+            alert(`Tab output saved to your downloads! 🎉`);
+            console.log(add(5, 5));
+        });
+    </script>
+</body>
+
+</html>

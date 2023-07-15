@@ -19,6 +19,10 @@ bacon
 # Calculate code coverage
 cargo tarpaulin --exclude-files src/main.rs --out Html
 cargo llvm-cov --ignore-filename-regex src/main.rs --open
+
+# Build WASM binary using [wasm-pack](https://rustwasm.github.io/docs/wasm-pack/introduction.html) and [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/introduction.html)
+wasm-pack build --target web
+ls -l pkg\guitar_tab_generator_bg.wasm  # get size in bytes
 ```
 
 Running To-Dos:
