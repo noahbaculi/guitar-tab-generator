@@ -1,6 +1,6 @@
 # guitar-tab-generator
 
-[![Rust](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust.yml/badge.svg)](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust.yml)
+[![Build + Test](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust_build_and_test.yml/badge.svg)](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust_build_and_test.yml)
 [![Coverage](https://codecov.io/gh/noahbaculi/guitar-tab-generator/branch/main/graph/badge.svg?token=BB01PPL4LF)](https://codecov.io/gh/noahbaculi/guitar-tab-generator)
 
 Guitar tab generator from note names considering difficulty of different finger positions.
