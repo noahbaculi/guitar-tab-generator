@@ -46,7 +46,7 @@ fn main() {
         MeasureBreak,
         Playable(vec![Pitch::G3]),
         Rest,
-        Playable(vec![Pitch::B3]),
+        Playable(vec![Pitch::CSharpDFlat4]),
         MeasureBreak,
         Playable(vec![Pitch::D4, Pitch::G4]),
         Playable(vec![Pitch::A5]),
@@ -66,6 +66,6 @@ fn main() {
     };
     // dbg!(&_arrangements);
 
-    let _arrangement_outputs = parser::parse_arrangements("G3\nb3\nD4G4".to_owned());
+    let _arrangement_outputs = parser::parse_arrangements("bb5C7d#2\nG3\nb3\nD4G4".to_owned());
     // dbg!(&_arrangement_outputs);
 }

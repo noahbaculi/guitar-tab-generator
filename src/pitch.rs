@@ -177,12 +177,13 @@ pub enum Pitch {
     ASharpBFlat9,
     B9,
 }
+
 impl fmt::Display for Pitch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pitch_w_pretty_sharp = format!("{:?}", self)
+        let pitch_str_repr = format!("{:?}", self)
             .replace("Sharp", "♯")
             .replace("Flat", "♭");
-        write!(f, "{}", pitch_w_pretty_sharp)
+        write!(f, "{}", pitch_str_repr)
     }
 }
 #[cfg(test)]
