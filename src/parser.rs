@@ -1,5 +1,6 @@
 use crate::{arrangement::InvalidInput, pitch::Pitch};
 use itertools::Itertools;
+use regex::Regex;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
@@ -26,23 +27,19 @@ pub fn parse_arrangements(input: String) -> String {
     "Hi".to_owned()
 }
 
-fn parse_line(_input_index: usize, mut input_line: String) -> Result<Vec<Pitch>, InvalidInput> {
+fn parse_line(_input_index: usize, input_line: String) -> Result<Vec<Pitch>, InvalidInput> {
     dbg!(&input_line);
 
-    // Iterate over 3 character chunks first to identify sharp or flat pitches
-    let three_char_pitches = input_line
-        .chars()
-        .tuple_windows()
-        // .inspect(|(a, b, c)| println!("{} - {} - {}", a, b, c))
-        .map(|(a, b, c)| format!("{a}{b}{c}"))
-        .filter(|three_char_window| Pitch::from_str(three_char_window).is_ok())
-        .collect::<Vec<_>>();
-    dbg!(&three_char_pitches);
-    for three_char_pitch in three_char_pitches {
-        input_line = input_line.replace(&three_char_pitch, "");
+    let pattern = r"(?P<three_char_pitch>[a-gA-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[a-gA-G][0-9])";
+
+    let re = Regex::new(pattern).unwrap();
+
+    // for caps in re.captures_iter(&input_line) {
+    //     dbg!(&caps[0]);
+    // }
+    for caps in re.find_iter(&input_line) {
+        dbg!(&caps);
     }
-
-    dbg!(&input_line);
 
     println!("------");
     Ok(vec![])
