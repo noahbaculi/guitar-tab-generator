@@ -1,7 +1,8 @@
-use crate::{arrangement::InvalidInput, pitch::Pitch};
+use crate::pitch::Pitch;
+use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use regex::Regex;
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 use strum_macros::EnumString;
 
 #[derive(EnumString, Debug, PartialEq)]
@@ -16,31 +17,77 @@ pub fn parse_arrangements(input: String) -> String {
     let _x = input
         .lines()
         .enumerate()
-        .map(|(input_index, input_line)| parse_line(input_index, input_line.to_owned()))
+        .map(|(input_index, input_line)| parse_line(input_index, input_line))
         .collect_vec();
-    // dbg!(&_x);
+    dbg!(&_x);
 
     // let _a = Color::from_str("Green").unwrap();
-    let _a = Pitch::from_str("Bb0");
+    // let _a = Pitch::from_str("Bb2220");
     // dbg!(&_a);
 
     "Hi".to_owned()
 }
 
-fn parse_line(_input_index: usize, input_line: String) -> Result<Vec<Pitch>, InvalidInput> {
-    dbg!(&input_line);
-
+fn parse_line(input_index: usize, input_line: &str) -> Result<Vec<Pitch>> {
     let pattern = r"(?P<three_char_pitch>[a-gA-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[a-gA-G][0-9])";
 
     let re = Regex::new(pattern).unwrap();
 
-    // for caps in re.captures_iter(&input_line) {
-    //     dbg!(&caps[0]);
-    // }
-    for caps in re.find_iter(&input_line) {
-        dbg!(&caps);
+    let (each_matched_indices, matched_pitches): (Vec<Vec<usize>>, Vec<Pitch>) = re
+        .find_iter(&input_line)
+        .filter_map(|regex_match| {
+            if let Ok(pitch) = Pitch::from_str(regex_match.as_str()) {
+                return Some(((regex_match.start()..regex_match.end()).collect(), pitch));
+            }
+            None
+        })
+        .unzip();
+
+    let matched_indices: HashSet<usize> = each_matched_indices.into_iter().flatten().collect();
+    let input_indices: HashSet<usize> = (0..input_line.len()).collect();
+
+    let unmatched_indices: Vec<usize> = input_indices
+        .difference(&matched_indices)
+        .sorted()
+        .cloned()
+        .collect();
+
+    if !unmatched_indices.is_empty() {
+        let line_number = input_index + 1;
+        let consecutive_indices = consecutive_slices(&unmatched_indices);
+        let error_msg = consecutive_indices
+            .into_iter()
+            .sorted()
+            .map(|unmatched_input_indices| {
+                dbg!(&unmatched_input_indices);
+                let first_idx = *unmatched_input_indices.first().unwrap();
+                let last_idx = *unmatched_input_indices.last().unwrap();
+                format!(
+                    "Input '{}' on line {} could not be parsed into a pitch.",
+                    &input_line[first_idx..=last_idx],
+                    line_number
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        return Err(anyhow!(error_msg));
     }
 
-    println!("------");
-    Ok(vec![])
+    Ok(matched_pitches)
+}
+
+fn consecutive_slices(data: &[usize]) -> Vec<&[usize]> {
+    let mut slice_start = 0;
+    let mut result = Vec::new();
+    for i in 1..data.len() {
+        if data[i - 1] + 1 != data[i] {
+            result.push(&data[slice_start..i]);
+            slice_start = i;
+        }
+    }
+    if data.len() > 0 {
+        result.push(&data[slice_start..]);
+    }
+    result
 }

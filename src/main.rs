@@ -66,6 +66,7 @@ fn main() {
     };
     // dbg!(&_arrangements);
 
-    let _arrangement_outputs = parser::parse_arrangements("bb5C7d#2\nG3\nb3\nD4G4".to_owned());
+    let _arrangement_outputs =
+        parser::parse_arrangements("bb5C7d#2xyx\nG3noaha2aaron\nb3\nD4G4".to_owned());
     // dbg!(&_arrangement_outputs);
 }
