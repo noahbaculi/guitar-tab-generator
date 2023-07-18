@@ -28,8 +28,10 @@ pub fn parse_arrangements(input: String) -> String {
     "Hi".to_owned()
 }
 
-fn parse_line(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
+fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
     // println!("--------------------------------");
+    input_line = remove_comments(input_line);
+
     if let Some(rest) = parse_rest(input_line) {
         return Ok(rest);
     }
@@ -37,6 +39,10 @@ fn parse_line(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> 
         return Ok(measure_break);
     }
     parse_pitch(input_index, input_line)
+}
+
+fn remove_comments(input_line: &str) -> &str {
+    input_line.split("//").next().unwrap_or(input_line)
 }
 
 fn parse_rest(input_line: &str) -> Option<Line<Vec<Pitch>>> {
