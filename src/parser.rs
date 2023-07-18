@@ -21,10 +21,6 @@ pub fn parse_arrangements(input: String) -> String {
         .collect_vec();
     dbg!(&_x);
 
-    // let _a = Color::from_str("Green").unwrap();
-    // let _a = Pitch::from_str("Bb2220");
-    // dbg!(&_a);
-
     "Hi".to_owned()
 }
 
@@ -109,17 +105,57 @@ fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>>
     Ok(Line::Playable(matched_pitches))
 }
 
-fn consecutive_slices(data: &[usize]) -> Vec<&[usize]> {
+/// Returns a vector of consecutive slices of the input numbers.
+///
+/// This function does not sort the input vector and the consecutive slices are grouped together based
+/// on the order of the input numbers as received.
+/// Each returned slice is a reference to a subarray of `usize` elements from the original data array.
+fn consecutive_slices(numbers: &[usize]) -> Vec<&[usize]> {
     let mut slice_start = 0;
     let mut result = Vec::new();
-    for i in 1..data.len() {
-        if data[i - 1] + 1 != data[i] {
-            result.push(&data[slice_start..i]);
+    for i in 1..numbers.len() {
+        if numbers[i - 1] + 1 != numbers[i] {
+            result.push(&numbers[slice_start..i]);
             slice_start = i;
         }
     }
-    if !data.is_empty() {
-        result.push(&data[slice_start..]);
+    if !numbers.is_empty() {
+        result.push(&numbers[slice_start..]);
     }
     result
+}
+#[cfg(test)]
+mod test_consecutive_slices {
+    use super::*;
+
+    #[test]
+    fn simple() {
+        let flat_nums = vec![1, 2, 3, 4];
+        let consecutive_nums = vec![vec![1, 2, 3, 4]];
+
+        assert_eq!(consecutive_slices(&flat_nums), consecutive_nums);
+    }
+    #[test]
+    fn complex() {
+        let flat_nums = vec![1, 2, 3, 4, 113, 115, 116, 6, 7, 8];
+        let consecutive_nums = vec![vec![1, 2, 3, 4], vec![113], vec![115, 116], vec![6, 7, 8]];
+
+        assert_eq!(consecutive_slices(&flat_nums), consecutive_nums);
+    }
+    #[test]
+    fn no_consecutive() {
+        let flat_nums = vec![95, 65, 74, 96, 68, 29, 34, 32];
+        let consecutive_nums = vec![
+            vec![95],
+            vec![65],
+            vec![74],
+            vec![96],
+            vec![68],
+            vec![29],
+            vec![34],
+            vec![32],
+        ];
+
+        assert_eq!(consecutive_slices(&flat_nums), consecutive_nums);
+    }
 }
