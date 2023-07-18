@@ -40,6 +40,34 @@ fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch
 fn remove_comments(input_line: &str) -> &str {
     input_line.split("//").next().unwrap_or(input_line)
 }
+#[cfg(test)]
+mod test_remove_comments {
+    use super::*;
+
+    #[test]
+    fn no_comment() {
+        assert_eq!(remove_comments("Hello, World!"), "Hello, World!");
+        assert_eq!(remove_comments("B3C1"), "B3C1");
+    }
+    #[test]
+    fn single_comment() {
+        assert_eq!(
+            remove_comments("Hello, World! // This is a comment"),
+            "Hello, World! "
+        );
+    }
+    #[test]
+    fn multiple_comments() {
+        assert_eq!(
+            remove_comments("Hello, // Comment 1\nWorld! // Comment 2"),
+            "Hello, "
+        );
+    }
+    #[test]
+    fn comment_at_start() {
+        assert_eq!(remove_comments("// Comment at the start"), "");
+    }
+}
 
 fn parse_rest(input_line: &str) -> Option<Line<Vec<Pitch>>> {
     let input_line_w_o_whitespace: String =
