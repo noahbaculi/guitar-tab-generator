@@ -60,7 +60,7 @@ fn main() {
         Playable(vec![Pitch::D4, Pitch::G4]),
     ];
     // let input_pitches = vec![vec![Pitch::D4, Pitch::G4]];
-    let _arrangements = match arrangement::create_arrangements(_guitar, input_pitches) {
+    let _arrangements = match arrangement::create_arrangements(_guitar, input_pitches, 3) {
         Ok(arrangements) => arrangements,
         Err(err) => panic!("{}", err),
     };

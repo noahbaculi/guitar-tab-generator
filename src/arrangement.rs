@@ -234,23 +234,36 @@ pub struct Arrangement {
 pub fn create_arrangements(
     guitar: Guitar,
     input_pitches: Vec<Line<BeatVec<Pitch>>>,
+    num_arrangements: u8,
 ) -> Result<Vec<Arrangement>> {
+    const MAX_NUM_ARRANGEMENTS: u8 = 20;
+    match num_arrangements {
+        1..=MAX_NUM_ARRANGEMENTS => (),
+        0 => return Err(anyhow!("No arrangements were requested.")),
+        _ => {
+            return Err(anyhow!(
+                "Too many arrangements to calculate. The maximum is {}.",
+                MAX_NUM_ARRANGEMENTS
+            ))
+        }
+    };
+
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
         validate_fingerings(&guitar, &input_pitches)?;
 
     let measure_break_indices: Vec<usize> = pitch_fingering_candidates
         .iter()
         .enumerate()
-        .filter(|(.., line_candidate)| line_candidate == &&MeasureBreak)
+        .filter(|(.., line_candidate)| matches!(line_candidate, MeasureBreak))
         .map(|(line_index, ..)| line_index)
         .collect_vec();
 
     let path_node_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
         .iter()
-        .filter(|&line_candidate| line_candidate != &MeasureBreak)
+        .filter(|line_candidate| !matches!(line_candidate, MeasureBreak))
         .enumerate()
         .map(|(line_index, line_candidate)| match line_candidate {
-            MeasureBreak => vec![],
+            MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
             Rest => vec![Node::Rest {
                 line_index: line_index as u16,
             }],
@@ -272,7 +285,6 @@ pub fn create_arrangements(
 
     let path_nodes: Vec<Node> = path_node_groups.into_iter().flatten().collect_vec();
 
-    const NUM_ARRANGEMENTS: usize = 5;
     let path_results: Vec<(Vec<Node>, i32)> = yen(
         &Node::Start,
         |current_node| calc_next_nodes(current_node, path_nodes.clone()),
@@ -283,7 +295,7 @@ pub fn create_arrangements(
                 *line_index == (num_path_node_groups - 1) as u16
             }
         },
-        NUM_ARRANGEMENTS,
+        num_arrangements as usize,
     );
     // dbg!(&path_results);
 
@@ -302,10 +314,127 @@ pub fn create_arrangements(
 
     Ok(arrangements)
 }
-// #[cfg(test)]
-// mod test_create_arrangements {
-//     use super::*;
-// }
+#[cfg(test)]
+mod test_create_arrangements {
+    use super::*;
+    use crate::string_number::StringNumber;
+
+    #[test]
+    fn single_line_single_pitch() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
+        let expected_arrangements: Vec<Arrangement> = vec![Arrangement {
+            lines: vec![Line::Playable(vec![PitchFingering {
+                pitch: Pitch::E4,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 0,
+            }])],
+            difficulty: 0,
+            max_fret_span: 0,
+        }];
+
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1).unwrap();
+
+        assert_eq!(arrangements, expected_arrangements);
+    }
+    #[test]
+    fn single_line_single_pitch_multiple_arrangements() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
+        let expected_arrangements: Vec<Arrangement> = vec![
+            Arrangement {
+                lines: vec![Line::Playable(vec![PitchFingering {
+                    pitch: Pitch::E4,
+                    string_number: StringNumber::new(1).unwrap(),
+                    fret: 0,
+                }])],
+                difficulty: 0,
+                max_fret_span: 0,
+            },
+            Arrangement {
+                lines: vec![Line::Playable(vec![PitchFingering {
+                    pitch: Pitch::E4,
+                    string_number: StringNumber::new(2).unwrap(),
+                    fret: 5,
+                }])],
+                difficulty: 5,
+                max_fret_span: 0,
+            },
+            Arrangement {
+                lines: vec![Line::Playable(vec![PitchFingering {
+                    pitch: Pitch::E4,
+                    string_number: StringNumber::new(3).unwrap(),
+                    fret: 9,
+                }])],
+                difficulty: 9,
+                max_fret_span: 0,
+            },
+            Arrangement {
+                lines: vec![Line::Playable(vec![PitchFingering {
+                    pitch: Pitch::E4,
+                    string_number: StringNumber::new(4).unwrap(),
+                    fret: 14,
+                }])],
+                difficulty: 14,
+                max_fret_span: 0,
+            },
+        ];
+
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 10).unwrap();
+
+        assert_eq!(arrangements, expected_arrangements);
+    }
+    #[test]
+    fn single_lines_all_variants() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![
+            Line::Playable(vec![Pitch::E4]),
+            Line::Rest,
+            Line::MeasureBreak,
+        ];
+        let expected_arrangements: Vec<Arrangement> = vec![Arrangement {
+            lines: vec![
+                Line::Playable(vec![PitchFingering {
+                    pitch: Pitch::E4,
+                    string_number: StringNumber::new(1).unwrap(),
+                    fret: 0,
+                }]),
+                Line::Rest,
+                Line::MeasureBreak,
+            ],
+            difficulty: 0,
+            max_fret_span: 0,
+        }];
+
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1).unwrap();
+
+        assert_eq!(arrangements, expected_arrangements);
+    }
+    #[test]
+    fn empty_input() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![];
+
+        let error = create_arrangements(Guitar::default(), input_pitches, 1).unwrap_err();
+        let error_string = format!("{error}");
+        assert_eq!(error_string, "No arrangements could be calculated.");
+    }
+    #[test]
+    fn zero_arrangements_requested() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
+
+        let error = create_arrangements(Guitar::default(), input_pitches, 0).unwrap_err();
+        let error_string = format!("{error}");
+        assert_eq!(error_string, "No arrangements were requested.");
+    }
+    #[test]
+    fn too_many_arrangements_requested() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
+
+        let error = create_arrangements(Guitar::default(), input_pitches, 22).unwrap_err();
+        let error_string = format!("{error}");
+        assert_eq!(
+            error_string,
+            "Too many arrangements to calculate. The maximum is 20."
+        );
+    }
+}
 
 /// Generates fingerings for each pitch, and returns a result containing the fingerings or
 /// an error message if any impossible pitches (with no fingerings) are found.
