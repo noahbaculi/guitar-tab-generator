@@ -49,6 +49,23 @@ fn parse_rest(input_line: &str) -> Option<Line<Vec<Pitch>>> {
     }
     None
 }
+#[cfg(test)]
+mod test_parse_rest {
+    use super::*;
+
+    #[test]
+    fn empty_input() {
+        assert_eq!(parse_rest(""), Some(Line::Rest));
+    }
+    #[test]
+    fn pitch_input() {
+        assert_eq!(parse_rest("G7"), None);
+    }
+    #[test]
+    fn input_with_whitespace() {
+        assert_eq!(parse_rest(" "), Some(Line::Rest));
+    }
+}
 
 fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
     let unique_chars: HashSet<char> = input_line.chars().filter(|c| !c.is_whitespace()).collect();
