@@ -3,15 +3,6 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use regex::RegexBuilder;
 use std::{collections::HashSet, str::FromStr};
-use strum_macros::EnumString;
-
-#[derive(EnumString, Debug, PartialEq)]
-enum Color {
-    Red,
-    Green { range: usize },
-    Blue(usize),
-    Yellow,
-}
 
 pub fn parse_arrangements(input: String) -> String {
     let _x = input
@@ -19,7 +10,7 @@ pub fn parse_arrangements(input: String) -> String {
         .enumerate()
         .map(|(input_index, input_line)| parse_line(input_index, input_line))
         .collect_vec();
-    dbg!(&_x);
+    // dbg!(&_x);
 
     "Hi".to_owned()
 }
@@ -265,6 +256,12 @@ mod test_parse_pitch {
     fn invalid_typo() {
         let error_msg = format!("{}", parse_pitch(12, "ZA2G#444B3").unwrap_err());
         let expected_error_msg = "Input 'Z' on line 13 could not be parsed into a pitch.\nInput '44' on line 13 could not be parsed into a pitch.";
+        assert_eq!(error_msg, expected_error_msg);
+    }
+    #[test]
+    fn invalid_pitch() {
+        let error_msg = format!("{}", parse_pitch(28, "Fb3").unwrap_err());
+        let expected_error_msg = "Input 'Fb3' on line 29 could not be parsed into a pitch.";
         assert_eq!(error_msg, expected_error_msg);
     }
     #[test]
