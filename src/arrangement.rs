@@ -1022,19 +1022,11 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
         ),
     };
 
-    let avg_fret_difference = if matches!(current_node, Node::Start | Node::Rest { .. })
-        || current_avg_fret.is_none()
-        || matches!(next_node, Node::Rest { .. })
-        || next_avg_fret.is_none()
+    let mut avg_fret_difference = 0.0;
+    if let (Some(current_avg_fret_num), Some(next_avg_fret_num)) = (current_avg_fret, next_avg_fret)
     {
-        0.0
-    } else {
-        let next_avg_fret_num = next_avg_fret.expect("Next average fret should be some number.");
-        let current_avg_fret_num =
-            current_avg_fret.expect("Current average fret should be some number.");
-
-        (next_avg_fret_num - current_avg_fret_num).abs()
-    };
+        avg_fret_difference = (next_avg_fret_num - current_avg_fret_num).abs();
+    }
 
     ((avg_fret_difference * 100.0)
         + (next_fret_span * 10.0)
