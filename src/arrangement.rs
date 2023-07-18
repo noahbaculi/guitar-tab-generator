@@ -42,7 +42,7 @@ type BeatVec<T> = Vec<T>;
 #[allow(dead_code)]
 pub struct BeatFingeringCombo {
     fingering_combo: BeatVec<PitchFingering>,
-    non_zero_avg_fret: OrderedFloat<f32>,
+    non_zero_avg_fret: Option<OrderedFloat<f32>>,
     non_zero_fret_span: u8,
 }
 impl BeatFingeringCombo {
@@ -53,16 +53,7 @@ impl BeatFingeringCombo {
                 .into_iter()
                 .cloned()
                 .collect(),
-            non_zero_avg_fret: OrderedFloat(
-                beat_fingering_candidate
-                    .clone()
-                    .iter()
-                    .filter(|fingering| fingering.fret != 0)
-                    .map(|fingering| fingering.fret as f64)
-                    .collect::<Mean>()
-                    .mean() as f32,
-            ),
-
+            non_zero_avg_fret: calc_non_zero_avg_fret(&beat_fingering_candidate),
             non_zero_fret_span: calc_fret_span(beat_fingering_candidate).unwrap_or(0),
         }
     }
@@ -138,10 +129,26 @@ mod test_create_beat_fingering_combo {
     }
 }
 
+fn calc_non_zero_avg_fret(
+    beat_fingering_candidate: &[&PitchFingering],
+) -> Option<OrderedFloat<f32>> {
+    let non_zero_fingerings = beat_fingering_candidate
+        .iter()
+        .filter(|fingering| fingering.fret != 0)
+        .map(|fingering| fingering.fret as f64)
+        .collect::<Mean>();
+
+    match non_zero_fingerings.is_empty() {
+        true => None,
+        false => Some(OrderedFloat(non_zero_fingerings.mean() as f32)),
+    }
+}
+
 #[derive(Debug, Eq, PartialEq)]
 pub struct Arrangement {
     lines: Vec<Line<BeatVec<PitchFingering>>>,
     difficulty: i32,
+    max_fret_span: u8,
 }
 
 pub fn create_arrangements(
@@ -916,35 +923,43 @@ mod test_calc_next_nodes {
 /// average fret difference and fret span.
 fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
     let current_avg_fret = match current_node {
-        Node::Start => 0.0,
-        Node::Rest { .. } => 0.0,
         Node::Note {
             beat_fingering_combo,
             ..
-        } => beat_fingering_combo.non_zero_avg_fret.into_inner(),
+        } => beat_fingering_combo.non_zero_avg_fret,
+        _ => None,
     };
 
     let (next_avg_fret, next_fret_span) = match next_node {
         Node::Start => unreachable!("Start should never be a future node."),
-        Node::Rest { .. } => (0.0, 0.0),
+        Node::Rest { .. } => (None, 0.0),
         Node::Note {
             beat_fingering_combo,
             ..
         } => (
-            beat_fingering_combo.non_zero_avg_fret.into_inner(),
+            beat_fingering_combo.non_zero_avg_fret,
             beat_fingering_combo.non_zero_fret_span as f32,
         ),
     };
 
-    let mut avg_fret_difference = (next_avg_fret - current_avg_fret).abs();
-
+    let avg_fret_difference;
     if matches!(current_node, Node::Start | Node::Rest { .. })
-        | matches!(next_node, Node::Rest { .. })
+        || current_avg_fret == None
+        || matches!(next_node, Node::Rest { .. })
+        || next_avg_fret == None
     {
         avg_fret_difference = 0.0;
+    } else {
+        let next_avg_fret_num = next_avg_fret.expect("Next average fret should be some number.");
+        let current_avg_fret_num =
+            current_avg_fret.expect("Current average fret should be some number.");
+
+        avg_fret_difference = (next_avg_fret_num - current_avg_fret_num).abs();
     }
 
-    ((avg_fret_difference * 100.0) + (next_fret_span * 10.0) + next_avg_fret) as i32
+    ((avg_fret_difference * 100.0)
+        + (next_fret_span * 10.0)
+        + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner()) as i32
 }
 #[cfg(test)]
 mod test_calculate_node_difficulty {
@@ -1108,26 +1123,40 @@ fn process_path(
     measure_break_indices: Vec<usize>,
 ) -> Arrangement {
     let mut lines: Vec<Line<BeatVec<PitchFingering>>> = path_nodes
-        .into_iter()
-        .filter(|node| node != &Node::Start)
+        .iter()
+        .filter(|node| node != &&Node::Start)
         .map(|node| match node {
-            Node::Start => unreachable!("Start node should already have been filtered out."),
+            Node::Start => unreachable!("Start node should have been filtered out."),
             Node::Rest { .. } => Line::Rest,
             Node::Note {
                 beat_fingering_combo,
                 ..
-            } => Line::Playable(beat_fingering_combo.fingering_combo),
+            } => Line::Playable(beat_fingering_combo.fingering_combo.clone()),
         })
         .collect_vec();
-
     // Add measure breaks back in
     for measure_break_index in measure_break_indices.into_iter().sorted() {
         lines.insert(measure_break_index, Line::MeasureBreak);
     }
 
+    let max_fret_span: u8 = path_nodes
+        .iter()
+        .filter(|node| node != &&Node::Start)
+        .filter_map(|node| match node {
+            Node::Start => unreachable!("Start node should have been filtered out."),
+            Node::Rest { .. } => None,
+            Node::Note {
+                beat_fingering_combo,
+                ..
+            } => Some(beat_fingering_combo.non_zero_fret_span),
+        })
+        .max()
+        .unwrap_or(0);
+
     Arrangement {
         lines,
         difficulty: path_difficulty,
+        max_fret_span,
     }
 }
 #[cfg(test)]
