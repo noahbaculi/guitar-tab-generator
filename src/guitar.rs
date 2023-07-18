@@ -43,6 +43,19 @@ pub struct Guitar {
     pub range: HashSet<Pitch>,
     pub string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
 }
+impl Default for Guitar {
+    fn default() -> Guitar {
+        let tuning = BTreeMap::from([
+            (StringNumber::new(1).unwrap(), Pitch::E4),
+            (StringNumber::new(2).unwrap(), Pitch::B3),
+            (StringNumber::new(3).unwrap(), Pitch::G3),
+            (StringNumber::new(4).unwrap(), Pitch::D3),
+            (StringNumber::new(5).unwrap(), Pitch::A2),
+            (StringNumber::new(6).unwrap(), Pitch::E2),
+        ]);
+        Guitar::new(tuning, 18).expect("Default guitar should be valid.")
+    }
+}
 impl Guitar {
     pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8) -> Result<Self> {
         check_fret_number(num_frets)?;

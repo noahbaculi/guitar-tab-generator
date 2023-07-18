@@ -172,7 +172,7 @@ mod test_calc_non_zero_avg_fret {
         assert_eq!(calc_non_zero_avg_fret(&[&pitch_fingering_1]), None);
     }
     #[test]
-    fn mulitple_zero_frets() {
+    fn multiple_zero_frets() {
         let pitch_fingering_1 = PitchFingering {
             pitch: Pitch::A0,
             string_number: StringNumber::new(1).unwrap(),
@@ -302,6 +302,10 @@ pub fn create_arrangements(
 
     Ok(arrangements)
 }
+// #[cfg(test)]
+// mod test_create_arrangements {
+//     use super::*;
+// }
 
 /// Generates fingerings for each pitch, and returns a result containing the fingerings or
 /// an error message if any impossible pitches (with no fingerings) are found.
@@ -366,83 +370,10 @@ fn validate_fingerings(
 #[cfg(test)]
 mod test_validate_fingerings {
     use super::*;
-    use crate::StringNumber;
-    use std::collections::{BTreeMap, HashSet};
-
-    fn generate_standard_guitar() -> Guitar {
-        Guitar {
-            tuning: BTreeMap::from([
-                (StringNumber::new(1).unwrap(), Pitch::E4),
-                (StringNumber::new(2).unwrap(), Pitch::B3),
-                (StringNumber::new(3).unwrap(), Pitch::G3),
-                (StringNumber::new(4).unwrap(), Pitch::D3),
-                (StringNumber::new(5).unwrap(), Pitch::A2),
-                (StringNumber::new(6).unwrap(), Pitch::E2),
-            ]),
-            num_frets: 12,
-            range: HashSet::from([
-                Pitch::E2,
-                Pitch::F2,
-                Pitch::FSharpGFlat2,
-                Pitch::G2,
-                Pitch::A2,
-                Pitch::ASharpBFlat2,
-                Pitch::B2,
-                Pitch::C3,
-                Pitch::D3,
-                Pitch::DSharpEFlat3,
-                Pitch::E3,
-                Pitch::F3,
-                Pitch::G3,
-                Pitch::GSharpAFlat3,
-                Pitch::A3,
-                Pitch::ASharpBFlat3,
-                Pitch::B3,
-                Pitch::C4,
-                Pitch::CSharpDFlat4,
-                Pitch::D4,
-                Pitch::E4,
-                Pitch::F4,
-                Pitch::FSharpGFlat4,
-                Pitch::G4,
-            ]),
-            string_ranges: BTreeMap::from([
-                (
-                    StringNumber::new(1).unwrap(),
-                    vec![Pitch::E4, Pitch::F4, Pitch::FSharpGFlat4, Pitch::G4],
-                ),
-                (
-                    StringNumber::new(2).unwrap(),
-                    vec![Pitch::B3, Pitch::C4, Pitch::CSharpDFlat4, Pitch::D4],
-                ),
-                (
-                    StringNumber::new(3).unwrap(),
-                    vec![
-                        Pitch::G3,
-                        Pitch::GSharpAFlat3,
-                        Pitch::A3,
-                        Pitch::ASharpBFlat3,
-                    ],
-                ),
-                (
-                    StringNumber::new(4).unwrap(),
-                    vec![Pitch::D3, Pitch::DSharpEFlat3, Pitch::E3, Pitch::F3],
-                ),
-                (
-                    StringNumber::new(5).unwrap(),
-                    vec![Pitch::A2, Pitch::ASharpBFlat2, Pitch::B2, Pitch::C3],
-                ),
-                (
-                    StringNumber::new(6).unwrap(),
-                    vec![Pitch::E2, Pitch::F2, Pitch::FSharpGFlat2, Pitch::G2],
-                ),
-            ]),
-        }
-    }
 
     #[test]
     fn valid_simple() {
-        let guitar = generate_standard_guitar();
+        let guitar = Guitar::default();
         let input_pitches = vec![Playable(vec![Pitch::G3])];
         let expected_fingerings = vec![Playable(vec![generate_pitch_fingerings(
             &guitar.string_ranges,
@@ -456,7 +387,7 @@ mod test_validate_fingerings {
     }
     #[test]
     fn valid_complex() {
-        let guitar = generate_standard_guitar();
+        let guitar = Guitar::default();
         let input_pitches = vec![
             Playable(vec![Pitch::G3]),
             MeasureBreak,
@@ -488,7 +419,7 @@ mod test_validate_fingerings {
     }
     #[test]
     fn invalid_simple() {
-        let guitar = generate_standard_guitar();
+        let guitar = Guitar::default();
         let input_pitches = vec![Playable(vec![Pitch::B9])];
 
         let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
@@ -499,7 +430,7 @@ mod test_validate_fingerings {
     }
     #[test]
     fn invalid_complex() {
-        let guitar = generate_standard_guitar();
+        let guitar = Guitar::default();
         let input_pitches = vec![
             Playable(vec![Pitch::A1]),
             Playable(vec![Pitch::G3]),
