@@ -58,6 +58,47 @@ fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
     }
     None
 }
+#[cfg(test)]
+mod test_parse_measure_break {
+    use super::*;
+
+    #[test]
+    fn measure_break_dash() {
+        assert_eq!(parse_measure_break("-"), Some(Line::MeasureBreak));
+    }
+    #[test]
+    fn measure_break_en_dash() {
+        assert_eq!(parse_measure_break("–"), Some(Line::MeasureBreak));
+    }
+    #[test]
+    fn measure_break_em_dash() {
+        assert_eq!(parse_measure_break("—"), Some(Line::MeasureBreak));
+    }
+    #[test]
+    fn empty_input() {
+        assert_eq!(parse_measure_break(""), None);
+    }
+    #[test]
+    fn no_measure_break() {
+        assert_eq!(parse_measure_break("A2C5Eb4"), None);
+    }
+    #[test]
+    fn whitespace_input() {
+        assert_eq!(parse_measure_break("    "), None);
+    }
+    #[test]
+    fn multiple_dashes() {
+        assert_eq!(parse_measure_break("---"), Some(Line::MeasureBreak));
+    }
+    #[test]
+    fn multiple_en_dashes() {
+        assert_eq!(parse_measure_break("–––"), Some(Line::MeasureBreak));
+    }
+    #[test]
+    fn mixed_dashes() {
+        assert_eq!(parse_measure_break("-–—"), None);
+    }
+}
 
 /// Parses input line to extract valid musical pitches, returning an error if any part of the
 /// input line cannot be parsed into a pitch.
