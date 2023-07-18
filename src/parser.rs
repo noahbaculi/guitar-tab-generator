@@ -1,4 +1,4 @@
-use crate::pitch::Pitch;
+use crate::{arrangement::Line, pitch::Pitch};
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use regex::Regex;
@@ -28,13 +28,40 @@ pub fn parse_arrangements(input: String) -> String {
     "Hi".to_owned()
 }
 
-fn parse_line(input_index: usize, input_line: &str) -> Result<Vec<Pitch>> {
+fn parse_line(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
+    // println!("--------------------------------");
+    if let Some(rest) = parse_rest(input_line) {
+        return Ok(rest);
+    }
+    if let Some(measure_break) = parse_measure_break(input_line) {
+        return Ok(measure_break);
+    }
+    parse_pitch(input_index, input_line)
+}
+
+fn parse_rest(input_line: &str) -> Option<Line<Vec<Pitch>>> {
+    if input_line.is_empty() {
+        return Some(Line::Rest);
+    }
+    None
+}
+
+fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
+    let unique_chars: HashSet<char> = input_line.chars().collect();
+    if unique_chars == HashSet::<char>::from(['-'])
+        || unique_chars == HashSet::<char>::from(['–'])
+        || unique_chars == HashSet::<char>::from(['—'])
+    {
+        return Some(Line::MeasureBreak);
+    }
+    None
+}
+
+fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
     let pattern = r"(?P<three_char_pitch>[a-gA-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[a-gA-G][0-9])";
-
     let re = Regex::new(pattern).unwrap();
-
     let (each_matched_indices, matched_pitches): (Vec<Vec<usize>>, Vec<Pitch>) = re
-        .find_iter(&input_line)
+        .find_iter(input_line)
         .filter_map(|regex_match| {
             if let Ok(pitch) = Pitch::from_str(regex_match.as_str()) {
                 return Some(((regex_match.start()..regex_match.end()).collect(), pitch));
@@ -59,7 +86,6 @@ fn parse_line(input_index: usize, input_line: &str) -> Result<Vec<Pitch>> {
             .into_iter()
             .sorted()
             .map(|unmatched_input_indices| {
-                dbg!(&unmatched_input_indices);
                 let first_idx = *unmatched_input_indices.first().unwrap();
                 let last_idx = *unmatched_input_indices.last().unwrap();
                 format!(
@@ -74,7 +100,7 @@ fn parse_line(input_index: usize, input_line: &str) -> Result<Vec<Pitch>> {
         return Err(anyhow!(error_msg));
     }
 
-    Ok(matched_pitches)
+    Ok(Line::Playable(matched_pitches))
 }
 
 fn consecutive_slices(data: &[usize]) -> Vec<&[usize]> {
@@ -86,7 +112,7 @@ fn consecutive_slices(data: &[usize]) -> Vec<&[usize]> {
             slice_start = i;
         }
     }
-    if data.len() > 0 {
+    if !data.is_empty() {
         result.push(&data[slice_start..]);
     }
     result
