@@ -157,7 +157,7 @@ mod test_calc_non_zero_avg_fret {
         };
 
         assert_eq!(
-            calc_non_zero_avg_fret(&vec![&pitch_fingering_1]),
+            calc_non_zero_avg_fret(&[&pitch_fingering_1]),
             Some(OrderedFloat(2.0))
         );
     }
@@ -169,7 +169,7 @@ mod test_calc_non_zero_avg_fret {
             fret: 0,
         };
 
-        assert_eq!(calc_non_zero_avg_fret(&vec![&pitch_fingering_1]), None);
+        assert_eq!(calc_non_zero_avg_fret(&[&pitch_fingering_1]), None);
     }
     #[test]
     fn mulitple_zero_frets() {
@@ -185,7 +185,7 @@ mod test_calc_non_zero_avg_fret {
         };
 
         assert_eq!(
-            calc_non_zero_avg_fret(&vec![&pitch_fingering_1, &pitch_fingering_2]),
+            calc_non_zero_avg_fret(&[&pitch_fingering_1, &pitch_fingering_2]),
             None
         );
     }
@@ -213,7 +213,7 @@ mod test_calc_non_zero_avg_fret {
         };
 
         assert_eq!(
-            calc_non_zero_avg_fret(&vec![
+            calc_non_zero_avg_fret(&[
                 &pitch_fingering_1,
                 &pitch_fingering_2,
                 &pitch_fingering_3,
