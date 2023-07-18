@@ -42,14 +42,16 @@ fn remove_comments(input_line: &str) -> &str {
 }
 
 fn parse_rest(input_line: &str) -> Option<Line<Vec<Pitch>>> {
-    if input_line.is_empty() {
+    let input_line_w_o_whitespace: String =
+        input_line.chars().filter(|c| !c.is_whitespace()).collect();
+    if input_line_w_o_whitespace.is_empty() {
         return Some(Line::Rest);
     }
     None
 }
 
 fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
-    let unique_chars: HashSet<char> = input_line.chars().collect();
+    let unique_chars: HashSet<char> = input_line.chars().filter(|c| !c.is_whitespace()).collect();
     if unique_chars == HashSet::<char>::from(['-'])
         || unique_chars == HashSet::<char>::from(['–'])
         || unique_chars == HashSet::<char>::from(['—'])
@@ -59,7 +61,8 @@ fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
     None
 }
 #[cfg(test)]
-mod test_parse_measure_break {
+#[cfg(test)]
+mod tests {
     use super::*;
 
     #[test]
@@ -80,11 +83,11 @@ mod test_parse_measure_break {
     }
     #[test]
     fn no_measure_break() {
-        assert_eq!(parse_measure_break("A2C5Eb4"), None);
+        assert_eq!(parse_measure_break("ABCDEF"), None);
     }
     #[test]
     fn whitespace_input() {
-        assert_eq!(parse_measure_break("    "), None);
+        assert_eq!(parse_measure_break(" "), None);
     }
     #[test]
     fn multiple_dashes() {
@@ -97,6 +100,10 @@ mod test_parse_measure_break {
     #[test]
     fn mixed_dashes() {
         assert_eq!(parse_measure_break("-–—"), None);
+    }
+    #[test]
+    fn measure_break_with_whitespace() {
+        assert_eq!(parse_measure_break("--- "), Some(Line::MeasureBreak));
     }
 }
 
