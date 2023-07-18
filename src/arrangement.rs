@@ -143,6 +143,86 @@ fn calc_non_zero_avg_fret(
         false => Some(OrderedFloat(non_zero_fingerings.mean() as f32)),
     }
 }
+#[cfg(test)]
+mod test_calc_non_zero_avg_fret {
+    use super::*;
+    use crate::StringNumber;
+
+    #[test]
+    fn single_non_zero_fret() {
+        let pitch_fingering_1 = PitchFingering {
+            pitch: Pitch::A0,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 2,
+        };
+
+        assert_eq!(
+            calc_non_zero_avg_fret(&vec![&pitch_fingering_1]),
+            Some(OrderedFloat(2.0))
+        );
+    }
+    #[test]
+    fn single_zero_fret() {
+        let pitch_fingering_1 = PitchFingering {
+            pitch: Pitch::A0,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 0,
+        };
+
+        assert_eq!(calc_non_zero_avg_fret(&vec![&pitch_fingering_1]), None);
+    }
+    #[test]
+    fn mulitple_zero_frets() {
+        let pitch_fingering_1 = PitchFingering {
+            pitch: Pitch::A0,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 0,
+        };
+        let pitch_fingering_2 = PitchFingering {
+            pitch: Pitch::B2,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 0,
+        };
+
+        assert_eq!(
+            calc_non_zero_avg_fret(&vec![&pitch_fingering_1, &pitch_fingering_2]),
+            None
+        );
+    }
+    #[test]
+    fn multiple_mixed_frets() {
+        let pitch_fingering_1 = PitchFingering {
+            pitch: Pitch::A0,
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 2,
+        };
+        let pitch_fingering_2 = PitchFingering {
+            pitch: Pitch::B1,
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 5,
+        };
+        let pitch_fingering_3 = PitchFingering {
+            pitch: Pitch::C2,
+            string_number: StringNumber::new(3).unwrap(),
+            fret: 0,
+        };
+        let pitch_fingering_4 = PitchFingering {
+            pitch: Pitch::D3,
+            string_number: StringNumber::new(4).unwrap(),
+            fret: 1,
+        };
+
+        assert_eq!(
+            calc_non_zero_avg_fret(&vec![
+                &pitch_fingering_1,
+                &pitch_fingering_2,
+                &pitch_fingering_3,
+                &pitch_fingering_4,
+            ]),
+            Some(OrderedFloat(8.0 / 3.0))
+        );
+    }
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Arrangement {
