@@ -34,6 +34,36 @@ pub fn parse_pitches(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
 
     Ok(parsed_lines)
 }
+#[cfg(test)]
+mod test_parse_pitches {
+    use super::*;
+
+    #[test]
+    fn valid() {
+        let input = "A3\nE2// Comment\n\nG4BB2G4\n-\nE4".to_owned();
+        let expected = vec![
+            Line::Playable(vec![Pitch::A3]),
+            Line::Playable(vec![Pitch::E2]),
+            Line::Rest,
+            Line::Playable(vec![Pitch::G4, Pitch::ASharpBFlat2, Pitch::G4]),
+            Line::MeasureBreak,
+            Line::Playable(vec![Pitch::E4]),
+        ];
+        assert_eq!(parse_pitches(input).unwrap(), expected);
+    }
+    #[test]
+    fn invalid() {
+        let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
+
+        let error = parse_pitches(input).unwrap_err();
+        let error_msg = format!("{error}");
+
+        assert_eq!(
+            error_msg,
+            "Input 'xyz' on line 1 could not be parsed into a pitch.\nInput 'BB.2' on line 4 could not be parsed into a pitch."
+        );
+    }
+}
 
 fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
     input_line = remove_comments(input_line);
