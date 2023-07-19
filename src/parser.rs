@@ -1,22 +1,41 @@
-use crate::{arrangement::Line, pitch::Pitch};
+use crate::{
+    arrangement::{BeatVec, Line},
+    pitch::Pitch,
+};
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use regex::RegexBuilder;
+use std::result::Result::Ok;
 use std::{collections::HashSet, str::FromStr};
 
-pub fn parse_arrangements(input: String) -> String {
-    let _x = input
+pub fn parse_pitches(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
+    let line_parse_results: Vec<Result<Line<BeatVec<Pitch>>, anyhow::Error>> = input
         .lines()
         .enumerate()
         .map(|(input_index, input_line)| parse_line(input_index, input_line))
         .collect_vec();
-    // dbg!(&_x);
 
-    "Hi".to_owned()
+    let unparsable_lines_error_msg = line_parse_results
+        .iter()
+        .filter_map(|line| match line {
+            Err(err) => Some(format!("{}", err)),
+            Ok(_) => None,
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+    if !unparsable_lines_error_msg.is_empty() {
+        return Err(anyhow!(unparsable_lines_error_msg));
+    }
+
+    let parsed_lines: Vec<Line<BeatVec<Pitch>>> = line_parse_results
+        .into_iter()
+        .filter_map(|line| line.ok())
+        .collect::<Vec<_>>();
+
+    Ok(parsed_lines)
 }
 
 fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
-    // println!("--------------------------------");
     input_line = remove_comments(input_line);
 
     if let Some(rest) = parse_rest(input_line) {
@@ -154,11 +173,9 @@ fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>>
         .expect("Regex pattern should be valid");
     let (matched_index_ranges, matched_pitches): (Vec<Vec<usize>>, Vec<Pitch>) = re
         .find_iter(input_line)
-        .filter_map(|regex_match| {
-            if let Ok(pitch) = Pitch::from_str(regex_match.as_str()) {
-                return Some(((regex_match.start()..regex_match.end()).collect(), pitch));
-            }
-            None
+        .filter_map(|regex_match| match Pitch::from_str(regex_match.as_str()) {
+            Ok(pitch) => Some(((regex_match.start()..regex_match.end()).collect(), pitch)),
+            _ => None,
         })
         .unzip();
 

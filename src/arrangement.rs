@@ -36,7 +36,7 @@ enum Node {
 }
 
 pub type PitchVec<T> = Vec<T>;
-type BeatVec<T> = Vec<T>;
+pub type BeatVec<T> = Vec<T>;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 #[allow(dead_code)]
