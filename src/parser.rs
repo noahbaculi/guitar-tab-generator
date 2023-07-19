@@ -37,14 +37,49 @@ pub fn parse_pitches(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
 
 fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
     input_line = remove_comments(input_line);
+    let line_content: String = remove_whitespace(input_line);
 
-    if let Some(rest) = parse_rest(input_line) {
+    if let Some(rest) = parse_rest(&line_content) {
         return Ok(rest);
     }
-    if let Some(measure_break) = parse_measure_break(input_line) {
+    if let Some(measure_break) = parse_measure_break(&line_content) {
         return Ok(measure_break);
     }
-    parse_pitch(input_index, input_line)
+    parse_pitch(input_index, &line_content)
+}
+#[cfg(test)]
+mod test_parse_line {
+    use super::*;
+
+    #[test]
+    fn empty() {
+        assert_eq!(parse_line(0, "").unwrap(), Line::Rest);
+    }
+    #[test]
+    fn only_comment() {
+        assert_eq!(parse_line(0, "  // Long comment.... ").unwrap(), Line::Rest);
+    }
+    #[test]
+    fn measure_break() {
+        assert_eq!(parse_line(0, "    --    ").unwrap(), Line::MeasureBreak);
+        assert_eq!(parse_line(0, "- //comment").unwrap(), Line::MeasureBreak);
+    }
+    #[test]
+    fn valid_pitch() {
+        let expected = Line::Playable(vec![Pitch::GSharpAFlat2, Pitch::A4, Pitch::E3, Pitch::G2]);
+        assert_eq!(parse_line(123, "    G#2A4  E3 G2 ").unwrap(), expected);
+        assert_eq!(parse_line(123, "G#2A4E3 G2// Comment").unwrap(), expected);
+    }
+    #[test]
+    fn test_parse_line_invalid_input() {
+        let error = parse_line(4, "  Invalid Text  ").unwrap_err();
+        let error_msg = format!("{error}");
+
+        assert_eq!(
+            error_msg,
+            "Input 'InvalidText' on line 5 could not be parsed into a pitch."
+        );
+    }
 }
 
 fn remove_comments(input_line: &str) -> &str {
@@ -79,10 +114,12 @@ mod test_remove_comments {
     }
 }
 
+fn remove_whitespace(input: &str) -> String {
+    input.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
 fn parse_rest(input_line: &str) -> Option<Line<Vec<Pitch>>> {
-    let input_line_w_o_whitespace: String =
-        input_line.chars().filter(|c| !c.is_whitespace()).collect();
-    if input_line_w_o_whitespace.is_empty() {
+    if input_line.is_empty() {
         return Some(Line::Rest);
     }
     None
@@ -99,14 +136,10 @@ mod test_parse_rest {
     fn pitch_input() {
         assert_eq!(parse_rest("G7"), None);
     }
-    #[test]
-    fn input_with_whitespace() {
-        assert_eq!(parse_rest(" "), Some(Line::Rest));
-    }
 }
 
 fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
-    let unique_chars: HashSet<char> = input_line.chars().filter(|c| !c.is_whitespace()).collect();
+    let unique_chars: HashSet<char> = input_line.chars().collect();
     if unique_chars == HashSet::<char>::from(['-'])
         || unique_chars == HashSet::<char>::from(['–'])
         || unique_chars == HashSet::<char>::from(['—'])
@@ -116,8 +149,7 @@ fn parse_measure_break(input_line: &str) -> Option<Line<Vec<Pitch>>> {
     None
 }
 #[cfg(test)]
-#[cfg(test)]
-mod tests {
+mod test_parse_measure_break {
     use super::*;
 
     #[test]
@@ -156,10 +188,6 @@ mod tests {
     fn mixed_dashes() {
         assert_eq!(parse_measure_break("-–—"), None);
     }
-    #[test]
-    fn measure_break_with_whitespace() {
-        assert_eq!(parse_measure_break("--- "), Some(Line::MeasureBreak));
-    }
 }
 
 /// Parses input line to extract valid musical pitches, returning an error if any part of the
@@ -194,14 +222,14 @@ fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>>
         let error_msg = consecutive_indices
             .into_iter()
             .sorted()
-            .map(|unmatched_input_indices| {
+            .filter_map(|unmatched_input_indices| {
                 let first_idx = *unmatched_input_indices.first().unwrap();
                 let last_idx = *unmatched_input_indices.last().unwrap();
-                format!(
+                let unmatched_input = &input_line[first_idx..=last_idx];
+                Some(format!(
                     "Input '{}' on line {} could not be parsed into a pitch.",
-                    &input_line[first_idx..=last_idx],
-                    line_number
-                )
+                    unmatched_input, line_number
+                ))
             })
             .collect::<Vec<_>>()
             .join("\n");

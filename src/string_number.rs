@@ -23,15 +23,15 @@ mod test_create_string_number {
     }
     #[test]
     fn invalid_zero() {
-        let expected_error_string = "A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1).";
+        let expected_error_msg = "A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1).";
         let error = StringNumber::new(0).unwrap_err();
-        assert_eq!(format!("{error}"), expected_error_string);
+        assert_eq!(format!("{error}"), expected_error_msg);
     }
     #[test]
     fn invalid_too_high() {
-        let expected_error_string = "The string number (15) is too high. The maximum is 12.";
+        let expected_error_msg = "The string number (15) is too high. The maximum is 12.";
         let error = StringNumber::new(15).unwrap_err();
-        assert_eq!(format!("{error}"), expected_error_string);
+        assert_eq!(format!("{error}"), expected_error_msg);
     }
 }
 

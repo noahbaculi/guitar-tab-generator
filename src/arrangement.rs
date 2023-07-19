@@ -412,25 +412,25 @@ mod test_create_arrangements {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![];
 
         let error = create_arrangements(Guitar::default(), input_pitches, 1).unwrap_err();
-        let error_string = format!("{error}");
-        assert_eq!(error_string, "No arrangements could be calculated.");
+        let error_msg = format!("{error}");
+        assert_eq!(error_msg, "No arrangements could be calculated.");
     }
     #[test]
     fn zero_arrangements_requested() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
 
         let error = create_arrangements(Guitar::default(), input_pitches, 0).unwrap_err();
-        let error_string = format!("{error}");
-        assert_eq!(error_string, "No arrangements were requested.");
+        let error_msg = format!("{error}");
+        assert_eq!(error_msg, "No arrangements were requested.");
     }
     #[test]
     fn too_many_arrangements_requested() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
 
         let error = create_arrangements(Guitar::default(), input_pitches, 22).unwrap_err();
-        let error_string = format!("{error}");
+        let error_msg = format!("{error}");
         assert_eq!(
-            error_string,
+            error_msg,
             "Too many arrangements to calculate. The maximum is 20."
         );
     }
@@ -480,7 +480,7 @@ fn validate_fingerings(
         .collect();
 
     if !impossible_pitches.is_empty() {
-        let error_string = impossible_pitches
+        let error_msg = impossible_pitches
             .iter()
             .map(|invalid_input| {
                 format!(
@@ -491,7 +491,7 @@ fn validate_fingerings(
             .collect::<Vec<String>>()
             .join("\n");
 
-        return Err(anyhow!(error_string));
+        return Err(anyhow!(error_msg));
     }
 
     Ok(fingerings)
@@ -552,10 +552,10 @@ mod test_validate_fingerings {
         let input_pitches = vec![Playable(vec![Pitch::B9])];
 
         let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
-        let error_string = format!("{error}");
-        let expected_error_string =
+        let error_msg = format!("{error}");
+        let expected_error_msg =
             "Pitch B9 on line 1 cannot be played on any strings of the configured guitar.";
-        assert_eq!(error_string, expected_error_string);
+        assert_eq!(error_msg, expected_error_msg);
     }
     #[test]
     fn invalid_complex() {
@@ -570,13 +570,13 @@ mod test_validate_fingerings {
         ];
 
         let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
-        let error_string = format!("{error}");
-        let expected_error_string =
+        let error_msg = format!("{error}");
+        let expected_error_msg =
             "Pitch A1 on line 1 cannot be played on any strings of the configured guitar.\n\
             Pitch A1 on line 4 cannot be played on any strings of the configured guitar.\n\
             Pitch B1 on line 4 cannot be played on any strings of the configured guitar.\n\
             Pitch D2 on line 5 cannot be played on any strings of the configured guitar.";
-        assert_eq!(error_string, expected_error_string);
+        assert_eq!(error_msg, expected_error_msg);
     }
 }
 

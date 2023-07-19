@@ -477,14 +477,14 @@ mod test_create_string_range {
     #[test]
     fn invalid() {
         let error = create_string_range(&Pitch::G9, 5).unwrap_err();
-        let error_string = format!("{error}");
-        let expected_error_string = "Too many frets (5) for string starting at pitch G9. The highest pitch is B9, which would only exist at fret number 4.";
-        assert_eq!(error_string, expected_error_string);
+        let error_msg = format!("{error}");
+        let expected_error_msg = "Too many frets (5) for string starting at pitch G9. The highest pitch is B9, which would only exist at fret number 4.";
+        assert_eq!(error_msg, expected_error_msg);
 
         let error = create_string_range(&Pitch::E2, 100).unwrap_err();
-        let error_string = format!("{error}");
-        let expected_error_string = "Too many frets (100) for string starting at pitch E2. The highest pitch is B9, which would only exist at fret number 91.";
-        assert_eq!(error_string, expected_error_string);
+        let error_msg = format!("{error}");
+        let expected_error_msg = "Too many frets (100) for string starting at pitch E2. The highest pitch is B9, which would only exist at fret number 91.";
+        assert_eq!(error_msg, expected_error_msg);
     }
 }
 
