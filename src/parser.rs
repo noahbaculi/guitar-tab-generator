@@ -252,14 +252,14 @@ fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>>
         let error_msg = consecutive_indices
             .into_iter()
             .sorted()
-            .filter_map(|unmatched_input_indices| {
+            .map(|unmatched_input_indices| {
                 let first_idx = *unmatched_input_indices.first().unwrap();
                 let last_idx = *unmatched_input_indices.last().unwrap();
                 let unmatched_input = &input_line[first_idx..=last_idx];
-                Some(format!(
+                format!(
                     "Input '{}' on line {} could not be parsed into a pitch.",
                     unmatched_input, line_number
-                ))
+                )
             })
             .collect::<Vec<_>>()
             .join("\n");

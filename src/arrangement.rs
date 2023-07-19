@@ -231,6 +231,7 @@ pub struct Arrangement {
     max_fret_span: u8,
 }
 
+// TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
 pub fn create_arrangements(
     guitar: Guitar,
     input_pitches: Vec<Line<BeatVec<Pitch>>>,
