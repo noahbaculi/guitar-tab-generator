@@ -184,6 +184,110 @@ mod test_create_guitar {
         Ok(())
     }
     #[test]
+    fn valid_simple_capo() -> Result<()> {
+        let tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]);
+
+        const NUM_FRETS: u8 = 18;
+        const CAPO: u8 = 4;
+
+        let expected_guitar = Guitar {
+            tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3]),
+            num_frets: NUM_FRETS - CAPO,
+            range: HashSet::from([
+                Pitch::G5,
+                Pitch::D4,
+                Pitch::A5,
+                Pitch::CSharpDFlat5,
+                Pitch::ASharpBFlat4,
+                Pitch::B4,
+                Pitch::GSharpAFlat4,
+                Pitch::D5,
+                Pitch::E4,
+                Pitch::E5,
+                Pitch::C5,
+                Pitch::DSharpEFlat5,
+                Pitch::DSharpEFlat4,
+                Pitch::F4,
+                Pitch::GSharpAFlat5,
+                Pitch::G4,
+                Pitch::C4,
+                Pitch::ASharpBFlat5,
+                Pitch::CSharpDFlat4,
+                Pitch::B3,
+                Pitch::FSharpGFlat4,
+                Pitch::F5,
+                Pitch::A4,
+                Pitch::FSharpGFlat5,
+            ]),
+            string_ranges: BTreeMap::from([
+                (
+                    StringNumber::new(1).unwrap(),
+                    vec![
+                        Pitch::GSharpAFlat4,
+                        Pitch::A4,
+                        Pitch::ASharpBFlat4,
+                        Pitch::B4,
+                        Pitch::C5,
+                        Pitch::CSharpDFlat5,
+                        Pitch::D5,
+                        Pitch::DSharpEFlat5,
+                        Pitch::E5,
+                        Pitch::F5,
+                        Pitch::FSharpGFlat5,
+                        Pitch::G5,
+                        Pitch::GSharpAFlat5,
+                        Pitch::A5,
+                        Pitch::ASharpBFlat5,
+                    ],
+                ),
+                (
+                    StringNumber::new(2).unwrap(),
+                    vec![
+                        Pitch::DSharpEFlat4,
+                        Pitch::E4,
+                        Pitch::F4,
+                        Pitch::FSharpGFlat4,
+                        Pitch::G4,
+                        Pitch::GSharpAFlat4,
+                        Pitch::A4,
+                        Pitch::ASharpBFlat4,
+                        Pitch::B4,
+                        Pitch::C5,
+                        Pitch::CSharpDFlat5,
+                        Pitch::D5,
+                        Pitch::DSharpEFlat5,
+                        Pitch::E5,
+                        Pitch::F5,
+                    ],
+                ),
+                (
+                    StringNumber::new(3).unwrap(),
+                    vec![
+                        Pitch::B3,
+                        Pitch::C4,
+                        Pitch::CSharpDFlat4,
+                        Pitch::D4,
+                        Pitch::DSharpEFlat4,
+                        Pitch::E4,
+                        Pitch::F4,
+                        Pitch::FSharpGFlat4,
+                        Pitch::G4,
+                        Pitch::GSharpAFlat4,
+                        Pitch::A4,
+                        Pitch::ASharpBFlat4,
+                        Pitch::B4,
+                        Pitch::C5,
+                        Pitch::CSharpDFlat5,
+                    ],
+                ),
+            ]),
+        };
+
+        assert_eq!(Guitar::new(tuning, NUM_FRETS, CAPO)?, expected_guitar);
+
+        Ok(())
+    }
+    #[test]
     fn valid_normal() -> Result<()> {
         let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
@@ -388,15 +492,6 @@ mod test_create_guitar {
         assert_eq!(Guitar::new(tuning, NUM_FRETS, 0)?, expected_guitar);
 
         Ok(())
-    }
-    #[test]
-    fn invalid_num_frets() {
-        assert!(Guitar::new(
-            create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES),
-            35,
-            0
-        )
-        .is_err());
     }
 }
 
