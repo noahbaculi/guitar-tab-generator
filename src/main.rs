@@ -11,7 +11,7 @@ use arrangement::Line::{MeasureBreak, Playable, Rest};
 
 use crate::guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES};
 
-mod parser;
+pub mod parser;
 
 fn main() {
     let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);

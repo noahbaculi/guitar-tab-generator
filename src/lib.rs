@@ -1,5 +1,5 @@
 use anyhow::Result;
-use parser::parse_lines;
+use parser::{parse_lines, parse_tuning};
 use pitch::Pitch;
 use wasm_bindgen::prelude::*;
 
@@ -28,7 +28,7 @@ pub struct WebArrangement {
 #[allow(unused_variables)]
 pub fn create_guitar_compositions(
     input: String,
-    guitar_tuning: &str,
+    tuning_input: &str,
     guitar_capo: u8,
     playback_beat_num: u16,
 ) -> Result<WebArrangement, JsError> {
@@ -36,6 +36,8 @@ pub fn create_guitar_compositions(
         Ok(lines) => Ok(lines),
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
+
+    let tuning = parse_tuning(tuning_input);
 
     Ok(WebArrangement {
         composition: "Hi".to_owned(),
