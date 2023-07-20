@@ -202,10 +202,38 @@ impl Pitch {
         *self as u8
     }
 
-    pub fn plus_offset(&self, offset: i8) -> Result<Pitch> {
-        match Pitch::from_repr((self.index() as i8 + offset) as usize) {
+    pub fn plus_offset(&self, offset: i16) -> Result<Pitch> {
+        match Pitch::from_repr((self.index() as i16 + offset) as usize) {
             Some(pitch) => Ok(pitch),
-            None => Err(anyhow!("Pitch offset results in a Pitch out of range.")),
+            None => Err(anyhow!(
+                "Pitch {self} offset by {offset} pitches results in a pitch out of range."
+            )),
         }
+    }
+}
+#[cfg(test)]
+mod test_pitch_plus_offset {
+    use super::*;
+
+    #[test]
+    fn valid_positive() {
+        assert_eq!(Pitch::FSharpGFlat3.plus_offset(3).unwrap(), Pitch::A3);
+    }
+    #[test]
+    fn valid_negative() {
+        assert_eq!(
+            Pitch::FSharpGFlat3.plus_offset(-3).unwrap(),
+            Pitch::DSharpEFlat3
+        );
+    }
+    #[test]
+    fn test_plus_offset_exceeds_range() {
+        let error = Pitch::ASharpBFlat9.plus_offset(2).unwrap_err();
+        let error_msg = format!("{error}");
+
+        assert_eq!(
+            error_msg,
+            "Pitch A♯B♭9 offset by 2 pitches results in a pitch out of range."
+        );
     }
 }
