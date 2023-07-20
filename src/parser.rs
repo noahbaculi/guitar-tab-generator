@@ -10,18 +10,47 @@ use regex::RegexBuilder;
 use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
 
-pub fn parse_tuning(tuning: &str) -> BTreeMap<StringNumber, Pitch> {
-    match tuning {
-        "openg" => create_string_tuning_offset([-2, 0, 0, 0, -2, -2]),
-        "opend" => create_string_tuning_offset([-2, 0, 0, -1, -2, -2]),
-        "c6" => create_string_tuning_offset([-4, 0, -2, 0, 1, 0]),
-        "dsus4" => create_string_tuning_offset([-2, 0, 0, 0, -2, -2]),
-        "dropd" => create_string_tuning_offset([-2, 0, 0, 0, 0, 0]),
-        "dropc" => create_string_tuning_offset([-4, -2, -2, -2, -2, -2]),
-        "openc" => create_string_tuning_offset([-4, -2, -2, 0, 1, 0]),
-        "dropb" => create_string_tuning_offset([-5, -3, -3, -3, -3, -3]),
-        "opene" => create_string_tuning_offset([0, -2, -2, -2, 0, 0]),
-        _ => create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES),
+/// Generates a open string offsets from a tuning name.
+///
+/// Defaults to the standard tuning offsets if the tuning name cannot be matched.
+pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
+    match tuning_name {
+        "openg" => [-2, 0, 0, 0, -2, -2],
+        "opend" => [-2, 0, 0, -1, -2, -2],
+        "c6" => [-4, 0, -2, 0, 1, 0],
+        "dsus4" => [-2, 0, 0, 0, -2, -2],
+        "dropd" => [-2, 0, 0, 0, 0, 0],
+        "dropc" => [-4, -2, -2, -2, -2, -2],
+        "openc" => [-4, -2, -2, 0, 1, 0],
+        "dropb" => [-5, -3, -3, -3, -3, -3],
+        "opene" => [0, -2, -2, -2, 0, 0],
+        _ => [0, 0, 0, 0, 0, 0],
+    }
+}
+#[cfg(test)]
+mod test_parse_tuning {
+    use super::*;
+
+    #[test]
+    fn standard_tuning() {
+        assert_eq!(parse_tuning("standard"), [0, 0, 0, 0, 0, 0]);
+    }
+    #[test]
+    fn open_g_tuning() {
+        assert_eq!(parse_tuning("openg"), [-2, 0, 0, 0, -2, -2]);
+    }
+    #[test]
+    fn dropd_tuning() {
+        assert_eq!(parse_tuning("dropd"), [-2, 0, 0, 0, 0, 0]);
+    }
+    #[test]
+    fn dropc_tuning() {
+        assert_eq!(parse_tuning("dropc"), [-4, -2, -2, -2, -2, -2]);
+    }
+    #[test]
+    fn unknown_tuning() {
+        // Test case with an unknown tuning name
+        assert_eq!(parse_tuning("unknown_tuning"), [0, 0, 0, 0, 0, 0]);
     }
 }
 
@@ -30,13 +59,13 @@ pub fn parse_tuning(tuning: &str) -> BTreeMap<StringNumber, Pitch> {
 ///
 /// Ex:
 /// `create_string_tuning_offset([0, 0, 0, 0, 0, 0])` creates the standard tuning.
-fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch> {
+pub fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch> {
     let offset_tuning_open_pitches: Vec<Pitch> = STD_6_STRING_TUNING_OPEN_PITCHES
         .iter()
         .zip(offsets)
         .map(|(std_tuning_pitch, offset)| {
             std_tuning_pitch
-                .plus_offset(offset)
+                .plus_offset(offset as i16)
                 .expect("Tuning pitch offset should be valid.")
         })
         .collect();
