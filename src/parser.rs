@@ -25,6 +25,11 @@ pub fn parse_tuning(tuning: &str) -> BTreeMap<StringNumber, Pitch> {
     }
 }
 
+/// Generates a tuning map of open string pitches from an array of pitch offsets
+/// relative to the standard 6 string tuning open pitches.
+///
+/// Ex:
+/// `create_string_tuning_offset([0, 0, 0, 0, 0, 0])` creates the standard tuning.
 fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch> {
     let offset_tuning_open_pitches: Vec<Pitch> = STD_6_STRING_TUNING_OPEN_PITCHES
         .iter()
@@ -37,6 +42,47 @@ fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch
         .collect();
 
     create_string_tuning(&offset_tuning_open_pitches)
+}
+#[cfg(test)]
+mod test_create_string_tuning_offset {
+    use super::*;
+
+    #[test]
+    fn no_offset() {
+        assert_eq!(
+            create_string_tuning_offset([0, 0, 0, 0, 0, 0]),
+            create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)
+        );
+    }
+    #[test]
+    fn single_offset() {
+        assert_eq!(
+            create_string_tuning_offset([-2, 0, 0, 0, 0, 0]),
+            create_string_tuning(&[
+                Pitch::D4,
+                Pitch::B3,
+                Pitch::G3,
+                Pitch::D3,
+                Pitch::A2,
+                Pitch::E2,
+            ])
+        );
+    }
+    #[test]
+    fn random_offsets() {
+        // Test case with random offsets
+        assert_eq!(
+            create_string_tuning_offset([2, -1, 3, 0, -2, 1]),
+            create_string_tuning(&[
+                Pitch::FSharpGFlat4,
+                Pitch::ASharpBFlat3,
+                Pitch::ASharpBFlat3,
+                Pitch::D3,
+                Pitch::G2,
+                Pitch::F2,
+            ])
+        );
+    }
 }
 
 pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
