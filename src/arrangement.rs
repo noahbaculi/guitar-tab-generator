@@ -231,6 +231,13 @@ pub struct Arrangement {
     max_fret_span: u8,
 }
 
+#[allow(unused_variables)]
+pub fn render_tab(arrangement: Arrangement, width: u16, playback_beat_num: Option<u16>) -> String {
+    let lines = arrangement.lines;
+
+    "Heyo".to_string()
+}
+
 // TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
 pub fn create_arrangements(
     guitar: Guitar,

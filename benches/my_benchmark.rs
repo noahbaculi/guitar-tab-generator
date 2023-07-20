@@ -5,7 +5,6 @@ use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criteri
 use guitar_tab_generator::{
     arrangement::{create_arrangements, BeatVec, Line},
     guitar::{create_string_tuning, Guitar, STD_6_STRING_TUNING_OPEN_PITCHES},
-    parser::parse_lines,
     pitch::Pitch,
     string_number::StringNumber,
 };
@@ -153,55 +152,127 @@ fn fur_elise_input() -> &'static str {
     C4"
 }
 
+pub const FUR_ELISE_INPUT: &str = "E4
+Eb4
+E4
+Eb4
+E4
+B3
+D4
+C4
+
+A2A3
+E3
+A3
+C3
+E3
+A3
+
+E3B3
+E3
+Ab3
+E3
+Ab3
+B3
+
+A2C4
+E3
+A3
+E3
+
+E4
+Eb4
+E4
+Eb4
+E4
+B3
+D4
+C4
+
+A2A3
+E3
+A3
+C3
+E3
+A3
+
+E3B3
+E3
+Ab3
+E3
+C4
+B3
+A3
+
+C4
+C4
+C4
+C4
+F4
+E4
+E4
+D4
+
+Bb4
+A4
+A4
+G4
+F4
+E4
+D4
+C4
+
+Bb3
+Bb3
+A3
+G3
+A3
+Bb3
+C4
+
+D4
+Eb4
+Eb4
+E4
+F4
+A3
+C4
+
+D4
+B3
+C4";
+
 fn fur_elise_lines() -> Result<Vec<Line<BeatVec<Pitch>>>> {
-    parse_lines(fur_elise_input().to_owned())
+    guitar_tab_generator::parser::parse_lines(fur_elise_input().to_owned())
 }
 
 fn arrangement_creation(c: &mut Criterion) {
     let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
-    c.bench_function("fur_elise_1_arrangement", |b| {
-        b.iter(|| {
-            create_arrangements(
-                black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
-                black_box(fur_elise_lines().unwrap()),
-                black_box(1),
-            )
-        })
-    });
-    c.bench_function("fur_elise_3_arrangements", |b| {
-        b.iter(|| {
-            create_arrangements(
-                black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
-                black_box(fur_elise_lines().unwrap()),
-                black_box(3),
-            )
-        })
-    });
+    // c.bench_function("fur_elise_1_arrangement", |b| {
+    //     b.iter(|| {
+    //         create_arrangements(
+    //             black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
+    //             black_box(fur_elise_lines().unwrap()),
+    //             black_box(1),
+    //         )
+    //     })
+    // });
+    // c.bench_function("fur_elise_3_arrangements", |b| {
+    //     b.iter(|| {
+    //         create_arrangements(
+    //             black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
+    //             black_box(fur_elise_lines().unwrap()),
+    //             black_box(3),
+    //         )
+    //     })
+    // });
     c.bench_function("fur_elise_5_arrangements", |b| {
         b.iter(|| {
             create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines().unwrap()),
                 black_box(5),
-            )
-        })
-    });
-    c.bench_function("fur_elise_10_arrangements", |b| {
-        b.iter(|| {
-            create_arrangements(
-                black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
-                black_box(fur_elise_lines().unwrap()),
-                black_box(5),
-            )
-        })
-    });
-    c.bench_function("fur_elise_20_arrangements", |b| {
-        b.iter(|| {
-            create_arrangements(
-                black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
-                black_box(fur_elise_lines().unwrap()),
-                black_box(20),
             )
         })
     });
@@ -229,17 +300,32 @@ fn arrangement_scaling(c: &mut Criterion) {
     group.finish();
 }
 
-fn pitch_parsing_scaling(c: &mut Criterion) {
+fn parse_lines(c: &mut Criterion) {
     let fur_elise_input = fur_elise_input();
 
-    c.bench_function("pitch_parsing_scaling", |b| {
-        b.iter(|| parse_lines(fur_elise_input.to_owned()))
+    c.bench_function("parse_lines", |b| {
+        b.iter(|| guitar_tab_generator::parser::parse_lines(fur_elise_input.to_owned()))
+    });
+}
+
+fn create_string_tuning_offset(c: &mut Criterion) {
+    c.bench_function("create_string_tuning_offset", |b| {
+        b.iter(|| {
+            guitar_tab_generator::parser::create_string_tuning_offset(
+                guitar_tab_generator::parser::parse_tuning(black_box("random")),
+            )
+        })
     });
 }
 
 criterion_group! {
     name=benches;
     config = Criterion::default().noise_threshold(0.02).sample_size(15);
-    targets = guitar_creation, arrangement_creation, arrangement_scaling, pitch_parsing_scaling
+    targets =
+        // guitar_creation,
+        // arrangement_creation,
+        // arrangement_scaling,
+        parse_lines,
+        create_string_tuning_offset,
 }
 criterion_main!(benches);

@@ -12,19 +12,15 @@
 
 
     <script type="module">
-        // import { add } from './pkg/guitar_tab_generator.js';
         import init, { WebArrangement, create_guitar_compositions, add } from './pkg/guitar_tab_generator.js';
-
         async function run() {
             await init();
         }
-
         run();
-
         document.getElementById("thisButton").addEventListener("click", () => {
             // alert(`Tab output saved to your downloads! 🎉`);
             // console.log(add(5, 5));
-            console.log(create_guitar_compositions("E332\nE4"));
+            console.log(create_guitar_compositions("E3\nE4", "standard"));
         });
     </script>
 </body>

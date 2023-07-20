@@ -1,4 +1,6 @@
 use anyhow::Result;
+use arrangement::create_arrangements;
+use guitar::Guitar;
 use parser::{create_string_tuning_offset, parse_lines, parse_tuning};
 use pitch::Pitch;
 use wasm_bindgen::prelude::*;
@@ -19,6 +21,7 @@ pub fn greet(name: &str) {
     alert(&format!("Hello, {}!", name));
 }
 #[wasm_bindgen(getter_with_clone)]
+#[derive(Debug)]
 pub struct WebArrangement {
     pub composition: String,
     pub max_fret_span: u32,
@@ -28,16 +31,25 @@ pub struct WebArrangement {
 #[allow(unused_variables)]
 pub fn create_guitar_compositions(
     input: String,
-    tuning_input: &str,
+    tuning_name: &str,
+    guitar_num_frets: u8,
     guitar_capo: u8,
-    playback_beat_num: u16,
+    num_arrangements: u8,
+    playback_beat_num: Option<u16>,
 ) -> Result<WebArrangement, JsError> {
-    let _input_lines: Result<Vec<arrangement::Line<Vec<Pitch>>>> = match parse_lines(input) {
-        Ok(lines) => Ok(lines),
+    let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = match parse_lines(input) {
+        Ok(lines) => lines,
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    let tuning = create_string_tuning_offset(parse_tuning(tuning_input));
+    let tuning = create_string_tuning_offset(parse_tuning(tuning_name));
+
+    let guitar = match Guitar::new(tuning, guitar_num_frets, guitar_capo) {
+        Ok(guitar) => guitar,
+        Err(e) => return Err(JsError::new(&e.to_string())),
+    };
+
+    let arrangement = create_arrangements(guitar, input_lines, num_arrangements);
 
     Ok(WebArrangement {
         composition: "Hi".to_owned(),
