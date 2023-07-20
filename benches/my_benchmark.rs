@@ -4,22 +4,15 @@ use anyhow::{anyhow, Result};
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use guitar_tab_generator::{
     arrangement::{create_arrangements, BeatVec, Line},
-    guitar::Guitar,
-    parser::parse_pitches,
+    guitar::{create_string_tuning, Guitar, STD_6_STRING_TUNING_OPEN_PITCHES},
+    parser::parse_lines,
     pitch::Pitch,
     string_number::StringNumber,
 };
 use std::{collections::BTreeMap, time::Duration};
 
 pub fn guitar_creation(c: &mut Criterion) {
-    let tuning = BTreeMap::from([
-        (StringNumber::new(1).unwrap(), Pitch::E4),
-        (StringNumber::new(2).unwrap(), Pitch::B3),
-        (StringNumber::new(3).unwrap(), Pitch::G3),
-        (StringNumber::new(4).unwrap(), Pitch::D3),
-        (StringNumber::new(5).unwrap(), Pitch::A2),
-        (StringNumber::new(6).unwrap(), Pitch::E2),
-    ]);
+    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
     let three_string_tuning = BTreeMap::from([
         (StringNumber::new(1).unwrap(), Pitch::E4),
         (StringNumber::new(2).unwrap(), Pitch::B3),
@@ -151,18 +144,11 @@ fn fur_elise_input() -> &'static str {
 }
 
 fn fur_elise_lines() -> Result<Vec<Line<BeatVec<Pitch>>>> {
-    parse_pitches(fur_elise_input().to_owned())
+    parse_lines(fur_elise_input().to_owned())
 }
 
 fn arrangement_creation(c: &mut Criterion) {
-    let tuning = BTreeMap::from([
-        (StringNumber::new(1).unwrap(), Pitch::E4),
-        (StringNumber::new(2).unwrap(), Pitch::B3),
-        (StringNumber::new(3).unwrap(), Pitch::G3),
-        (StringNumber::new(4).unwrap(), Pitch::D3),
-        (StringNumber::new(5).unwrap(), Pitch::A2),
-        (StringNumber::new(6).unwrap(), Pitch::E2),
-    ]);
+    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
     c.bench_function("fur_elise_1_arrangement", |b| {
         b.iter(|| {
@@ -212,14 +198,7 @@ fn arrangement_creation(c: &mut Criterion) {
 }
 
 fn arrangement_scaling(c: &mut Criterion) {
-    let tuning = BTreeMap::from([
-        (StringNumber::new(1).unwrap(), Pitch::E4),
-        (StringNumber::new(2).unwrap(), Pitch::B3),
-        (StringNumber::new(3).unwrap(), Pitch::G3),
-        (StringNumber::new(4).unwrap(), Pitch::D3),
-        (StringNumber::new(5).unwrap(), Pitch::A2),
-        (StringNumber::new(6).unwrap(), Pitch::E2),
-    ]);
+    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
     let mut group = c.benchmark_group("arrangement_scaling");
     for num in (0..=22) {
@@ -244,7 +223,7 @@ fn pitch_parsing_scaling(c: &mut Criterion) {
     let fur_elise_input = fur_elise_input();
 
     c.bench_function("pitch_parsing_scaling", |b| {
-        b.iter(|| parse_pitches(fur_elise_input.to_owned()))
+        b.iter(|| parse_lines(fur_elise_input.to_owned()))
     });
 }
 

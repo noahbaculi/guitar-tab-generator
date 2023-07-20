@@ -1,4 +1,6 @@
-use parser::parse_pitches;
+use anyhow::Result;
+use parser::parse_lines;
+use pitch::Pitch;
 use wasm_bindgen::prelude::*;
 
 pub mod arrangement;
@@ -23,13 +25,22 @@ pub struct WebArrangement {
 }
 
 #[wasm_bindgen]
-pub fn create_guitar_compositions(input: String) -> WebArrangement {
-    let input_lines = parse_pitches(input);
+#[allow(unused_variables)]
+pub fn create_guitar_compositions(
+    input: String,
+    guitar_tuning: &str,
+    guitar_capo: u8,
+    playback_beat_num: u16,
+) -> Result<WebArrangement, JsError> {
+    let _input_lines: Result<Vec<arrangement::Line<Vec<Pitch>>>> = match parse_lines(input) {
+        Ok(lines) => Ok(lines),
+        Err(e) => return Err(JsError::new(&e.to_string())),
+    };
 
-    WebArrangement {
+    Ok(WebArrangement {
         composition: "Hi".to_owned(),
         max_fret_span: 2,
-    }
+    })
 }
 
 #[wasm_bindgen]

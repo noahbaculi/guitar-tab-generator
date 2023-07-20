@@ -1,12 +1,42 @@
 use crate::{
     arrangement::{BeatVec, Line},
+    guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES},
     pitch::Pitch,
+    string_number::StringNumber,
 };
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use regex::RegexBuilder;
-use std::result::Result::Ok;
+use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
+
+fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch> {
+    let offset_tuning_open_pitches: Vec<Pitch> = STD_6_STRING_TUNING_OPEN_PITCHES
+        .iter()
+        .zip(offsets)
+        .map(|(std_tuning_pitch, offset)| {
+            Pitch::from_repr((std_tuning_pitch.index() as i8 + offset) as usize)
+                .expect("Tuning offset should be valid.")
+        })
+        .collect();
+
+    create_string_tuning(&offset_tuning_open_pitches)
+}
+
+pub fn parse_tuning(tuning: &str) -> BTreeMap<StringNumber, Pitch> {
+    match tuning {
+        "openg" => create_string_tuning_offset([-2, 0, 0, 0, -2, -2]),
+        "opend" => create_string_tuning_offset([-2, 0, 0, -1, -2, -2]),
+        "c6" => create_string_tuning_offset([-4, 0, -2, 0, 1, 0]),
+        "dsus4" => create_string_tuning_offset([-2, 0, 0, 0, -2, -2]),
+        "dropd" => create_string_tuning_offset([-2, 0, 0, 0, 0, 0]),
+        "dropc" => create_string_tuning_offset([-4, -2, -2, -2, -2, -2]),
+        "openc" => create_string_tuning_offset([-4, -2, -2, 0, 1, 0]),
+        "dropb" => create_string_tuning_offset([-5, -3, -3, -3, -3, -3]),
+        "opene" => create_string_tuning_offset([0, -2, -2, -2, 0, 0]),
+        _ => create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES),
+    }
+}
 
 pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
     let line_parse_results: Vec<Result<Line<BeatVec<Pitch>>, anyhow::Error>> = input

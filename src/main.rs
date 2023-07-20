@@ -1,10 +1,7 @@
-use std::collections::BTreeMap;
-
 pub mod pitch;
 use pitch::Pitch;
 
 pub mod string_number;
-use string_number::StringNumber;
 
 pub mod guitar;
 use guitar::Guitar;
@@ -12,17 +9,12 @@ use guitar::Guitar;
 pub mod arrangement;
 use arrangement::Line::{MeasureBreak, Playable, Rest};
 
+use crate::guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES};
+
 mod parser;
 
 fn main() {
-    let tuning = BTreeMap::from([
-        (StringNumber::new(1).unwrap(), Pitch::E4),
-        (StringNumber::new(2).unwrap(), Pitch::B3),
-        (StringNumber::new(3).unwrap(), Pitch::G3),
-        (StringNumber::new(4).unwrap(), Pitch::D3),
-        (StringNumber::new(5).unwrap(), Pitch::A2),
-        (StringNumber::new(6).unwrap(), Pitch::E2),
-    ]);
+    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
     // dbg!(&tuning);
 
@@ -67,7 +59,7 @@ fn main() {
     // dbg!(&_arrangements);
 
     // let _arrangement_outputs =
-    //     parser::parse_pitches("bb5C7d#2/hi//there\nG3noaha2aaron\nb3\n\nD4G4\n---\nC2".to_owned());
+    //     parser::parse_lines("bb5C7d#2/hi//there\nG3noaha2aaron\nb3\n\nD4G4\n---\nC2".to_owned());
     let _arrangement_outputs = parser::parse_lines("E2//there\nG3\nb3\n\nD4G4\n---\nC2".to_owned());
     dbg!(&_arrangement_outputs);
 }

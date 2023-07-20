@@ -36,6 +36,28 @@ mod test_pitch_fingering_debug {
     }
 }
 
+pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
+    Pitch::E4,
+    Pitch::B3,
+    Pitch::G3,
+    Pitch::D3,
+    Pitch::A2,
+    Pitch::E2,
+];
+/// Creates a mapping of string numbers to pitch values based on an array of open string pitches.
+///
+/// Arguments:
+///
+/// * `open_string_pitches`: An array slice containing the pitches of the open strings in a guitar
+/// starting at string 1 (the highest string), and ending with string _N_ (the lowest string) where _N_ > 1.
+pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> BTreeMap<StringNumber, Pitch> {
+    open_string_pitches
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (StringNumber::new((i + 1) as u8).unwrap(), *p))
+        .collect::<BTreeMap<StringNumber, Pitch>>()
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct Guitar {
     pub tuning: BTreeMap<StringNumber, Pitch>,
@@ -45,19 +67,13 @@ pub struct Guitar {
 }
 impl Default for Guitar {
     fn default() -> Guitar {
-        let tuning = BTreeMap::from([
-            (StringNumber::new(1).unwrap(), Pitch::E4),
-            (StringNumber::new(2).unwrap(), Pitch::B3),
-            (StringNumber::new(3).unwrap(), Pitch::G3),
-            (StringNumber::new(4).unwrap(), Pitch::D3),
-            (StringNumber::new(5).unwrap(), Pitch::A2),
-            (StringNumber::new(6).unwrap(), Pitch::E2),
-        ]);
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
         Guitar::new(tuning, 18).expect("Default guitar should be valid.")
     }
 }
 impl Guitar {
     #[inline]
+    // TODO! account for capos
     pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8) -> Result<Self> {
         check_fret_number(num_frets)?;
 
@@ -89,20 +105,9 @@ impl Guitar {
 mod test_create_guitar {
     use super::*;
 
-    fn create_default_tuning() -> BTreeMap<StringNumber, Pitch> {
-        BTreeMap::from([
-            (StringNumber::new(1).unwrap(), Pitch::E4),
-            (StringNumber::new(2).unwrap(), Pitch::B3),
-            (StringNumber::new(3).unwrap(), Pitch::G3),
-            (StringNumber::new(4).unwrap(), Pitch::D3),
-            (StringNumber::new(5).unwrap(), Pitch::A2),
-            (StringNumber::new(6).unwrap(), Pitch::E2),
-        ])
-    }
-
     #[test]
     fn valid_simple() -> Result<()> {
-        let tuning = create_default_tuning();
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
         const NUM_FRETS: u8 = 3;
 
@@ -174,7 +179,7 @@ mod test_create_guitar {
     }
     #[test]
     fn valid_normal() -> Result<()> {
-        let tuning = create_default_tuning();
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
         const NUM_FRETS: u8 = 18;
 
@@ -380,7 +385,7 @@ mod test_create_guitar {
     }
     #[test]
     fn invalid_num_frets() {
-        assert!(Guitar::new(create_default_tuning(), 35).is_err());
+        assert!(Guitar::new(create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES), 35).is_err());
     }
 }
 

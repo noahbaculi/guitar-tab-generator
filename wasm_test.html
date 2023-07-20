@@ -13,7 +13,7 @@
 
     <script type="module">
         // import { add } from './pkg/guitar_tab_generator.js';
-        import init, { WebArrangement,test_return_struct, add } from './pkg/guitar_tab_generator.js';
+        import init, { WebArrangement, create_guitar_compositions, add } from './pkg/guitar_tab_generator.js';
 
         async function run() {
             await init();
@@ -24,7 +24,7 @@
         document.getElementById("thisButton").addEventListener("click", () => {
             // alert(`Tab output saved to your downloads! 🎉`);
             // console.log(add(5, 5));
-            console.log(test_return_struct("Hi there"));
+            console.log(create_guitar_compositions("E332\nE4"));
         });
     </script>
 </body>
