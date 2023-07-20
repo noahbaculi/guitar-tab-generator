@@ -18,7 +18,7 @@ fn main() {
 
     // dbg!(&tuning);
 
-    let _guitar = match Guitar::new(tuning, 18) {
+    let _guitar = match Guitar::new(tuning, 18, 0) {
         Ok(guitar) => guitar,
         Err(err) => {
             panic!("{}", err);

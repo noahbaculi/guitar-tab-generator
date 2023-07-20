@@ -68,17 +68,23 @@ pub struct Guitar {
 impl Default for Guitar {
     fn default() -> Guitar {
         let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
-        Guitar::new(tuning, 18).expect("Default guitar should be valid.")
+        Guitar::new(tuning, 18, 0).expect("Default guitar should be valid.")
     }
 }
 impl Guitar {
     #[inline]
-    // TODO! account for capos
-    pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8) -> Result<Self> {
+    pub fn new(tuning: BTreeMap<StringNumber, Pitch>, mut num_frets: u8, capo: u8) -> Result<Self> {
         check_fret_number(num_frets)?;
 
+        check_capo_number(capo)?;
+        num_frets -= capo;
+        let adjusted_tuning = tuning
+            .into_iter()
+            .map(|(string_num, pitch)| (string_num, pitch.plus_offset(capo as i8).unwrap()))
+            .collect::<BTreeMap<_, _>>();
+
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
-        for (string_number, string_open_pitch) in tuning.iter() {
+        for (string_number, string_open_pitch) in adjusted_tuning.iter() {
             string_ranges.insert(
                 string_number.clone().to_owned(),
                 create_string_range(string_open_pitch, num_frets)?,
@@ -94,7 +100,7 @@ impl Guitar {
         );
 
         Ok(Guitar {
-            tuning,
+            tuning: adjusted_tuning,
             num_frets,
             range,
             string_ranges,
@@ -173,7 +179,7 @@ mod test_create_guitar {
             ]),
         };
 
-        assert_eq!(Guitar::new(tuning, NUM_FRETS)?, expected_guitar);
+        assert_eq!(Guitar::new(tuning, NUM_FRETS, 0)?, expected_guitar);
 
         Ok(())
     }
@@ -379,13 +385,18 @@ mod test_create_guitar {
             ]),
         };
 
-        assert_eq!(Guitar::new(tuning, NUM_FRETS)?, expected_guitar);
+        assert_eq!(Guitar::new(tuning, NUM_FRETS, 0)?, expected_guitar);
 
         Ok(())
     }
     #[test]
     fn invalid_num_frets() {
-        assert!(Guitar::new(create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES), 35).is_err());
+        assert!(Guitar::new(
+            create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES),
+            35,
+            0
+        )
+        .is_err());
     }
 }
 
@@ -408,16 +419,45 @@ mod test_check_fret_number {
         assert!(check_fret_number(0).is_ok());
         assert!(check_fret_number(2).is_ok());
         assert!(check_fret_number(7).is_ok());
-        assert!(check_fret_number(20).is_ok());
+        assert!(check_fret_number(18).is_ok());
+        assert!(check_fret_number(24).is_ok());
+        assert!(check_fret_number(30).is_ok());
     }
     #[test]
     fn invalid() {
-        assert!(check_fret_number(0).is_ok());
-        assert!(check_fret_number(12).is_ok());
-        assert!(check_fret_number(18).is_ok());
-        assert!(check_fret_number(27).is_ok());
         assert!(check_fret_number(31).is_err());
         assert!(check_fret_number(100).is_err());
+    }
+}
+
+/// Check if the capo fret number is within a maximum limit and returns an error if it exceeds the limit.
+fn check_capo_number(capo: u8) -> Result<()> {
+    const MAX_CAPO: u8 = 8;
+    if capo > MAX_CAPO {
+        return Err(anyhow!(
+            "The capo fret ({capo}) is too high. The maximum is {MAX_CAPO}."
+        ));
+    }
+    Ok(())
+}
+#[cfg(test)]
+mod test_check_capo_number {
+    use super::*;
+    #[test]
+    fn valid() {
+        assert!(check_capo_number(0).is_ok());
+        assert!(check_capo_number(2).is_ok());
+        assert!(check_capo_number(5).is_ok());
+        assert!(check_capo_number(8).is_ok());
+    }
+    #[test]
+    fn invalid() {
+        assert!(check_capo_number(9).is_err());
+        assert!(check_capo_number(12).is_err());
+        assert!(check_capo_number(18).is_err());
+        assert!(check_capo_number(27).is_err());
+        assert!(check_capo_number(31).is_err());
+        assert!(check_capo_number(100).is_err());
     }
 }
 

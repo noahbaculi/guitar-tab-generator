@@ -30,8 +30,9 @@ fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch
         .iter()
         .zip(offsets)
         .map(|(std_tuning_pitch, offset)| {
-            Pitch::from_repr((std_tuning_pitch.index() as i8 + offset) as usize)
-                .expect("Tuning offset should be valid.")
+            std_tuning_pitch
+                .plus_offset(offset)
+                .expect("Tuning pitch offset should be valid.")
         })
         .collect();
 

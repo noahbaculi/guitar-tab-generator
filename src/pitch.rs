@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use std::fmt;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 
@@ -199,5 +200,12 @@ mod test_pitch_display {
 impl Pitch {
     pub fn index(&self) -> u8 {
         *self as u8
+    }
+
+    pub fn plus_offset(&self, offset: i8) -> Result<Pitch> {
+        match Pitch::from_repr((self.index() as i8 + offset) as usize) {
+            Some(pitch) => Ok(pitch),
+            None => Err(anyhow!("Pitch offset results in a Pitch out of range.")),
+        }
     }
 }
