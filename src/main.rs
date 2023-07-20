@@ -68,7 +68,6 @@ fn main() {
 
     // let _arrangement_outputs =
     //     parser::parse_pitches("bb5C7d#2/hi//there\nG3noaha2aaron\nb3\n\nD4G4\n---\nC2".to_owned());
-    let _arrangement_outputs =
-        parser::parse_pitches("E2//there\nG3\nb3\n\nD4G4\n---\nC2".to_owned());
+    let _arrangement_outputs = parser::parse_lines("E2//there\nG3\nb3\n\nD4G4\n---\nC2".to_owned());
     dbg!(&_arrangement_outputs);
 }

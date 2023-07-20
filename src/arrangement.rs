@@ -1,6 +1,6 @@
 use crate::{
-    guitar::{generate_pitch_fingerings, PitchFingering},
-    Guitar, Pitch,
+    guitar::{generate_pitch_fingerings, Guitar, PitchFingering},
+    pitch::Pitch,
 };
 use anyhow::{anyhow, Result};
 use average::Mean;
@@ -61,7 +61,7 @@ impl BeatFingeringCombo {
 #[cfg(test)]
 mod test_create_beat_fingering_combo {
     use super::*;
-    use crate::StringNumber;
+    use crate::string_number::StringNumber;
 
     #[test]
     fn simple() {
@@ -146,7 +146,7 @@ fn calc_non_zero_avg_fret(
 #[cfg(test)]
 mod test_calc_non_zero_avg_fret {
     use super::*;
-    use crate::StringNumber;
+    use crate::string_number::StringNumber;
 
     #[test]
     fn single_non_zero_fret() {
@@ -598,7 +598,7 @@ fn generate_fingering_combos(
 #[cfg(test)]
 mod test_generate_fingering_combos {
     use super::*;
-    use crate::StringNumber;
+    use crate::string_number::StringNumber;
 
     #[test]
     fn simple() {
@@ -687,7 +687,7 @@ fn no_duplicate_strings(beat_fingering_option: &Vec<&PitchFingering>) -> bool {
 #[cfg(test)]
 mod test_no_duplicate_strings {
     use super::*;
-    use crate::StringNumber;
+    use crate::string_number::StringNumber;
 
     #[test]
     fn valid_simple() {
@@ -798,7 +798,7 @@ fn calc_fret_span(beat_fingering_candidate: Vec<&PitchFingering>) -> Option<u8> 
 #[cfg(test)]
 mod test_calc_fret_span {
     use super::*;
-    use crate::StringNumber;
+    use crate::string_number::StringNumber;
 
     #[test]
     fn simple() {
@@ -1294,7 +1294,7 @@ fn process_path(
 #[cfg(test)]
 mod test_process_path {
     use super::*;
-    use crate::StringNumber;
+    use crate::string_number::StringNumber;
 
     #[test]
     fn simple() {

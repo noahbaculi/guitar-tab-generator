@@ -1,4 +1,11 @@
+use parser::parse_pitches;
 use wasm_bindgen::prelude::*;
+
+pub mod arrangement;
+pub mod guitar;
+pub mod parser;
+pub mod pitch;
+pub mod string_number;
 
 #[wasm_bindgen]
 extern "C" {
@@ -16,9 +23,11 @@ pub struct WebArrangement {
 }
 
 #[wasm_bindgen]
-pub fn test_return_struct(composition_str: &str) -> WebArrangement {
+pub fn create_guitar_compositions(input: String) -> WebArrangement {
+    let input_lines = parse_pitches(input);
+
     WebArrangement {
-        composition: composition_str.to_owned(),
+        composition: "Hi".to_owned(),
         max_fret_span: 2,
     }
 }

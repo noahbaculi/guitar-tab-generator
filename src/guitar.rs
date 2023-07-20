@@ -1,4 +1,4 @@
-use crate::{arrangement::PitchVec, Pitch, StringNumber};
+use crate::{arrangement::PitchVec, pitch::Pitch, string_number::StringNumber};
 use anyhow::{anyhow, Result};
 use std::{
     collections::{BTreeMap, HashSet},
@@ -36,7 +36,7 @@ mod test_pitch_fingering_debug {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Guitar {
     pub tuning: BTreeMap<StringNumber, Pitch>,
     pub num_frets: u8,
@@ -57,6 +57,7 @@ impl Default for Guitar {
     }
 }
 impl Guitar {
+    #[inline]
     pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8) -> Result<Self> {
         check_fret_number(num_frets)?;
 

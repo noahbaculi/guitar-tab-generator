@@ -8,7 +8,7 @@ use regex::RegexBuilder;
 use std::result::Result::Ok;
 use std::{collections::HashSet, str::FromStr};
 
-pub fn parse_pitches(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
+pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
     let line_parse_results: Vec<Result<Line<BeatVec<Pitch>>, anyhow::Error>> = input
         .lines()
         .enumerate()
@@ -35,7 +35,7 @@ pub fn parse_pitches(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
     Ok(parsed_lines)
 }
 #[cfg(test)]
-mod test_parse_pitches {
+mod test_parse_lines {
     use super::*;
 
     #[test]
@@ -49,13 +49,13 @@ mod test_parse_pitches {
             Line::MeasureBreak,
             Line::Playable(vec![Pitch::E4]),
         ];
-        assert_eq!(parse_pitches(input).unwrap(), expected);
+        assert_eq!(parse_lines(input).unwrap(), expected);
     }
     #[test]
     fn invalid() {
         let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
 
-        let error = parse_pitches(input).unwrap_err();
+        let error = parse_lines(input).unwrap_err();
         let error_msg = format!("{error}");
 
         assert_eq!(
