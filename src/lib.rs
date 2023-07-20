@@ -1,5 +1,5 @@
 use anyhow::Result;
-use parser::{parse_lines, parse_tuning};
+use parser::{create_string_tuning_offset, parse_lines, parse_tuning};
 use pitch::Pitch;
 use wasm_bindgen::prelude::*;
 
@@ -37,7 +37,7 @@ pub fn create_guitar_compositions(
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    let tuning = parse_tuning(tuning_input);
+    let tuning = create_string_tuning_offset(parse_tuning(tuning_input));
 
     Ok(WebArrangement {
         composition: "Hi".to_owned(),

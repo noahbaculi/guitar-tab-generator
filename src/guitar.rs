@@ -80,7 +80,7 @@ impl Guitar {
         num_frets -= capo;
         let adjusted_tuning = tuning
             .into_iter()
-            .map(|(string_num, pitch)| (string_num, pitch.plus_offset(capo as i8).unwrap()))
+            .map(|(string_num, pitch)| (string_num, pitch.plus_offset(capo as i16).unwrap()))
             .collect::<BTreeMap<_, _>>();
 
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
