@@ -12,34 +12,36 @@ use guitar_tab_generator::{
 use std::{collections::BTreeMap, time::Duration};
 
 pub fn guitar_creation(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
-    let three_string_tuning = BTreeMap::from([
-        (StringNumber::new(1).unwrap(), Pitch::E4),
-        (StringNumber::new(2).unwrap(), Pitch::B3),
-        (StringNumber::new(3).unwrap(), Pitch::G3),
-    ]);
-    let twelve_string_tuning = BTreeMap::from([
-        (StringNumber::new(1).unwrap(), Pitch::E4),
-        (StringNumber::new(2).unwrap(), Pitch::B3),
-        (StringNumber::new(3).unwrap(), Pitch::G3),
-        (StringNumber::new(4).unwrap(), Pitch::D3),
-        (StringNumber::new(5).unwrap(), Pitch::A2),
-        (StringNumber::new(6).unwrap(), Pitch::E2),
-        (StringNumber::new(7).unwrap(), Pitch::E2),
-        (StringNumber::new(8).unwrap(), Pitch::E2),
-        (StringNumber::new(9).unwrap(), Pitch::E2),
-        (StringNumber::new(10).unwrap(), Pitch::E2),
-        (StringNumber::new(11).unwrap(), Pitch::E2),
-        (StringNumber::new(12).unwrap(), Pitch::E2),
+    let six_string_tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
+
+    let three_string_tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]);
+    let twelve_string_tuning = create_string_tuning(&[
+        Pitch::E4,
+        Pitch::B3,
+        Pitch::G3,
+        Pitch::D3,
+        Pitch::A2,
+        Pitch::E2,
+        Pitch::E2,
+        Pitch::E2,
+        Pitch::E2,
+        Pitch::E2,
+        Pitch::E2,
+        Pitch::E2,
     ]);
 
     const STANDARD_NUM_FRETS: u8 = 18;
 
     c.bench_function("create_standard_guitar", |b| {
-        b.iter(|| Guitar::new(black_box(tuning.clone()), black_box(STANDARD_NUM_FRETS)))
+        b.iter(|| {
+            Guitar::new(
+                black_box(six_string_tuning.clone()),
+                black_box(STANDARD_NUM_FRETS),
+            )
+        })
     });
     c.bench_function("create_few_fret_guitar", |b| {
-        b.iter(|| Guitar::new(black_box(tuning.clone()), black_box(3)))
+        b.iter(|| Guitar::new(black_box(six_string_tuning.clone()), black_box(3)))
     });
     c.bench_function("create_few_string_guitar", |b| {
         b.iter(|| {
