@@ -1,5 +1,5 @@
 use anyhow::Result;
-use arrangement::create_arrangements;
+use arrangement::{create_arrangements, render_tab};
 use guitar::Guitar;
 use parser::{create_string_tuning_offset, parse_lines, parse_tuning};
 use pitch::Pitch;
@@ -49,7 +49,13 @@ pub fn create_guitar_compositions(
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    let arrangement = create_arrangements(guitar, input_lines, num_arrangements);
+    let arrangements = match create_arrangements(guitar.clone(), input_lines, num_arrangements) {
+        Ok(arrangements) => arrangements,
+        Err(e) => return Err(JsError::new(&e.to_string())),
+    };
+
+    let _x = render_tab(arrangements[0].clone(), guitar, 60, Some(2));
+    // dbg!(_x);
 
     Ok(WebArrangement {
         composition: "Hi".to_owned(),

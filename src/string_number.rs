@@ -13,6 +13,9 @@ impl StringNumber {
 
         }
     }
+    pub fn get(&self) -> u8 {
+        self.0
+    }
 }
 #[cfg(test)]
 mod test_create_string_number {

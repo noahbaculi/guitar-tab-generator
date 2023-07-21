@@ -8,9 +8,9 @@ use strum::IntoEnumIterator;
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PitchFingering {
-    pub pitch: Pitch,
     pub string_number: StringNumber,
     pub fret: u8,
+    pub pitch: Pitch,
 }
 impl fmt::Debug for PitchFingering {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -58,7 +58,7 @@ pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> BTreeMap<StringNum
         .collect::<BTreeMap<StringNumber, Pitch>>()
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Guitar {
     pub tuning: BTreeMap<StringNumber, Pitch>,
     pub num_frets: u8,

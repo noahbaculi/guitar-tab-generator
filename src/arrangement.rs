@@ -224,7 +224,7 @@ mod test_calc_non_zero_avg_fret {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Arrangement {
     lines: Vec<Line<BeatVec<PitchFingering>>>,
     difficulty: i32,
@@ -232,10 +232,81 @@ pub struct Arrangement {
 }
 
 #[allow(unused_variables)]
-pub fn render_tab(arrangement: Arrangement, width: u16, playback_beat_num: Option<u16>) -> String {
-    let lines = arrangement.lines;
+pub fn render_tab(
+    arrangement: Arrangement,
+    guitar: Guitar,
+    width: u16,
+    playback_beat_num: Option<u16>,
+) -> String {
+    let num_strings = guitar.string_ranges.len();
+    let _lines = arrangement
+        .lines
+        .iter()
+        .map(|line| render_line(line, num_strings))
+        .collect_vec();
+    dbg!(_lines);
 
     "Heyo".to_string()
+}
+
+fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<String> {
+    let pitch_fingerings = match line {
+        Line::MeasureBreak => return vec!["|".to_owned(); num_strings],
+        Line::Rest => return vec!["-".to_owned(); num_strings],
+        Line::Playable(pitch_fingerings) => pitch_fingerings.iter().sorted().collect_vec(),
+    };
+    let fret_width_max = calc_fret_width_max(&pitch_fingerings);
+
+    let mut playable_render = vec!["-".repeat(fret_width_max); num_strings];
+    for fingering in pitch_fingerings {
+        playable_render[fingering.string_number.get() as usize - 1] =
+            render_fret(fingering.fret, fret_width_max)
+    }
+
+    playable_render
+}
+
+/// Creates a string with the fret number padded with dashes to match the maximum width.
+///
+/// # Panics
+///
+/// Panics if the width of the fret string representation is greater than `fret_width_max`.
+fn render_fret(fret: u8, fret_width_max: usize) -> String {
+    let fret_repr = fret.to_string();
+    let fret_width = fret_repr.len();
+    let filler_width = fret_width_max - fret_width;
+    let filler: String = "-".repeat(filler_width);
+    format!("{filler}{fret_repr}")
+}
+#[cfg(test)]
+mod test_render_fret {
+    use super::*;
+
+    #[test]
+    fn one_digit_in_one_digit_max() {
+        assert_eq!(render_fret(4, 1), "4");
+    }
+    #[test]
+    fn one_digit_in_two_digit_max() {
+        assert_eq!(render_fret(3, 2), "-3");
+    }
+    #[test]
+    fn two_digit_in_two_digit_max() {
+        assert_eq!(render_fret(12, 2), "12");
+    }
+    #[test]
+    #[should_panic]
+    fn input_wider_than_max_width() {
+        render_fret(123, 2);
+    }
+}
+
+fn calc_fret_width_max(pitch_fingerings: &[&PitchFingering]) -> usize {
+    pitch_fingerings
+        .iter()
+        .map(|fingering| fingering.fret.to_string().len())
+        .max()
+        .expect("Playable line pitch fingerings should not be empty.")
 }
 
 // TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?

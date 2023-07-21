@@ -1,6 +1,6 @@
 fn main() {
     let tab = guitar_tab_generator::create_guitar_compositions(
-        "E4
+        "E3E4E3
         Eb4
         E4
         Eb4
