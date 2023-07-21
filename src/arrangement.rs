@@ -499,6 +499,35 @@ fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
         })
         .collect()
 }
+#[cfg(test)]
+mod test_transpose {
+    use super::*;
+
+    #[test]
+    fn test_transpose_2x2() {
+        let input_matrix = vec![vec!["A", "B"], vec!["C", "D"]];
+        let expected_output = vec![vec!["A", "C"], vec!["B", "D"]];
+        assert_eq!(transpose(input_matrix), expected_output);
+    }
+    #[test]
+    fn test_transpose_3x2() {
+        let input_matrix = vec![vec!["A", "B"], vec!["C", "D"], vec!["E", "F"]];
+        let expected_output = vec![vec!["A", "C", "E"], vec!["B", "D", "F"]];
+        assert_eq!(transpose(input_matrix), expected_output);
+    }
+    #[test]
+    fn test_transpose_2x3() {
+        let input_matrix = vec![vec!["A", "B", "C"], vec!["D", "E", "F"]];
+        let expected_output = vec![vec!["A", "D"], vec!["B", "E"], vec!["C", "F"]];
+        assert_eq!(transpose(input_matrix), expected_output);
+    }
+    #[test]
+    #[should_panic]
+    fn empty_input() {
+        let input_matrix: Vec<Vec<&str>> = Vec::new();
+        transpose(input_matrix);
+    }
+}
 
 // TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
 pub fn create_arrangements(
