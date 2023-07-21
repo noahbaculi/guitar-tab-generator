@@ -249,6 +249,7 @@ pub fn render_tab(
     "Heyo".to_string()
 }
 
+/// Renders Line as a vector of strings representing the fret positions on a guitar.
 fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<String> {
     let pitch_fingerings = match line {
         Line::MeasureBreak => return vec!["|".to_owned(); num_strings],
@@ -257,13 +258,122 @@ fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<
     };
     let fret_width_max = calc_fret_width_max(&pitch_fingerings);
 
+    // Instantiate vec with rest dashes for all strings with the max fret width
     let mut playable_render = vec!["-".repeat(fret_width_max); num_strings];
+
+    // Add the rendered frets for the strings that are played
     for fingering in pitch_fingerings {
         playable_render[fingering.string_number.get() as usize - 1] =
             render_fret(fingering.fret, fret_width_max)
     }
 
     playable_render
+}
+#[cfg(test)]
+mod test_render_line {
+    use super::*;
+    use crate::string_number::StringNumber;
+
+    const NUM_STRINGS: usize = 6;
+
+    #[test]
+    fn measure_break() {
+        assert_eq!(
+            render_line(&Line::MeasureBreak, NUM_STRINGS),
+            vec!["|".to_owned(); NUM_STRINGS]
+        );
+    }
+    #[test]
+    fn rest() {
+        assert_eq!(
+            render_line(&Line::Rest, NUM_STRINGS),
+            vec!["-".to_owned(); NUM_STRINGS]
+        );
+    }
+    #[test]
+    fn playable_basic() {
+        let pitch_fingerings = vec![
+            PitchFingering {
+                string_number: StringNumber::new(2).unwrap(),
+                fret: 2,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(5).unwrap(),
+                fret: 13,
+                pitch: Pitch::G4,
+            },
+        ];
+        let expected_line_render = vec!["--", "-2", "--", "--", "13", "--"];
+
+        assert_eq!(
+            render_line(&Line::Playable(pitch_fingerings), 6),
+            expected_line_render
+        );
+    }
+    #[test]
+    fn playable_complex() {
+        let pitch_fingerings = vec![
+            PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 9,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(2).unwrap(),
+                fret: 0,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(4).unwrap(),
+                fret: 8,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(5).unwrap(),
+                fret: 10,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(6).unwrap(),
+                fret: 0,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(7).unwrap(),
+                fret: 11,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(8).unwrap(),
+                fret: 12,
+                pitch: Pitch::G4,
+            },
+        ];
+        let expected_line_render = vec!["-9", "-0", "--", "-8", "10", "-0", "11", "12"];
+
+        assert_eq!(
+            render_line(&Line::Playable(pitch_fingerings), 8),
+            expected_line_render
+        );
+    }
+    #[test]
+    #[should_panic]
+    fn playable_more_fingerings_than_strings() {
+        let pitch_fingerings = vec![
+            PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 9,
+                pitch: Pitch::G4,
+            },
+            PitchFingering {
+                string_number: StringNumber::new(2).unwrap(),
+                fret: 0,
+                pitch: Pitch::G4,
+            },
+        ];
+        render_line(&Line::Playable(pitch_fingerings), 1);
+    }
 }
 
 /// Creates a string with the fret number padded with dashes to match the maximum width.
