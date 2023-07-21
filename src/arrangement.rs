@@ -239,12 +239,14 @@ pub fn render_tab(
     playback_beat_num: Option<u16>,
 ) -> String {
     let num_strings = guitar.string_ranges.len();
-    let _lines = arrangement
+    let columns = arrangement
         .lines
         .iter()
         .map(|line| render_line(line, num_strings))
         .collect_vec();
-    dbg!(_lines);
+
+    let rows = transpose(columns);
+    dbg!(rows);
 
     "Heyo".to_string()
 }
@@ -411,12 +413,91 @@ mod test_render_fret {
     }
 }
 
+/// Calculates the maximum width of the the string representations of fret numbers in a given array of pitch fingerings.
 fn calc_fret_width_max(pitch_fingerings: &[&PitchFingering]) -> usize {
     pitch_fingerings
         .iter()
         .map(|fingering| fingering.fret.to_string().len())
         .max()
         .expect("Playable line pitch fingerings should not be empty.")
+}
+#[cfg(test)]
+mod test_calc_fret_width_max {
+    use crate::string_number::StringNumber;
+
+    use super::*;
+
+    #[test]
+    fn fret_width_one() {
+        let fingering = PitchFingering {
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 2,
+            pitch: Pitch::G4,
+        };
+        assert_eq!(calc_fret_width_max(&[&fingering]), 1);
+    }
+
+    #[test]
+    fn fret_width_one_multiple_fingerings() {
+        let fingering1 = PitchFingering {
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 0,
+            pitch: Pitch::G4,
+        };
+        let fingering2 = PitchFingering {
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 2,
+            pitch: Pitch::G4,
+        };
+        let fingering3 = PitchFingering {
+            string_number: StringNumber::new(5).unwrap(),
+            fret: 8,
+            pitch: Pitch::G4,
+        };
+        let fingerings = vec![&fingering1, &fingering2, &fingering3];
+        assert_eq!(calc_fret_width_max(&fingerings), 1);
+    }
+    #[test]
+    fn fret_width_two_multiple_fingerings() {
+        let fingering1 = PitchFingering {
+            string_number: StringNumber::new(1).unwrap(),
+            fret: 2,
+            pitch: Pitch::G4,
+        };
+        let fingering2 = PitchFingering {
+            string_number: StringNumber::new(2).unwrap(),
+            fret: 11,
+            pitch: Pitch::G4,
+        };
+        let fingering3 = PitchFingering {
+            string_number: StringNumber::new(4).unwrap(),
+            fret: 3,
+            pitch: Pitch::G4,
+        };
+        let fingerings = vec![&fingering1, &fingering2, &fingering3];
+        assert_eq!(calc_fret_width_max(&fingerings), 2);
+    }
+
+    #[test]
+    #[should_panic]
+    fn empty_input() {
+        let fingerings: Vec<&PitchFingering> = Vec::new();
+        calc_fret_width_max(&fingerings);
+    }
+}
+
+fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
+    assert!(!v.is_empty());
+    let len = v[0].len();
+    let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
+    (0..len)
+        .map(|_| {
+            iters
+                .iter_mut()
+                .map(|n| n.next().unwrap())
+                .collect::<Vec<T>>()
+        })
+        .collect()
 }
 
 // TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
