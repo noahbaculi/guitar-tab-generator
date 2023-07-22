@@ -49,10 +49,10 @@ pub fn render_tab(
 
     let beat_column_renders = transpose(columns);
 
-    let string_group_renders =
-        render_string_group(beat_column_renders, width, padding, line_index_of_playback);
+    let (strings_rows, playback_indicator_position) =
+        render_string_groups(beat_column_renders, width, padding, line_index_of_playback);
 
-    "Heyo".to_string()
+    render_complete(&strings_rows, playback_indicator_position)
 }
 
 fn line_index_of_sonorous_index<T>(
@@ -361,12 +361,12 @@ struct PlaybackIndicatorPosition {
     column_index: usize,
 }
 
-fn render_string_group(
+fn render_string_groups(
     beat_column_renders: Vec<Vec<String>>,
     width: u16,
     padding: u8,
     playback_column_index: Option<usize>,
-) -> Vec<String> {
+) -> (Vec<Vec<String>>, Option<PlaybackIndicatorPosition>) {
     let padding_render = "-".repeat(padding as usize);
 
     const MAX_FRET_RENDER_WIDTH: usize = 2;
@@ -412,38 +412,16 @@ fn render_string_group(
         }
 
         strings_rows.push(string_rows);
-
-        // dbg!(&string_rows);
     }
 
-    // match playback_indicator_position {
-    //     None => {}
-    //     Some(ref pos) => {
-    //         strings_rows[pos.row_group_index].insert(pos.column_index, "*".to_string());
-    //     }
-    // }
+    (strings_rows, playback_indicator_position)
+}
 
-    // let tab_group_rows = strings_rows
-    //     .into_iter()
-    //     .enumerate()
-    //     .map(|(row_group_index, mut row_group)| {
-    //         let playback_row_render = match playback_indicator_position {
-    //             None => "".to_owned(),
-    //             Some(ref pos) => match row_group_index == pos.row_group_index {
-    //                 false => "".to_owned(),
-    //                 true => " ".repeat(pos.column_index) + "*",
-    //             },
-    //         };
-
-    //         row_group.push(playback_row_render.to_owned());
-    //         row_group
-    //     })
-    //     .collect_vec();
-
-    // dbg!(&tab_group_rows);
-    // dbg!(&playback_indicator_position);
-
-    let num_row_groups = strings_rows[0][0].len() - 1;
+fn render_complete(
+    strings_rows: &[Vec<String>],
+    playback_indicator_position: Option<PlaybackIndicatorPosition>,
+) -> String {
+    let num_row_groups = strings_rows[0].len();
 
     for row_group_index in 0..num_row_groups {
         let upper_playback_row_render = match playback_indicator_position {
@@ -455,7 +433,7 @@ fn render_string_group(
         };
         println!("{}", upper_playback_row_render);
 
-        for string_rows in &strings_rows {
+        for string_rows in strings_rows {
             println!(
                 "{:?}",
                 string_rows
@@ -475,5 +453,5 @@ fn render_string_group(
         println!();
     }
 
-    vec!["Hi".to_owned()]
+    "Hi".to_owned()
 }
