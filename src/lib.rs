@@ -1,14 +1,16 @@
 use anyhow::Result;
-use arrangement::{create_arrangements, render_tab};
+use arrangement::create_arrangements;
 use guitar::Guitar;
 use parser::{create_string_tuning_offset, parse_lines, parse_tuning};
 use pitch::Pitch;
+use renderer::render_tab;
 use wasm_bindgen::prelude::*;
 
 pub mod arrangement;
 pub mod guitar;
 pub mod parser;
 pub mod pitch;
+pub mod renderer;
 pub mod string_number;
 
 #[wasm_bindgen]
@@ -35,6 +37,8 @@ pub fn create_guitar_compositions(
     guitar_num_frets: u8,
     guitar_capo: u8,
     num_arrangements: u8,
+    width: u16,
+    padding: u8,
     playback_beat_num: Option<u16>,
 ) -> Result<WebArrangement, JsError> {
     let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = match parse_lines(input) {
@@ -54,7 +58,7 @@ pub fn create_guitar_compositions(
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    let _x = render_tab(arrangements[0].clone(), guitar, 60, Some(2));
+    let _x = render_tab(arrangements[0].clone(), guitar, width, padding, Some(2));
     // dbg!(_x);
 
     Ok(WebArrangement {

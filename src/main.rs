@@ -1,18 +1,27 @@
 fn main() {
     let tab = guitar_tab_generator::create_guitar_compositions(
-        "E3E4E3
+        "E4
         Eb4
         E4
         Eb4
         E4
         B3
         D4
-        C4"
+        C4
+        -
+        A2A3
+        E3E3E3
+        A3
+        C3
+        E3
+        A3"
         .to_owned(),
         "standard",
         18,
         0,
         1,
+        10,
+        2,
         None,
     )
     .map_err(wasm_bindgen::JsValue::from)
