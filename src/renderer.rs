@@ -56,7 +56,7 @@ pub fn render_tab(
 }
 
 fn line_index_of_sonorous_index<T>(
-    lines: &Vec<Line<T>>,
+    lines: &[Line<T>],
     playback_sonorous_column_num: usize,
 ) -> Option<usize> {
     let mut sonorous_idx = 0;
@@ -444,16 +444,26 @@ fn render_string_group(
     // dbg!(&playback_indicator_position);
 
     let num_row_groups = strings_rows[0][0].len() - 1;
+
     for row_group_index in 0..num_row_groups {
+        let upper_playback_row_render = match playback_indicator_position {
+            None => "".to_owned(),
+            Some(ref pos) => match row_group_index == pos.row_group_index {
+                false => "".to_owned(),
+                true => " ".repeat(pos.column_index + 1) + "▼",
+            },
+        };
+        println!("{}", upper_playback_row_render);
+
         for string_rows in &strings_rows {
             println!(
                 "{:?}",
                 string_rows
-                    .get(row_group_index.clone())
+                    .get(row_group_index)
                     .unwrap_or(&"???".to_owned())
             );
         }
-        let playback_row_render = match playback_indicator_position {
+        let lower_playback_row_render = match playback_indicator_position {
             None => "".to_owned(),
             Some(ref pos) => match row_group_index == pos.row_group_index {
                 false => "".to_owned(),
@@ -461,7 +471,7 @@ fn render_string_group(
             },
         };
 
-        println!("{}", playback_row_render.to_owned());
+        println!("{}", lower_playback_row_render);
         println!();
     }
 
