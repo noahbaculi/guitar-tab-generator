@@ -421,6 +421,8 @@ fn render_complete(
     strings_rows: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
+    let mut output_lines: Vec<String> = vec![];
+
     let num_row_groups = strings_rows[0].len();
 
     for row_group_index in 0..num_row_groups {
@@ -431,27 +433,28 @@ fn render_complete(
                 true => " ".repeat(pos.column_index + 1) + "▼",
             },
         };
-        println!("{}", upper_playback_row_render);
+        output_lines.push(upper_playback_row_render);
 
         for string_rows in strings_rows {
-            println!(
-                "{:?}",
+            output_lines.push(
                 string_rows
                     .get(row_group_index)
                     .unwrap_or(&"???".to_owned())
+                    .to_string(),
             );
         }
         let lower_playback_row_render = match playback_indicator_position {
             None => "".to_owned(),
             Some(ref pos) => match row_group_index == pos.row_group_index {
                 false => "".to_owned(),
-                true => " ".repeat(pos.column_index + 1) + "▲",
+                true => " ".repeat(pos.column_index) + "▲",
             },
         };
 
-        println!("{}", lower_playback_row_render);
-        println!();
+        output_lines.push(lower_playback_row_render);
+        output_lines.push("".to_owned());
     }
 
-    "Hi".to_owned()
+    println!("{}", &output_lines.join("\n"));
+    output_lines.join("\n")
 }

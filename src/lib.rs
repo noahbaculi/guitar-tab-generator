@@ -59,17 +59,17 @@ pub fn create_guitar_compositions(
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    let _x = render_tab(
+    let tab = render_tab(
         arrangements[0].clone(),
         guitar,
         width,
         padding,
         playback_beat_num,
     );
-    // dbg!(_x);
+    println!("{}", &tab);
 
     Ok(WebArrangement {
-        composition: "Hi".to_owned(),
+        composition: tab,
         max_fret_span: 2,
     })
 }
