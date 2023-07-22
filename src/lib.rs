@@ -31,6 +31,7 @@ pub struct WebArrangement {
 
 #[wasm_bindgen]
 #[allow(unused_variables)]
+#[allow(clippy::too_many_arguments)]
 pub fn create_guitar_compositions(
     input: String,
     tuning_name: &str,
@@ -58,7 +59,13 @@ pub fn create_guitar_compositions(
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    let _x = render_tab(arrangements[0].clone(), guitar, width, padding, Some(2));
+    let _x = render_tab(
+        arrangements[0].clone(),
+        guitar,
+        width,
+        padding,
+        playback_beat_num,
+    );
     // dbg!(_x);
 
     Ok(WebArrangement {

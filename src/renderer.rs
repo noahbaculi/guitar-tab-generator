@@ -11,9 +11,36 @@ pub fn render_tab(
     guitar: Guitar,
     width: u16,
     padding: u8,
-    playback_beat_num: Option<u16>,
+    playback: Option<u16>,
 ) -> String {
     let num_strings = guitar.string_ranges.len();
+
+    let line_index_of_playback: Option<usize> = match playback {
+        None => None,
+        Some(playback_sonorous_column_num) => {
+            line_index_of_sonorous_index(&arrangement.lines, playback_sonorous_column_num as usize)
+        }
+    };
+    // dbg!(line_index_of_playback);
+
+    // match playback_beat_num {
+    //     None => None,
+    //     Some(playback_beat_num) => Some(
+    //         arrangement
+    //             .lines
+    //             .iter()
+    //             .filter(|line| matches!(line, Line::Playable(_) | Line::Rest))
+    //             .enumerate()
+    //             .inspect(|(index, line)| {
+    //                 println!("{} - {:?}", index, line);
+    //             })
+    //             .position(|(index, _)| index == playback_beat_num.into())
+    //             .unwrap(),
+    //     ),
+    // };
+    // dbg!(&arrangement.lines);
+    // dbg!(&playback_column_index);
+
     let columns = arrangement
         .lines
         .iter()
@@ -22,9 +49,28 @@ pub fn render_tab(
 
     let beat_column_renders = transpose(columns);
 
-    let string_group_renders = render_string_group(beat_column_renders, width, padding);
+    let string_group_renders =
+        render_string_group(beat_column_renders, width, padding, line_index_of_playback);
 
     "Heyo".to_string()
+}
+
+fn line_index_of_sonorous_index<T>(
+    lines: &Vec<Line<T>>,
+    playback_sonorous_column_num: usize,
+) -> Option<usize> {
+    let mut sonorous_idx = 0;
+    for (column_index, line) in lines.iter().enumerate() {
+        match line {
+            Line::MeasureBreak => (),
+            Line::Playable(..) | Line::Rest => sonorous_idx += 1,
+        };
+
+        if sonorous_idx == playback_sonorous_column_num {
+            return Some(column_index);
+        }
+    }
+    None
 }
 
 /// Renders Line as a vector of strings representing the fret positions on a guitar.
@@ -50,7 +96,7 @@ fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<
 #[cfg(test)]
 mod test_render_line {
     use super::*;
-    use crate::string_number::StringNumber;
+    use crate::{pitch::Pitch, string_number::StringNumber};
 
     const NUM_STRINGS: usize = 6;
 
@@ -168,7 +214,7 @@ fn render_fret(fret: u8, fret_width_max: usize) -> String {
     );
     let filler_width = fret_width_max - fret_width;
     let filler: String = "-".repeat(filler_width);
-    format!("{filler}{fret_repr}")
+    format!("{fret_repr}{filler}")
 }
 #[cfg(test)]
 mod test_render_fret {
@@ -203,7 +249,7 @@ fn calc_fret_width_max(pitch_fingerings: &[&PitchFingering]) -> usize {
 }
 #[cfg(test)]
 mod test_calc_fret_width_max {
-    use crate::string_number::StringNumber;
+    use crate::{pitch::Pitch, string_number::StringNumber};
 
     use super::*;
 
@@ -309,19 +355,29 @@ mod test_transpose {
     }
 }
 
+#[derive(Debug)]
+struct PlaybackIndicatorPosition {
+    row_group_index: usize,
+    column_index: usize,
+}
+
 fn render_string_group(
     beat_column_renders: Vec<Vec<String>>,
     width: u16,
     padding: u8,
+    playback_column_index: Option<usize>,
 ) -> Vec<String> {
     let padding_render = "-".repeat(padding as usize);
 
     const MAX_FRET_RENDER_WIDTH: usize = 2;
     let mut strings_rows: Vec<Vec<String>> = vec![];
 
-    dbg!(&beat_column_renders);
+    // dbg!(&beat_column_renders);
+
+    let mut playback_indicator_position: Option<PlaybackIndicatorPosition> = None;
 
     for string_beat_columns in beat_column_renders {
+        let num_render_columns = string_beat_columns.len();
         let mut remaining_string_beat_columns = VecDeque::from(string_beat_columns);
         let mut string_rows: Vec<String> = vec![];
 
@@ -329,11 +385,24 @@ fn render_string_group(
             let mut string_row = String::with_capacity(width as usize);
             string_row.push_str(&padding_render);
             while string_row.len() < (width as usize - padding as usize - MAX_FRET_RENDER_WIDTH) {
+                match playback_column_index {
+                    None => {}
+                    Some(idx) => {
+                        if num_render_columns - remaining_string_beat_columns.len() == idx {
+                            playback_indicator_position = Some(PlaybackIndicatorPosition {
+                                row_group_index: string_rows.len(),
+                                column_index: string_row.len(),
+                            });
+                        }
+                    }
+                }
+
                 let next_string_item = remaining_string_beat_columns.pop_front();
                 match next_string_item {
                     Some(string_item) => string_row.push_str(&string_item),
                     None => break,
                 }
+
                 string_row.push_str(&padding_render);
             }
             let remaining_characters = width as usize - string_row.len();
@@ -346,20 +415,55 @@ fn render_string_group(
 
         // dbg!(&string_rows);
     }
-    // dbg!(&strings_rows);
 
-    // let num_row_groups = strings_rows[0][0].len() - 1;
-    // for row_group_index in 0..num_row_groups {
-    //     for string_rows in &strings_rows {
-    //         println!(
-    //             "{:?}",
-    //             string_rows
-    //                 .get(row_group_index.clone())
-    //                 .unwrap_or(&"???".to_owned())
-    //         );
+    // match playback_indicator_position {
+    //     None => {}
+    //     Some(ref pos) => {
+    //         strings_rows[pos.row_group_index].insert(pos.column_index, "*".to_string());
     //     }
-    //     println!("")
     // }
+
+    // let tab_group_rows = strings_rows
+    //     .into_iter()
+    //     .enumerate()
+    //     .map(|(row_group_index, mut row_group)| {
+    //         let playback_row_render = match playback_indicator_position {
+    //             None => "".to_owned(),
+    //             Some(ref pos) => match row_group_index == pos.row_group_index {
+    //                 false => "".to_owned(),
+    //                 true => " ".repeat(pos.column_index) + "*",
+    //             },
+    //         };
+
+    //         row_group.push(playback_row_render.to_owned());
+    //         row_group
+    //     })
+    //     .collect_vec();
+
+    // dbg!(&tab_group_rows);
+    // dbg!(&playback_indicator_position);
+
+    let num_row_groups = strings_rows[0][0].len() - 1;
+    for row_group_index in 0..num_row_groups {
+        for string_rows in &strings_rows {
+            println!(
+                "{:?}",
+                string_rows
+                    .get(row_group_index.clone())
+                    .unwrap_or(&"???".to_owned())
+            );
+        }
+        let playback_row_render = match playback_indicator_position {
+            None => "".to_owned(),
+            Some(ref pos) => match row_group_index == pos.row_group_index {
+                false => "".to_owned(),
+                true => " ".repeat(pos.column_index + 1) + "▲",
+            },
+        };
+
+        println!("{}", playback_row_render.to_owned());
+        println!();
+    }
 
     vec!["Hi".to_owned()]
 }

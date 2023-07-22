@@ -2,6 +2,7 @@ fn main() {
     let tab = guitar_tab_generator::create_guitar_compositions(
         "E4
         Eb4
+
         E4
         Eb4
         E4
@@ -20,9 +21,9 @@ fn main() {
         18,
         0,
         1,
-        10,
+        40,
         2,
-        None,
+        Some(4),
     )
     .map_err(wasm_bindgen::JsValue::from)
     .unwrap();
