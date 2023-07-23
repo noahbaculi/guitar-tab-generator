@@ -23,7 +23,7 @@ fn main() {
         1,
         40,
         2,
-        Some(1),
+        Some(12),
     )
     .map_err(wasm_bindgen::JsValue::from)
     .unwrap();

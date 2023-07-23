@@ -214,7 +214,7 @@ fn render_fret(fret: u8, fret_width_max: usize) -> String {
     );
     let filler_width = fret_width_max - fret_width;
     let filler: String = "-".repeat(filler_width);
-    format!("{fret_repr}{filler}")
+    format!("{filler}{fret_repr}")
 }
 #[cfg(test)]
 mod test_render_fret {
@@ -385,22 +385,28 @@ fn render_string_groups(
             let mut string_row = String::with_capacity(width as usize);
             string_row.push_str(&padding_render);
             while string_row.len() < (width as usize - padding as usize - MAX_FRET_RENDER_WIDTH) {
-                match playback_column_index {
-                    None => {}
-                    Some(idx) => {
-                        if num_render_columns - remaining_string_beat_columns.len() == idx {
-                            playback_indicator_position = Some(PlaybackIndicatorPosition {
-                                row_group_index: string_rows.len(),
-                                column_index: string_row.len(),
-                            });
-                        }
-                    }
-                }
-
                 let next_string_item = remaining_string_beat_columns.pop_front();
                 match next_string_item {
-                    Some(string_item) => string_row.push_str(&string_item),
                     None => break,
+                    Some(string_item) => {
+                        match playback_column_index {
+                            None => {}
+                            Some(idx) => {
+                                if num_render_columns - remaining_string_beat_columns.len() == idx {
+                                    let wide_fret_playback_offset = match string_item.len() {
+                                        2 => 1,
+                                        _ => 0,
+                                    };
+
+                                    playback_indicator_position = Some(PlaybackIndicatorPosition {
+                                        row_group_index: string_rows.len(),
+                                        column_index: string_row.len() + wide_fret_playback_offset,
+                                    });
+                                }
+                            }
+                        }
+                        string_row.push_str(&string_item)
+                    }
                 }
 
                 string_row.push_str(&padding_render);
@@ -430,7 +436,7 @@ fn render_complete(
             None => "".to_owned(),
             Some(ref pos) => match row_group_index == pos.row_group_index {
                 false => "".to_owned(),
-                true => " ".repeat(pos.column_index + 1) + "▼",
+                true => " ".repeat(pos.column_index) + "▼",
             },
         };
         output_lines.push(upper_playback_row_render);
@@ -455,6 +461,6 @@ fn render_complete(
         output_lines.push("".to_owned());
     }
 
-    println!("{}", &output_lines.join("\n"));
+    // println!("{}", &output_lines.join("\n"));
     output_lines.join("\n")
 }
