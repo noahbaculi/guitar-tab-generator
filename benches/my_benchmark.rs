@@ -10,6 +10,7 @@ use guitar_tab_generator::{
     renderer::render_tab,
     string_number::StringNumber,
 };
+use itertools::Itertools;
 use std::{collections::BTreeMap, time::Duration};
 
 pub fn guitar_creation(c: &mut Criterion) {
@@ -230,10 +231,12 @@ fn bench_create_string_tuning_offset(c: &mut Criterion) {
     });
 }
 
-fn bench_create_single_composition(c: &mut Criterion) {
-    let mut group = c.benchmark_group("create_compositions");
-    for input_lines_num in (0..=85).step_by(5) {
-        let input_text = fur_elise_input().to_owned();
+fn bench_create_single_composition_scaling(c: &mut Criterion) {
+    let mut group = c.benchmark_group("bench_create_single_composition_scaling");
+    for input_lines_num in (5..=85).step_by(10) {
+        let input_text = fur_elise_input().lines().take(input_lines_num).join("\n");
+        // dbg!(&input_text);
+
         group
             .sample_size(15)
             .warm_up_time(Duration::from_secs_f32(2.0));
@@ -243,14 +246,14 @@ fn bench_create_single_composition(c: &mut Criterion) {
             |b, &playback_index| {
                 b.iter(|| {
                     guitar_tab_generator::create_guitar_compositions(
-                        black_box(input_text),
+                        black_box(input_text.clone()),
                         black_box("standard"),
                         black_box(18),
                         black_box(0),
-                        black_box(2),
+                        black_box(1),
                         black_box(40),
                         black_box(1),
-                        black_box(Some(playback_index)),
+                        black_box(None),
                     );
                 });
             },
@@ -304,7 +307,7 @@ criterion_group! {
         // arrangement_scaling,
         // parse_lines,
         // create_string_tuning_offset,
-        bench_create_compositions,
+        bench_create_single_composition_scaling,
         bench_render_tab
 }
 criterion_main!(benches);
