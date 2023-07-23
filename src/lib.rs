@@ -40,7 +40,7 @@ pub fn create_guitar_compositions(
     num_arrangements: u8,
     width: u16,
     padding: u8,
-    playback_beat_num: Option<u16>,
+    playback_index: Option<u16>,
 ) -> Result<WebArrangement, JsError> {
     let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = match parse_lines(input) {
         Ok(lines) => lines,
@@ -64,9 +64,9 @@ pub fn create_guitar_compositions(
         guitar,
         width,
         padding,
-        playback_beat_num,
+        playback_index,
     );
-    println!("{}", &tab);
+    // println!("{}", &tab);
 
     Ok(WebArrangement {
         composition: tab,

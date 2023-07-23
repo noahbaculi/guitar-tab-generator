@@ -21,7 +21,7 @@ pub fn render_tab(
             line_index_of_sonorous_index(&arrangement.lines, playback_sonorous_column_num as usize)
         }
     };
-    // dbg!(line_index_of_playback);
+    // dbg!(&line_index_of_playback);
 
     // match playback_beat_num {
     //     None => None,
@@ -52,25 +52,39 @@ pub fn render_tab(
     let (strings_rows, playback_indicator_position) =
         render_string_groups(beat_column_renders, width, padding, line_index_of_playback);
 
+    // dbg!(&playback_indicator_position);
+
     render_complete(&strings_rows, playback_indicator_position)
 }
 
-fn line_index_of_sonorous_index<T>(
-    lines: &[Line<T>],
+fn line_index_of_sonorous_index(
+    lines: &[Line<BeatVec<PitchFingering>>],
     playback_sonorous_column_num: usize,
 ) -> Option<usize> {
-    let mut sonorous_idx = 0;
-    for (column_index, line) in lines.iter().enumerate() {
-        match line {
-            Line::MeasureBreak => (),
-            Line::Playable(..) | Line::Rest => sonorous_idx += 1,
-        };
+    // let mut sonorous_idx = 0;
+    // for (column_index, line) in lines.iter().enumerate() {
+    //     match line {
+    //         Line::MeasureBreak => (),
+    //         Line::Playable(..) | Line::Rest => {
+    //             if sonorous_idx == playback_sonorous_column_num {
+    //                 return Some(column_index);
+    //             }
+    //             sonorous_idx += 1
+    //         }
+    //     };
+    // }
 
-        if sonorous_idx == playback_sonorous_column_num {
-            return Some(column_index);
-        }
-    }
-    None
+    lines
+        .iter()
+        .enumerate()
+        .filter(|(_, line)| matches!(line, Line::Playable(_) | Line::Rest))
+        // .inspect(|(idx, line)| println!("{} - {:?}", idx, line))
+        .map(|(index, _)| index)
+        .nth(playback_sonorous_column_num)
+
+    // for sonorous_index in 0..playback_sonorous_column_num {}
+
+    // None
 }
 
 /// Renders Line as a vector of strings representing the fret positions on a guitar.
@@ -386,13 +400,24 @@ fn render_string_groups(
             string_row.push_str(&padding_render);
             while string_row.len() < (width as usize - padding as usize - MAX_FRET_RENDER_WIDTH) {
                 let next_string_item = remaining_string_beat_columns.pop_front();
+                // dbg!(&next_string_item);
                 match next_string_item {
-                    None => break,
+                    None => {
+                        break;
+                    }
                     Some(string_item) => {
+                        // dbg!(&playback_column_index);
                         match playback_column_index {
                             None => {}
                             Some(idx) => {
-                                if num_render_columns - remaining_string_beat_columns.len() == idx {
+                                // dbg!(
+                                //     &num_render_columns,
+                                //     &remaining_string_beat_columns.len(),
+                                //     &idx
+                                // );
+                                if num_render_columns - remaining_string_beat_columns.len() - 1
+                                    == idx
+                                {
                                     let wide_fret_playback_offset = match string_item.len() {
                                         2 => 1,
                                         _ => 0,
