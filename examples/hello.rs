@@ -1,3 +1,5 @@
+extern crate guitar_tab_generator;
+
 fn main() {
     let tab = guitar_tab_generator::create_guitar_compositions(
         "E4

@@ -13,11 +13,20 @@ Old versions:
 Commands:
 
 ```shell
+# Run code
+cargo run --example hello
+# Background code runner
+bacon -- --example hello
+
+
+# Background code checker
+cargo clippy
 # Background code checker
 bacon
 
 # Calculate code coverage
 cargo tarpaulin --exclude-files src/main.rs --out Html --output-dir dev/tarpaulin-coverage
+cargo tarpaulin  --out Html --output-dir dev/tarpaulin-coverage
 cargo llvm-cov --ignore-filename-regex src/main.rs --open
 
 # Screen for potentially unused feature flags
