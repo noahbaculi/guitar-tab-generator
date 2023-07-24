@@ -61,30 +61,81 @@ fn line_index_of_sonorous_index(
     lines: &[Line<BeatVec<PitchFingering>>],
     playback_sonorous_column_num: usize,
 ) -> Option<usize> {
-    // let mut sonorous_idx = 0;
-    // for (column_index, line) in lines.iter().enumerate() {
-    //     match line {
-    //         Line::MeasureBreak => (),
-    //         Line::Playable(..) | Line::Rest => {
-    //             if sonorous_idx == playback_sonorous_column_num {
-    //                 return Some(column_index);
-    //             }
-    //             sonorous_idx += 1
-    //         }
-    //     };
-    // }
-
     lines
         .iter()
         .enumerate()
         .filter(|(_, line)| matches!(line, Line::Playable(_) | Line::Rest))
-        // .inspect(|(idx, line)| println!("{} - {:?}", idx, line))
         .map(|(index, _)| index)
         .nth(playback_sonorous_column_num)
+}
+#[cfg(test)]
+mod test_line_index_of_sonorous_index {
+    use super::*;
+    use crate::{pitch::Pitch, string_number::StringNumber};
 
-    // for sonorous_index in 0..playback_sonorous_column_num {}
+    #[test]
+    fn empty_lines() {
+        let lines: Vec<Line<BeatVec<PitchFingering>>> = vec![];
+        assert_eq!(line_index_of_sonorous_index(&lines, 12), None);
+    }
+    #[test]
+    fn only_measure_breaks() {
+        let lines: Vec<Line<BeatVec<PitchFingering>>> =
+            vec![Line::MeasureBreak, Line::MeasureBreak, Line::MeasureBreak];
+        assert_eq!(line_index_of_sonorous_index(&lines, 12), None);
+    }
 
-    // None
+    fn get_lines() -> Vec<Line<BeatVec<PitchFingering>>> {
+        vec![
+            Line::Playable(vec![PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 6,
+                pitch: Pitch::E4,
+            }]),
+            Line::Playable(vec![PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 6,
+                pitch: Pitch::E4,
+            }]),
+            Line::Rest,
+            Line::Playable(vec![PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 6,
+                pitch: Pitch::E4,
+            }]),
+            Line::MeasureBreak,
+            Line::Playable(vec![PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 6,
+                pitch: Pitch::E4,
+            }]),
+            Line::Playable(vec![PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 6,
+                pitch: Pitch::E4,
+            }]),
+            Line::Playable(vec![PitchFingering {
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 6,
+                pitch: Pitch::E4,
+            }]),
+        ]
+    }
+    #[test]
+    fn include_playable() {
+        let lines = get_lines();
+        assert_eq!(line_index_of_sonorous_index(&lines, 2), Some(2));
+    }
+    #[test]
+    fn include_rest() {
+        let lines = get_lines();
+        assert_eq!(line_index_of_sonorous_index(&lines, 3), Some(3));
+    }
+    #[test]
+    fn exclude_measure_break() {
+        let lines = get_lines();
+        assert_eq!(line_index_of_sonorous_index(&lines, 4), Some(5));
+    }
 }
 
 /// Renders Line as a vector of strings representing the fret positions on a guitar.

@@ -237,9 +237,9 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
         let input_text = fur_elise_input().lines().take(input_lines_num).join("\n");
         // dbg!(&input_text);
 
-        group
-            .sample_size(15)
-            .warm_up_time(Duration::from_secs_f32(2.0));
+        // group
+        //     .sample_size(20)
+        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(input_lines_num),
             &input_lines_num,
@@ -275,10 +275,9 @@ fn bench_render_tab(c: &mut Criterion) {
     .unwrap();
 
     for playback_index in (0..=30).step_by(10) {
-        // group.throughput(Throughput::Bytes(*size as u64));
-        group
-            .sample_size(15)
-            .warm_up_time(Duration::from_secs_f32(2.0));
+        // group
+        //     .sample_size(20)
+        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(playback_index),
             &playback_index,
