@@ -5,7 +5,6 @@ use crate::{
 use itertools::Itertools;
 use std::collections::VecDeque;
 
-#[allow(unused_variables)]
 pub fn render_tab(
     arrangement: Arrangement,
     guitar: Guitar,
@@ -420,7 +419,7 @@ mod test_transpose {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct PlaybackIndicatorPosition {
     row_group_index: usize,
     column_index: usize,
@@ -437,8 +436,6 @@ fn render_string_groups(
     const MAX_FRET_RENDER_WIDTH: usize = 2;
     let mut strings_rows: Vec<Vec<String>> = vec![];
 
-    // dbg!(&beat_column_renders);
-
     let mut playback_indicator_position: Option<PlaybackIndicatorPosition> = None;
 
     for string_beat_columns in beat_column_renders {
@@ -451,24 +448,19 @@ fn render_string_groups(
             string_row.push_str(&padding_render);
             while string_row.len() < (width as usize - padding as usize - MAX_FRET_RENDER_WIDTH) {
                 let next_string_item = remaining_string_beat_columns.pop_front();
-                // dbg!(&next_string_item);
                 match next_string_item {
                     None => {
                         break;
                     }
                     Some(string_item) => {
-                        // dbg!(&playback_column_index);
                         match playback_column_index {
                             None => {}
                             Some(idx) => {
-                                // dbg!(
-                                //     &num_render_columns,
-                                //     &remaining_string_beat_columns.len(),
-                                //     &idx
-                                // );
                                 if num_render_columns - remaining_string_beat_columns.len() - 1
                                     == idx
                                 {
+                                    // Offset the playback indicator by one
+                                    // character if the frets are two characters wide
                                     let wide_fret_playback_offset = match string_item.len() {
                                         2 => 1,
                                         _ => 0,
@@ -497,6 +489,147 @@ fn render_string_groups(
     }
 
     (strings_rows, playback_indicator_position)
+}
+#[cfg(test)]
+mod test_render_string_groups {
+    use super::*;
+
+    fn get_beat_column_renders() -> Vec<Vec<String>> {
+        vec![
+            vec![
+                "0".to_owned(),
+                "-".to_owned(),
+                "-".to_owned(),
+                "--".to_owned(),
+                "|".to_owned(),
+                "0".to_owned(),
+                "-".to_owned(),
+                "-".to_owned(),
+                "--".to_owned(),
+                "|".to_owned(),
+            ],
+            vec![
+                "-".to_owned(),
+                "1".to_owned(),
+                "-".to_owned(),
+                "--".to_owned(),
+                "|".to_owned(),
+                "-".to_owned(),
+                "1".to_owned(),
+                "-".to_owned(),
+                "--".to_owned(),
+                "|".to_owned(),
+            ],
+            vec![
+                "-".to_owned(),
+                "-".to_owned(),
+                "2".to_owned(),
+                "--".to_owned(),
+                "|".to_owned(),
+                "-".to_owned(),
+                "-".to_owned(),
+                "2".to_owned(),
+                "--".to_owned(),
+                "|".to_owned(),
+            ],
+            vec![
+                "-".to_owned(),
+                "-".to_owned(),
+                "-".to_owned(),
+                "30".to_owned(),
+                "|".to_owned(),
+                "-".to_owned(),
+                "-".to_owned(),
+                "-".to_owned(),
+                "30".to_owned(),
+                "|".to_owned(),
+            ],
+        ]
+    }
+
+    #[test]
+    fn single_row_group() {
+        let beat_column_renders = get_beat_column_renders();
+        let width = 25;
+        let padding = 1;
+        let playback_column_index = Some(1);
+
+        let expected_string_groups = vec![
+            vec!["-0--------|-0--------|---".to_owned()],
+            vec!["---1------|---1------|---".to_owned()],
+            vec!["-----2----|-----2----|---".to_owned()],
+            vec!["-------30-|-------30-|---".to_owned()],
+        ];
+        let expected_playback_indicator_position = Some(PlaybackIndicatorPosition {
+            row_group_index: 0,
+            column_index: 3,
+        });
+
+        assert_eq!(
+            render_string_groups(beat_column_renders, width, padding, playback_column_index),
+            (expected_string_groups, expected_playback_indicator_position)
+        );
+    }
+    #[test]
+    fn single_row_group_playback_second_char_of_wide_fret() {
+        let beat_column_renders = get_beat_column_renders();
+        let width = 25;
+        let padding = 1;
+        let playback_column_index = Some(3);
+
+        let expected_string_groups = vec![
+            vec!["-0--------|-0--------|---".to_owned()],
+            vec!["---1------|---1------|---".to_owned()],
+            vec!["-----2----|-----2----|---".to_owned()],
+            vec!["-------30-|-------30-|---".to_owned()],
+        ];
+        let expected_playback_indicator_position = Some(PlaybackIndicatorPosition {
+            row_group_index: 0,
+            column_index: 8,
+        });
+
+        assert_eq!(
+            render_string_groups(beat_column_renders, width, padding, playback_column_index),
+            (expected_string_groups, expected_playback_indicator_position)
+        );
+    }
+    #[test]
+    fn two_row_group() {
+        let beat_column_renders = get_beat_column_renders();
+        let width = 14;
+        let padding = 1;
+        let playback_column_index = Some(7);
+
+        let expected_string_groups = vec![
+            vec!["-0--------|---".to_owned(), "-0--------|---".to_owned()],
+            vec!["---1------|---".to_owned(), "---1------|---".to_owned()],
+            vec!["-----2----|---".to_owned(), "-----2----|---".to_owned()],
+            vec!["-------30-|---".to_owned(), "-------30-|---".to_owned()],
+        ];
+        let expected_playback_indicator_position = Some(PlaybackIndicatorPosition {
+            row_group_index: 1,
+            column_index: 5,
+        });
+
+        assert_eq!(
+            render_string_groups(beat_column_renders, width, padding, playback_column_index),
+            (expected_string_groups, expected_playback_indicator_position)
+        );
+    }
+    #[test]
+    fn no_playback_column_index() {
+        let (_, playback_indicator_position) =
+            render_string_groups(get_beat_column_renders(), 20, 1, None);
+
+        assert_eq!(playback_indicator_position, None);
+    }
+    #[test]
+    fn too_large_playback_column_index() {
+        let (_, playback_indicator_position) =
+            render_string_groups(get_beat_column_renders(), 20, 1, Some(100_000));
+
+        assert_eq!(playback_indicator_position, None);
+    }
 }
 
 fn render_complete(
