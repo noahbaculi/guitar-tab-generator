@@ -53,7 +53,7 @@ pub fn render_tab(
 
     // dbg!(&playback_indicator_position);
 
-    render_complete(&strings_rows, playback_indicator_position)
+    render_string_output(&strings_rows, playback_indicator_position)
 }
 
 fn line_index_of_sonorous_index(
@@ -632,7 +632,7 @@ mod test_render_string_groups {
     }
 }
 
-fn render_complete(
+fn render_string_output(
     strings_rows: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
@@ -669,7 +669,101 @@ fn render_complete(
         output_lines.push(lower_playback_row_render);
         output_lines.push("".to_owned());
     }
-
-    // println!("{}", &output_lines.join("\n"));
     output_lines.join("\n")
+}
+
+#[cfg(test)]
+mod test_render_string_output {
+    use super::*;
+
+    #[test]
+    fn single_row_group() {
+        let string_rows = vec![
+            vec!["-0--------|-0--------|---".to_owned()],
+            vec!["---1------|---1------|---".to_owned()],
+            vec!["-----2----|-----2----|---".to_owned()],
+            vec!["-------30-|-------30-|---".to_owned()],
+        ];
+        let playback_indicator_position = Some(PlaybackIndicatorPosition {
+            row_group_index: 0,
+            column_index: 3,
+        });
+
+        let expected_output = concat!(
+            "   ▼\n",
+            "-0--------|-0--------|---\n",
+            "---1------|---1------|---\n",
+            "-----2----|-----2----|---\n",
+            "-------30-|-------30-|---\n",
+            "   ▲\n"
+        )
+        .to_owned();
+
+        assert_eq!(
+            render_string_output(&string_rows, playback_indicator_position),
+            expected_output
+        );
+    }
+    #[test]
+    fn single_row_group_no_playback() {
+        let string_rows = vec![
+            vec!["-0--------|-0--------|---".to_owned()],
+            vec!["---1------|---1------|---".to_owned()],
+            vec!["-----2----|-----2----|---".to_owned()],
+            vec!["-------30-|-------30-|---".to_owned()],
+        ];
+        let playback_indicator_position = None;
+
+        let output = render_string_output(&string_rows, playback_indicator_position);
+
+        let expected_output = concat!(
+            "\n",
+            "-0--------|-0--------|---\n",
+            "---1------|---1------|---\n",
+            "-----2----|-----2----|---\n",
+            "-------30-|-------30-|---\n",
+            "\n"
+        )
+        .to_owned();
+
+        println!("Output :\n{output}");
+        println!("expected output :\n{expected_output}");
+
+        assert_eq!(output, expected_output);
+    }
+    #[test]
+    fn multiple_row_groups_playback_second_char_of_wide_fret() {
+        let string_rows = vec![
+            vec!["-0--------|---".to_owned(), "-0--------|---".to_owned()],
+            vec!["---1------|---".to_owned(), "---1------|---".to_owned()],
+            vec!["-----2----|---".to_owned(), "-----2----|---".to_owned()],
+            vec!["-------30-|---".to_owned(), "-------30-|---".to_owned()],
+        ];
+        let playback_indicator_position = Some(PlaybackIndicatorPosition {
+            row_group_index: 1,
+            column_index: 8,
+        });
+
+        let output = render_string_output(&string_rows, playback_indicator_position);
+
+        let expected_output = concat!(
+            "\n",
+            "-0--------|---\n",
+            "---1------|---\n",
+            "-----2----|---\n",
+            "-------30-|---\n\n\n",
+            "        ▼\n",
+            "-0--------|---\n",
+            "---1------|---\n",
+            "-----2----|---\n",
+            "-------30-|---\n",
+            "        ▲\n",
+        )
+        .to_owned();
+
+        println!("Output :\n{output}");
+        println!("expected output :\n{expected_output}");
+
+        assert_eq!(output, expected_output);
+    }
 }

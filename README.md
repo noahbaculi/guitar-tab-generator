@@ -25,9 +25,8 @@ cargo clippy
 bacon
 
 # Calculate code coverage
-cargo tarpaulin --exclude-files src/main.rs --out Html --output-dir dev/tarpaulin-coverage
-cargo tarpaulin  --out Html --output-dir dev/tarpaulin-coverage
-cargo llvm-cov --ignore-filename-regex src/main.rs --open
+cargo tarpaulin --out Html --output-dir dev/tarpaulin-coverage
+cargo llvm-cov --open
 
 # Screen for potentially unused feature flags
 unused-features analyze --report-dir 'dev/unused-features-report'
