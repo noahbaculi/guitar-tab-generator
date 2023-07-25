@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 
 pub fn render_tab(
     arrangement_lines: &[Line<BeatVec<PitchFingering>>],
-    guitar: Guitar,
+    guitar: &Guitar,
     width: u16,
     padding: u8,
     playback: Option<u16>,
@@ -80,7 +80,7 @@ mod test_render_tab {
 
         let output = render_tab(
             &arrangement_lines,
-            Guitar::default(),
+            &Guitar::default(),
             width,
             padding,
             playback,
@@ -112,7 +112,7 @@ mod test_render_tab {
 
         let output = render_tab(
             &arrangement_lines,
-            Guitar::default(),
+            &Guitar::default(),
             width,
             padding,
             playback,

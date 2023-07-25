@@ -61,7 +61,7 @@ pub fn create_guitar_compositions(
 
     let tab = render_tab(
         &arrangements[0].lines,
-        guitar,
+        &guitar,
         width,
         padding,
         playback_index,
