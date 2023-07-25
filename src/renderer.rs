@@ -1,12 +1,12 @@
 use crate::{
-    arrangement::{Arrangement, BeatVec, Line},
+    arrangement::{BeatVec, Line},
     guitar::{Guitar, PitchFingering},
 };
 use itertools::Itertools;
 use std::collections::VecDeque;
 
 pub fn render_tab(
-    arrangement: Arrangement,
+    arrangement_lines: &[Line<BeatVec<PitchFingering>>],
     guitar: Guitar,
     width: u16,
     padding: u8,
@@ -16,32 +16,12 @@ pub fn render_tab(
 
     let line_index_of_playback: Option<usize> = match playback {
         None => None,
-        Some(playback_sonorous_column_num) => {
-            line_index_of_sonorous_index(&arrangement.lines, playback_sonorous_column_num as usize)
+        Some(playback_sonorous_index) => {
+            line_index_of_sonorous_index(arrangement_lines, playback_sonorous_index as usize)
         }
     };
-    // dbg!(&line_index_of_playback);
 
-    // match playback_beat_num {
-    //     None => None,
-    //     Some(playback_beat_num) => Some(
-    //         arrangement
-    //             .lines
-    //             .iter()
-    //             .filter(|line| matches!(line, Line::Playable(_) | Line::Rest))
-    //             .enumerate()
-    //             .inspect(|(index, line)| {
-    //                 println!("{} - {:?}", index, line);
-    //             })
-    //             .position(|(index, _)| index == playback_beat_num.into())
-    //             .unwrap(),
-    //     ),
-    // };
-    // dbg!(&arrangement.lines);
-    // dbg!(&playback_column_index);
-
-    let columns = arrangement
-        .lines
+    let columns = arrangement_lines
         .iter()
         .map(|line| render_line(line, num_strings))
         .collect_vec();
@@ -51,21 +31,128 @@ pub fn render_tab(
     let (strings_rows, playback_indicator_position) =
         render_string_groups(beat_column_renders, width, padding, line_index_of_playback);
 
-    // dbg!(&playback_indicator_position);
-
     render_string_output(&strings_rows, playback_indicator_position)
+}
+#[cfg(test)]
+mod test_render_tab {
+    use crate::{pitch::Pitch, string_number::StringNumber};
+
+    use super::*;
+
+    fn get_arrangement_lines() -> Vec<Line<BeatVec<PitchFingering>>> {
+        vec![
+            Line::Playable(vec![PitchFingering {
+                pitch: Pitch::E4,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 0,
+            }]),
+            Line::Playable(vec![PitchFingering {
+                pitch: Pitch::DSharpEFlat4,
+                string_number: StringNumber::new(2).unwrap(),
+                fret: 4,
+            }]),
+            Line::Playable(vec![PitchFingering {
+                pitch: Pitch::E4,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 0,
+            }]),
+            Line::Rest,
+            Line::MeasureBreak,
+            Line::Playable(vec![PitchFingering {
+                pitch: Pitch::DSharpEFlat4,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 4,
+            }]),
+            Line::Playable(vec![PitchFingering {
+                pitch: Pitch::A5,
+                string_number: StringNumber::new(1).unwrap(),
+                fret: 12,
+            }]),
+        ]
+    }
+
+    #[test]
+    fn single_row_group() {
+        let arrangement_lines = get_arrangement_lines();
+        let width = 20;
+        let padding = 1;
+        let playback = Some(3);
+
+        let output = render_tab(
+            &arrangement_lines,
+            Guitar::default(),
+            width,
+            padding,
+            playback,
+        );
+
+        let expected_output = concat!(
+            "       ▼\n",
+            "-0---0---|-4-12-----\n",
+            "---4-----|----------\n",
+            "---------|----------\n",
+            "---------|----------\n",
+            "---------|----------\n",
+            "---------|----------\n",
+            "       ▲\n"
+        )
+        .to_owned();
+
+        println!("Output :\n{output}");
+        println!("expected output :\n{expected_output}");
+
+        assert_eq!(output, expected_output);
+    }
+    #[test]
+    fn two_row_groups_no_playback() {
+        let arrangement_lines = get_arrangement_lines();
+        let width = 14;
+        let padding = 1;
+        let playback = None;
+
+        let output = render_tab(
+            &arrangement_lines,
+            Guitar::default(),
+            width,
+            padding,
+            playback,
+        );
+
+        let expected_output = concat!(
+            "\n",
+            "-0---0---|----\n",
+            "---4-----|----\n",
+            "---------|----\n",
+            "---------|----\n",
+            "---------|----\n",
+            "---------|----\n",
+            "\n\n\n",
+            "-4-12---------\n",
+            "--------------\n",
+            "--------------\n",
+            "--------------\n",
+            "--------------\n",
+            "--------------\n\n"
+        )
+        .to_owned();
+
+        println!("Output :\n{output}");
+        println!("expected output :\n{expected_output}");
+
+        assert_eq!(output, expected_output);
+    }
 }
 
 fn line_index_of_sonorous_index(
     lines: &[Line<BeatVec<PitchFingering>>],
-    playback_sonorous_column_num: usize,
+    playback_sonorous_index: usize,
 ) -> Option<usize> {
     lines
         .iter()
         .enumerate()
         .filter(|(_, line)| matches!(line, Line::Playable(_) | Line::Rest))
         .map(|(index, _)| index)
-        .nth(playback_sonorous_column_num)
+        .nth(playback_sonorous_index)
 }
 #[cfg(test)]
 mod test_line_index_of_sonorous_index {
