@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WASM Example</title>
+</head>
+
+<body>
+    <button id="thisButton">Hi</button>
+
+
+    <script type="module">
+        import init, { WebArrangement, create_guitar_compositions } from '../pkg/guitar_tab_generator.js';
+        async function run() {
+            await init();
+        }
+        run();
+
+        let input_string = `E4
+            Eb4
+            E4
+            Eb4
+            E4
+            B3
+            D4
+            C4
+
+            A2A3
+            E3
+            A3
+            C3
+            E3
+            A3
+
+            E3B3
+            E3
+            Ab3
+            E3
+            Ab3
+            B3
+
+            A2C4
+            E3
+            A3
+            E3
+
+            E4
+            Eb4
+            E4
+            Eb4
+            E4
+            B3
+            D4
+            C4
+
+            A2A3
+            E3
+            A3
+            C3
+            E3
+            A3
+
+            E3B3
+            E3
+            Ab3
+            E3
+            C4
+            B3
+            A3
+
+            C4
+            C4
+            C4
+            C4
+            F4
+            E4
+            E4
+            D4
+
+            Bb4
+            A4
+            A4
+            G4
+            F4
+            E4
+            D4
+            C4
+
+            Bb3
+            Bb3
+            A3
+            G3
+            A3
+            Bb3
+            C4
+
+            D4
+            Eb4
+            Eb4
+            E4
+            F4
+            A3
+            C4
+
+            D4
+            B3
+            C4`;
+
+
+        let input = {
+            input_pitches: input_string,
+            tuning_name: "standard",
+            guitar_num_frets: 18,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            width: 40,
+            padding: 1,
+            playback_index: 3
+        };
+
+        document.getElementById("thisButton").addEventListener("click", () => {
+            // alert(`Tab output saved to your downloads! 🎉`);
+            // console.log(add(5, 5));
+            let web_arrangements = create_guitar_compositions(input);
+            console.log(web_arrangements[0].tab);
+        });
+    </script>
+</body>
+
+</html>

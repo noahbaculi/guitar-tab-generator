@@ -235,7 +235,19 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_create_single_composition_scaling");
     for input_lines_num in (5..=85).step_by(10) {
         let input_text = fur_elise_input().lines().take(input_lines_num).join("\n");
-        // dbg!(&input_text);
+
+        let web_input = guitar_tab_generator::WebInput {
+            input_pitches: input_text,
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 18,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            width: 40,
+            padding: 2,
+            playback_index: Some(12),
+        };
+
+        let input = serde_wasm_bindgen::to_value(&web_input).unwrap();
 
         // group
         //     .sample_size(20)
@@ -245,16 +257,7 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
             &input_lines_num,
             |b, &playback_index| {
                 b.iter(|| {
-                    guitar_tab_generator::create_guitar_compositions(
-                        black_box(input_text.clone()),
-                        black_box("standard"),
-                        black_box(18),
-                        black_box(0),
-                        black_box(1),
-                        black_box(40),
-                        black_box(1),
-                        black_box(None),
-                    );
+                    guitar_tab_generator::create_guitar_compositions(black_box(input.clone()));
                 });
             },
         );

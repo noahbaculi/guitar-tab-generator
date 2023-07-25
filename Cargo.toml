@@ -16,6 +16,8 @@ js-sys = "0.3.64"
 ordered-float = "3.7.0"
 pathfinding = "4.3.0"
 regex = "1.9.1"
+serde = { version = "1.0.175", features = ["derive"] }
+serde-wasm-bindgen = "0.5.0"
 strum = "0.25.0"
 strum_macros = "0.25.1"
 thiserror = "1.0.43"
@@ -23,10 +25,10 @@ wasm-bindgen = "0.2.87"
 web-sys = "0.3.64"
 
 [profile.release]
-# strip = true  # Automatically strip symbols from the binary.
-# opt-level = "z"  # Optimize for size.
-# lto = true
-# codegen-units = 1
+strip = true      # Automatically strip symbols from the binary.
+opt-level = "z"   # Optimize for size.
+lto = true
+codegen-units = 1
 
 [dev-dependencies]
 criterion = { version = "0.4", features = ["html_reports"] }

@@ -34,7 +34,7 @@ unused-features build-report --input 'dev/unused-features-report/report.json'
 
 # Build WASM binary using [wasm-pack](https://rustwasm.github.io/docs/wasm-pack/introduction.html) and [wasm-bindgen](https://rustwasm.github.io/wasm-bindgen/introduction.html)
 wasm-pack build --target web
-ls -l pkg/guitar_tab_generator_bg.wasm  # get size in bytes
+ls -l pkg/guitar_tab_generator_bg.wasm  # get size in bytes 1137837 -> 905075
 ```
 
 Running To-Dos:
