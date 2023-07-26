@@ -1,8 +1,8 @@
 extern crate guitar_tab_generator;
 
 fn main() {
-    let web_input = guitar_tab_generator::WebInput {
-        input_pitches: "E4
+    let input = guitar_tab_generator::CompositionInput {
+        pitches: "E4
         Eb4
 
         E4
@@ -29,10 +29,6 @@ fn main() {
         playback_index: Some(12),
     };
 
-    let tab = guitar_tab_generator::create_guitar_compositions(
-        serde_wasm_bindgen::to_value(&web_input).unwrap(),
-    )
-    .map_err(wasm_bindgen::JsValue::from)
-    .unwrap();
+    let tab = guitar_tab_generator::create_guitar_compositions(input);
     dbg!(&tab);
 }

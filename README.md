@@ -15,6 +15,7 @@ Commands:
 ```shell
 # Run code
 cargo run --example hello
+cargo run --example core_usage
 # Background code runner
 bacon -- --example hello
 

@@ -11,7 +11,7 @@
     <button id="generateButton">Generate Arrangement</button>
 
     <script type="module">
-        import init, { WebArrangement, create_guitar_compositions } from '../pkg/guitar_tab_generator.js';
+        import init, { Composition, wasm_create_guitar_compositions, get_tuning_names } from '../pkg/guitar_tab_generator.js';
         async function run() {
             await init();
         }
@@ -107,7 +107,7 @@
             B3
             C4`;
         let input = {
-            input_pitches: input_string,
+            pitches: input_string,
             tuning_name: "standard",
             guitar_num_frets: 18,
             guitar_capo: 0,
@@ -119,10 +119,13 @@
 
         document.getElementById("generateButton").addEventListener("click", () => {
             let startTime = performance.now();
-            let webArrangements = create_guitar_compositions(input);
+            let compositions = wasm_create_guitar_compositions(input);
             let endTime = performance.now();
-            console.log(`Arrangement generated in ${endTime - startTime} milliseconds:`, webArrangements[0]);
-            console.log(`Tab:\n`, webArrangements[0].tab);
+            let duration = (endTime - startTime).toFixed(1);
+            console.log(`Arrangement generated in ${duration} milliseconds:`, compositions[0]);
+            console.log(`Tab:\n`, compositions[0].tab);
+
+            console.log(get_tuning_names());
         });
     </script>
 </body>

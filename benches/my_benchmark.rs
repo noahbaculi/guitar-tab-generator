@@ -194,7 +194,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
 fn bench_arrangement_scaling(c: &mut Criterion) {
     let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
 
-    let mut group = c.benchmark_group("arrangement_scaling");
+    let mut group = c.benchmark_group("bench_arrangement_scaling");
     for num in (0..=22) {
         // group.throughput(Throughput::Bytes(*size as u64));
         group
@@ -234,10 +234,8 @@ fn bench_create_string_tuning_offset(c: &mut Criterion) {
 fn bench_create_single_composition_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_create_single_composition_scaling");
     for input_lines_num in (5..=85).step_by(10) {
-        let input_text = fur_elise_input().lines().take(input_lines_num).join("\n");
-
-        let web_input = guitar_tab_generator::WebInput {
-            input_pitches: input_text,
+        let input = guitar_tab_generator::CompositionInput {
+            pitches: fur_elise_input().lines().take(input_lines_num).join("\n"),
             tuning_name: "standard".to_owned(),
             guitar_num_frets: 18,
             guitar_capo: 0,
@@ -246,8 +244,6 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
             padding: 2,
             playback_index: Some(12),
         };
-
-        let input = serde_wasm_bindgen::to_value(&web_input).unwrap();
 
         // group
         //     .sample_size(20)
@@ -300,11 +296,11 @@ fn bench_render_tab(c: &mut Criterion) {
 
 criterion_group! {
     name=benches;
-    config = Criterion::default().noise_threshold(0.02).sample_size(25);
+    config = Criterion::default().noise_threshold(0.05).sample_size(15);
     targets =
         // guitar_creation,
         // arrangement_creation,
-        // arrangement_scaling,
+        // bench_arrangement_scaling,
         // parse_lines,
         // create_string_tuning_offset,
         bench_create_single_composition_scaling,
