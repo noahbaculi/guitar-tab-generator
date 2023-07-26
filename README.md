@@ -14,10 +14,10 @@ Commands:
 
 ```shell
 # Run code
-cargo run --example hello
+cargo run --example basic
 cargo run --example core_usage
 # Background code runner
-bacon -- --example hello
+bacon -- --example basic
 
 
 # Background code checker
@@ -38,7 +38,7 @@ wasm-pack build --target web
 ls -l pkg/guitar_tab_generator_bg.wasm  # get size in bytes 1137837 -> 905075
 ```
 
-Running To-Dos:
+## Future Improvements
 
 - [ ] add filter for max_fret_span in `arrangements`
 - [ ] re-examine namespace of functions (object functions vs standalone) (public vs private)

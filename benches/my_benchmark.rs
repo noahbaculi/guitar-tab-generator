@@ -253,7 +253,7 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
             &input_lines_num,
             |b, &playback_index| {
                 b.iter(|| {
-                    guitar_tab_generator::create_guitar_compositions(black_box(input.clone()));
+                    guitar_tab_generator::wrapper_create_arrangements(black_box(input.clone()));
                 });
             },
         );

@@ -36,15 +36,17 @@ pub struct Composition {
 pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsError> {
     let composition_input: CompositionInput = serde_wasm_bindgen::from_value(input)?;
 
-    let compositions = match create_guitar_compositions(composition_input) {
-        Ok(comps) => comps,
+    let compositions = match wrapper_create_arrangements(composition_input) {
+        Ok(compositions) => compositions,
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
     Ok(serde_wasm_bindgen::to_value(&compositions)?)
 }
 
-pub fn create_guitar_compositions(composition_input: CompositionInput) -> Result<Vec<Composition>> {
+pub fn wrapper_create_arrangements(
+    composition_input: CompositionInput,
+) -> Result<Vec<Composition>> {
     let CompositionInput {
         pitches: input_pitches,
         tuning_name,
@@ -76,7 +78,7 @@ pub fn create_guitar_compositions(composition_input: CompositionInput) -> Result
     Ok(compositions)
 }
 #[cfg(test)]
-mod test_create_guitar_compositions {
+mod test_wrapper_create_arrangements {
     use super::*;
 
     #[test]
@@ -92,7 +94,7 @@ mod test_create_guitar_compositions {
             playback_index: Some(3),
         };
 
-        let compositions = create_guitar_compositions(composition_input).unwrap();
+        let compositions = wrapper_create_arrangements(composition_input).unwrap();
         let expected_composition = Composition {
             tab: "           ▼\n-----------------0------\n--------------0---------\n-----------0------------\n--------0---------------\n-----0------------------\n--0---------------------\n           ▲\n".to_owned(),
             max_fret_span: 0,
@@ -112,6 +114,6 @@ mod test_create_guitar_compositions {
             padding: 2,
             playback_index: Some(3),
         };
-        assert!(create_guitar_compositions(composition_input).is_err());
+        assert!(wrapper_create_arrangements(composition_input).is_err());
     }
 }

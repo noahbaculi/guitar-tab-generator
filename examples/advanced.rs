@@ -9,6 +9,7 @@ use guitar_tab_generator::{
 
 extern crate guitar_tab_generator;
 
+/// Advanced usage example using the individual component functions.
 fn main() -> Result<()> {
     let input = "E4
         Eb4
@@ -42,11 +43,11 @@ fn main() -> Result<()> {
     let guitar_num_frets = 18;
     let guitar_capo = 0;
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
-    dbg!(&guitar);
+    // dbg!(&guitar);
 
     let num_arrangements = 1;
     let arrangements = create_arrangements(guitar.clone(), lines, num_arrangements)?;
-    dbg!(&guitar);
+    // dbg!(&arrangements);
 
     let tab_width = 20;
     let padding = 1;
