@@ -42,7 +42,7 @@ pub type BeatVec<T> = Vec<T>;
 #[allow(dead_code)]
 pub struct BeatFingeringCombo {
     fingering_combo: BeatVec<PitchFingering>,
-    non_zero_avg_fret: Option<OrderedFloat<f32>>,
+    avg_non_zero_fret: Option<OrderedFloat<f32>>,
     non_zero_fret_span: u8,
 }
 impl BeatFingeringCombo {
@@ -53,7 +53,7 @@ impl BeatFingeringCombo {
                 .into_iter()
                 .cloned()
                 .collect(),
-            non_zero_avg_fret: calc_non_zero_avg_fret(&beat_fingering_candidate),
+            avg_non_zero_fret: calc_avg_non_zero_fret(&beat_fingering_candidate),
             non_zero_fret_span: calc_fret_span(beat_fingering_candidate).unwrap_or(0),
         }
     }
@@ -73,12 +73,12 @@ mod test_create_beat_fingering_combo {
 
         let BeatFingeringCombo {
             fingering_combo,
-            non_zero_avg_fret,
+            avg_non_zero_fret,
             non_zero_fret_span,
         } = BeatFingeringCombo::new(vec![&pitch_fingering_1]);
 
         assert_eq!(fingering_combo, vec![pitch_fingering_1]);
-        assert_eq!(non_zero_avg_fret, Some(OrderedFloat(2.0)));
+        assert_eq!(avg_non_zero_fret, Some(OrderedFloat(2.0)));
         assert_eq!(non_zero_fret_span, 0);
     }
     #[test]
@@ -106,7 +106,7 @@ mod test_create_beat_fingering_combo {
 
         let BeatFingeringCombo {
             fingering_combo,
-            non_zero_avg_fret,
+            avg_non_zero_fret,
             non_zero_fret_span,
         } = BeatFingeringCombo::new(vec![
             &pitch_fingering_1,
@@ -124,12 +124,12 @@ mod test_create_beat_fingering_combo {
                 pitch_fingering_4
             ]
         );
-        assert_eq!(non_zero_avg_fret, Some(OrderedFloat(8.0 / 3.0)));
+        assert_eq!(avg_non_zero_fret, Some(OrderedFloat(8.0 / 3.0)));
         assert_eq!(non_zero_fret_span, 4);
     }
 }
 
-fn calc_non_zero_avg_fret(
+fn calc_avg_non_zero_fret(
     beat_fingering_candidate: &[&PitchFingering],
 ) -> Option<OrderedFloat<f32>> {
     let non_zero_fingerings = beat_fingering_candidate
@@ -144,7 +144,7 @@ fn calc_non_zero_avg_fret(
     }
 }
 #[cfg(test)]
-mod test_calc_non_zero_avg_fret {
+mod test_calc_avg_non_zero_fret {
     use super::*;
     use crate::string_number::StringNumber;
 
@@ -157,7 +157,7 @@ mod test_calc_non_zero_avg_fret {
         };
 
         assert_eq!(
-            calc_non_zero_avg_fret(&[&pitch_fingering_1]),
+            calc_avg_non_zero_fret(&[&pitch_fingering_1]),
             Some(OrderedFloat(2.0))
         );
     }
@@ -169,7 +169,7 @@ mod test_calc_non_zero_avg_fret {
             fret: 0,
         };
 
-        assert_eq!(calc_non_zero_avg_fret(&[&pitch_fingering_1]), None);
+        assert_eq!(calc_avg_non_zero_fret(&[&pitch_fingering_1]), None);
     }
     #[test]
     fn multiple_zero_frets() {
@@ -185,7 +185,7 @@ mod test_calc_non_zero_avg_fret {
         };
 
         assert_eq!(
-            calc_non_zero_avg_fret(&[&pitch_fingering_1, &pitch_fingering_2]),
+            calc_avg_non_zero_fret(&[&pitch_fingering_1, &pitch_fingering_2]),
             None
         );
     }
@@ -213,7 +213,7 @@ mod test_calc_non_zero_avg_fret {
         };
 
         assert_eq!(
-            calc_non_zero_avg_fret(&[
+            calc_avg_non_zero_fret(&[
                 &pitch_fingering_1,
                 &pitch_fingering_2,
                 &pitch_fingering_3,
@@ -902,7 +902,7 @@ mod test_calc_next_nodes {
                 line_index: 0,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(0.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(0.1)),
                     non_zero_fret_span: 0,
                 },
             },
@@ -910,7 +910,7 @@ mod test_calc_next_nodes {
                 line_index: 0,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(0.2)),
+                    avg_non_zero_fret: Some(OrderedFloat(0.2)),
                     non_zero_fret_span: 0,
                 },
             },
@@ -918,7 +918,7 @@ mod test_calc_next_nodes {
                 line_index: 1,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(1.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(1.1)),
                     non_zero_fret_span: 1,
                 },
             },
@@ -928,7 +928,7 @@ mod test_calc_next_nodes {
                 line_index: 4,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(4.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 },
             },
@@ -936,7 +936,7 @@ mod test_calc_next_nodes {
                 line_index: 4,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(4.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 },
             },
@@ -952,7 +952,7 @@ mod test_calc_next_nodes {
                 line_index: 0,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(0.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(0.1)),
                     non_zero_fret_span: 0,
                 },
             },
@@ -960,7 +960,7 @@ mod test_calc_next_nodes {
                 line_index: 0,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(0.2)),
+                    avg_non_zero_fret: Some(OrderedFloat(0.2)),
                     non_zero_fret_span: 0,
                 },
             },
@@ -980,7 +980,7 @@ mod test_calc_next_nodes {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(0.1)),
+                avg_non_zero_fret: Some(OrderedFloat(0.1)),
                 non_zero_fret_span: 0,
             },
         };
@@ -989,7 +989,7 @@ mod test_calc_next_nodes {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(1.1)),
+                avg_non_zero_fret: Some(OrderedFloat(1.1)),
                 non_zero_fret_span: 1,
             },
         }]
@@ -1008,7 +1008,7 @@ mod test_calc_next_nodes {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(1.1)),
+                avg_non_zero_fret: Some(OrderedFloat(1.1)),
                 non_zero_fret_span: 1,
             },
         };
@@ -1046,7 +1046,7 @@ mod test_calc_next_nodes {
                 line_index: 4,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(4.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 },
             },
@@ -1054,7 +1054,7 @@ mod test_calc_next_nodes {
                 line_index: 4,
                 beat_fingering_combo: BeatFingeringCombo {
                     fingering_combo: vec![],
-                    non_zero_avg_fret: Some(OrderedFloat(4.1)),
+                    avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 },
             },
@@ -1086,7 +1086,7 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
         Node::Note {
             beat_fingering_combo,
             ..
-        } => beat_fingering_combo.non_zero_avg_fret,
+        } => beat_fingering_combo.avg_non_zero_fret,
         _ => None,
     };
 
@@ -1097,7 +1097,7 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
             beat_fingering_combo,
             ..
         } => (
-            beat_fingering_combo.non_zero_avg_fret,
+            beat_fingering_combo.avg_non_zero_fret,
             beat_fingering_combo.non_zero_fret_span as f32,
         ),
     };
@@ -1122,7 +1122,7 @@ mod test_calculate_node_difficulty {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.5)),
+                avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1130,7 +1130,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.5)),
+                avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1143,7 +1143,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.5)),
+                avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1156,7 +1156,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.5)),
+                avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1172,7 +1172,7 @@ mod test_calculate_node_difficulty {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.5)),
+                avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1188,7 +1188,7 @@ mod test_calculate_node_difficulty {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.0)),
+                avg_non_zero_fret: Some(OrderedFloat(3.0)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1196,7 +1196,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(1.6)),
+                avg_non_zero_fret: Some(OrderedFloat(1.6)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1209,7 +1209,7 @@ mod test_calculate_node_difficulty {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(4.133333)),
+                avg_non_zero_fret: Some(OrderedFloat(4.133333)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1217,7 +1217,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(4.133333)),
+                avg_non_zero_fret: Some(OrderedFloat(4.133333)),
                 non_zero_fret_span: 3,
             },
         };
@@ -1230,7 +1230,7 @@ mod test_calculate_node_difficulty {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(5.0)),
+                avg_non_zero_fret: Some(OrderedFloat(5.0)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1238,7 +1238,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(2.0)),
+                avg_non_zero_fret: Some(OrderedFloat(2.0)),
                 non_zero_fret_span: 5,
             },
         };
@@ -1251,7 +1251,7 @@ mod test_calculate_node_difficulty {
             line_index: 0,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(7.3333333)),
+                avg_non_zero_fret: Some(OrderedFloat(7.3333333)),
                 non_zero_fret_span: 0,
             },
         };
@@ -1259,7 +1259,7 @@ mod test_calculate_node_difficulty {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
-                non_zero_avg_fret: Some(OrderedFloat(3.6666666)),
+                avg_non_zero_fret: Some(OrderedFloat(3.6666666)),
                 non_zero_fret_span: 4,
             },
         };
@@ -1323,7 +1323,7 @@ mod test_process_path {
                 string_number: StringNumber::new(1).unwrap(),
                 fret: 3,
             }],
-            non_zero_avg_fret: Some(OrderedFloat(3.0)),
+            avg_non_zero_fret: Some(OrderedFloat(3.0)),
             non_zero_fret_span: 0,
         };
 
@@ -1353,7 +1353,7 @@ mod test_process_path {
                 string_number: StringNumber::new(1).unwrap(),
                 fret: 3,
             }],
-            non_zero_avg_fret: Some(OrderedFloat(3.0)),
+            avg_non_zero_fret: Some(OrderedFloat(3.0)),
             non_zero_fret_span: 4,
         };
 
