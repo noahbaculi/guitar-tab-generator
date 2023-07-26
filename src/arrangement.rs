@@ -230,6 +230,25 @@ pub struct Arrangement {
     difficulty: i32,
     max_fret_span: u8,
 }
+impl Arrangement {
+    pub fn max_fret_span(&self) -> u8 {
+        self.max_fret_span
+    }
+}
+#[cfg(test)]
+mod test_max_fret_span {
+    use super::*;
+
+    #[test]
+    fn test_max_fret_span() {
+        let arrangement = Arrangement {
+            lines: vec![],
+            difficulty: 4,
+            max_fret_span: 5,
+        };
+        assert_eq!(arrangement.max_fret_span(), 5);
+    }
+}
 
 // TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
 pub fn create_arrangements(
