@@ -25,7 +25,7 @@ pub struct CompositionInput {
 }
 
 #[wasm_bindgen(getter_with_clone)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Composition {
     pub tab: String,
     pub max_fret_span: u8,
@@ -74,4 +74,44 @@ pub fn create_guitar_compositions(composition_input: CompositionInput) -> Result
         .collect_vec();
 
     Ok(compositions)
+}
+#[cfg(test)]
+mod test_create_guitar_compositions {
+    use super::*;
+
+    #[test]
+    fn test_create_guitar_compositions_valid_input() {
+        let composition_input = CompositionInput {
+            pitches: "E2\nA2\nD3\nG3\nB3\nE4".to_owned(),
+            tuning_name: "standard".to_string(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            width: 24,
+            padding: 2,
+            playback_index: Some(3),
+        };
+
+        let compositions = create_guitar_compositions(composition_input).unwrap();
+        let expected_composition = Composition {
+            tab: "           ▼\n-----------------0------\n--------------0---------\n-----------0------------\n--------0---------------\n-----0------------------\n--0---------------------\n           ▲\n".to_owned(),
+            max_fret_span: 0,
+        };
+
+        assert_eq!(compositions[0], expected_composition);
+    }
+    #[test]
+    fn test_error() {
+        let composition_input = CompositionInput {
+            pitches: "E2\nA2\nD3\n???\nG3\nB3\nE4".to_owned(),
+            tuning_name: "standard".to_string(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            width: 20,
+            padding: 2,
+            playback_index: Some(3),
+        };
+        assert!(create_guitar_compositions(composition_input).is_err());
+    }
 }
