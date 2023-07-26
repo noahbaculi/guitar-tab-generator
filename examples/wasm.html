@@ -8,8 +8,7 @@
 </head>
 
 <body>
-    <button id="thisButton">Hi</button>
-
+    <button id="generateButton">Generate Arrangement</button>
 
     <script type="module">
         import init, { WebArrangement, create_guitar_compositions } from '../pkg/guitar_tab_generator.js';
@@ -107,8 +106,6 @@
             D4
             B3
             C4`;
-
-
         let input = {
             input_pitches: input_string,
             tuning_name: "standard",
@@ -120,11 +117,12 @@
             playback_index: 3
         };
 
-        document.getElementById("thisButton").addEventListener("click", () => {
-            // alert(`Tab output saved to your downloads! 🎉`);
-            // console.log(add(5, 5));
-            let web_arrangements = create_guitar_compositions(input);
-            console.log(web_arrangements[0].tab);
+        document.getElementById("generateButton").addEventListener("click", () => {
+            let startTime = performance.now();
+            let webArrangements = create_guitar_compositions(input);
+            let endTime = performance.now();
+            console.log(`Arrangement generated in ${endTime - startTime} milliseconds:`, webArrangements[0]);
+            console.log(`Tab:\n`, webArrangements[0].tab);
         });
     </script>
 </body>

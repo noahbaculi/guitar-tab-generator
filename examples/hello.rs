@@ -13,7 +13,7 @@ fn main() {
         C4
         -
         A2A3
-        E3E3E3
+        E3
         A3
         C3
         E3
