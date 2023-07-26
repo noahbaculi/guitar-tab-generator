@@ -9,22 +9,47 @@ use itertools::Itertools;
 use regex::RegexBuilder;
 use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
+use strum::VariantNames;
+use strum_macros::{EnumString, EnumVariantNames};
+use wasm_bindgen::prelude::*;
+
+#[derive(Debug, EnumString, EnumVariantNames)]
+#[strum(ascii_case_insensitive)]
+pub enum TuningName {
+    OpenG,
+    OpenD,
+    C6,
+    #[strum(serialize = "DADGAD")]
+    Dsus4,
+    DropD,
+    DropC,
+    OpenC,
+    DropB,
+    OpenE,
+}
+
+#[wasm_bindgen]
+pub fn get_tuning_names() -> Result<JsValue, JsError> {
+    let tuning_names: Vec<String> = TuningName::VARIANTS.iter().map(|&x| x.into()).collect_vec();
+
+    Ok(serde_wasm_bindgen::to_value(&tuning_names)?)
+}
 
 /// Generates a open string offsets from a tuning name.
 ///
 /// Defaults to the standard tuning offsets if the tuning name cannot be matched.
 pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
-    match tuning_name {
-        "openg" => [-2, 0, 0, 0, -2, -2],
-        "opend" => [-2, 0, 0, -1, -2, -2],
-        "c6" => [-4, 0, -2, 0, 1, 0],
-        "dsus4" => [-2, 0, 0, 0, -2, -2],
-        "dropd" => [-2, 0, 0, 0, 0, 0],
-        "dropc" => [-4, -2, -2, -2, -2, -2],
-        "openc" => [-4, -2, -2, 0, 1, 0],
-        "dropb" => [-5, -3, -3, -3, -3, -3],
-        "opene" => [0, -2, -2, -2, 0, 0],
-        _ => [0, 0, 0, 0, 0, 0],
+    match TuningName::from_str(tuning_name) {
+        Ok(TuningName::OpenG) => [-2, 0, 0, 0, -2, -2],
+        Ok(TuningName::OpenD) => [-2, 0, 0, -1, -2, -2],
+        Ok(TuningName::C6) => [-4, 0, -2, 0, 1, 0],
+        Ok(TuningName::Dsus4) => [-2, 0, 0, 0, -2, -2],
+        Ok(TuningName::DropD) => [-2, 0, 0, 0, 0, 0],
+        Ok(TuningName::DropC) => [-4, -2, -2, -2, -2, -2],
+        Ok(TuningName::OpenC) => [-4, -2, -2, 0, 1, 0],
+        Ok(TuningName::DropB) => [-5, -3, -3, -3, -3, -3],
+        Ok(TuningName::OpenE) => [0, -2, -2, -2, 0, 0],
+        Err(_) => [0, 0, 0, 0, 0, 0],
     }
 }
 #[cfg(test)]
@@ -46,6 +71,10 @@ mod test_parse_tuning {
     #[test]
     fn dropc_tuning() {
         assert_eq!(parse_tuning("dropc"), [-4, -2, -2, -2, -2, -2]);
+    }
+    #[test]
+    fn dadgad_tuning() {
+        assert_eq!(parse_tuning("dadgad"), [-2, 0, 0, 0, -2, -2]);
     }
     #[test]
     fn unknown_tuning() {
