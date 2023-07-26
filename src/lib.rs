@@ -32,6 +32,7 @@ pub struct Composition {
 }
 
 #[wasm_bindgen]
+#[cfg(not(tarpaulin_include))]
 pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsError> {
     let composition_input: CompositionInput = serde_wasm_bindgen::from_value(input)?;
 

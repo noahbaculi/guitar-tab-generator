@@ -19,7 +19,7 @@ pub enum TuningName {
     OpenG,
     OpenD,
     C6,
-    #[strum(serialize = "DADGAD")]
+    #[strum(serialize = "dsus4", serialize = "dadgad")]
     Dsus4,
     DropD,
     DropC,
@@ -29,6 +29,7 @@ pub enum TuningName {
 }
 
 #[wasm_bindgen]
+#[cfg(not(tarpaulin_include))]
 pub fn get_tuning_names() -> Result<JsValue, JsError> {
     let tuning_names: Vec<String> = TuningName::VARIANTS.iter().map(|&x| x.into()).collect_vec();
 
@@ -61,24 +62,20 @@ mod test_parse_tuning {
         assert_eq!(parse_tuning("standard"), [0, 0, 0, 0, 0, 0]);
     }
     #[test]
-    fn open_g_tuning() {
+    fn non_standard_tunings() {
         assert_eq!(parse_tuning("openg"), [-2, 0, 0, 0, -2, -2]);
-    }
-    #[test]
-    fn dropd_tuning() {
-        assert_eq!(parse_tuning("dropd"), [-2, 0, 0, 0, 0, 0]);
-    }
-    #[test]
-    fn dropc_tuning() {
-        assert_eq!(parse_tuning("dropc"), [-4, -2, -2, -2, -2, -2]);
-    }
-    #[test]
-    fn dadgad_tuning() {
+        assert_eq!(parse_tuning("opend"), [-2, 0, 0, -1, -2, -2]);
+        assert_eq!(parse_tuning("c6"), [-4, 0, -2, 0, 1, 0]);
         assert_eq!(parse_tuning("dadgad"), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("dsus4"), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("dropd"), [-2, 0, 0, 0, 0, 0]);
+        assert_eq!(parse_tuning("dropc"), [-4, -2, -2, -2, -2, -2]);
+        assert_eq!(parse_tuning("openc"), [-4, -2, -2, 0, 1, 0]);
+        assert_eq!(parse_tuning("dropb"), [-5, -3, -3, -3, -3, -3]);
+        assert_eq!(parse_tuning("opene"), [0, -2, -2, -2, 0, 0]);
     }
     #[test]
     fn unknown_tuning() {
-        // Test case with an unknown tuning name
         assert_eq!(parse_tuning("unknown_tuning"), [0, 0, 0, 0, 0, 0]);
     }
 }
