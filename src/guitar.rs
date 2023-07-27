@@ -72,7 +72,6 @@ impl Default for Guitar {
     }
 }
 impl Guitar {
-    #[inline]
     pub fn new(tuning: BTreeMap<StringNumber, Pitch>, mut num_frets: u8, capo: u8) -> Result<Self> {
         check_fret_number(num_frets)?;
 

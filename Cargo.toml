@@ -1,11 +1,12 @@
 [package]
 name = "guitar-tab-generator"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 authors = ["Noah Baculi <noahbaculi@gmail.com>"]
 description = "Generate fingerstyle guitar tabs based on the difficulty of different finger positions"
 readme = "README.md"
 repository = "https://github.com/noahbaculi/guitar-tab-generator"
+license = "GPL-3.0-only"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -36,5 +37,5 @@ codegen-units = 1
 criterion = { version = "0.4", features = ["html_reports"] }
 
 [[bench]]
-name = "my_benchmark"
+name = "benchmarks"
 harness = false

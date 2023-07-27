@@ -328,7 +328,7 @@ criterion_group! {
     name=benches;
     config = Criterion::default().noise_threshold(0.05).sample_size(15);
     targets =
-        // guitar_creation,
+        guitar_creation,
         // arrangement_creation,
         // bench_arrangement_scaling,
         // parse_lines,

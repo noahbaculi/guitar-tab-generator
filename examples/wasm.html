@@ -11,7 +11,7 @@
     <button id="generateButton">Generate Arrangement</button>
 
     <script type="module">
-        import init, { Composition, wasm_create_guitar_compositions, get_tuning_names } from '../pkg/guitar_tab_generator.js';
+        import init, { wasm_create_guitar_compositions, get_tuning_names } from '../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js';
         async function run() {
             await init();
         }

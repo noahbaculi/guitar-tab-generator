@@ -191,8 +191,11 @@ impl fmt::Display for Pitch {
 mod test_pitch_display {
     use super::*;
     #[test]
-    fn valid_simple() {
+    fn natural_pitch() {
         assert_eq!(format!("{}", Pitch::E2), "E2");
+    }
+    #[test]
+    fn sharp_flat_pitch() {
         assert_eq!(format!("{}", Pitch::DSharpEFlat3), "D♯E♭3");
     }
 }
@@ -202,6 +205,16 @@ impl Pitch {
         *self as u8
     }
 
+    pub fn plain_text(&self) -> String {
+        let pitch_variant_name = format!("{:?}", self);
+
+        let pitch_plain_text = &pitch_variant_name[pitch_variant_name.find("Sharp").unwrap_or(0)..]
+            .replace("Sharp", "")
+            .replace("Flat", "b");
+
+        pitch_plain_text.to_owned()
+    }
+
     pub fn plus_offset(&self, offset: i16) -> Result<Pitch> {
         match Pitch::from_repr((self.index() as i16 + offset) as usize) {
             Some(pitch) => Ok(pitch),
@@ -209,6 +222,19 @@ impl Pitch {
                 "Pitch {self} offset by {offset} pitches results in a pitch out of range."
             )),
         }
+    }
+}
+#[cfg(test)]
+mod test_pitch_plain_text {
+    use super::*;
+
+    #[test]
+    fn natural_pitch() {
+        assert_eq!(Pitch::C8.plain_text(), "C8");
+    }
+    #[test]
+    fn sharp_flat_pitch() {
+        assert_eq!(Pitch::CSharpDFlat9.plain_text(), "Db9");
     }
 }
 #[cfg(test)]

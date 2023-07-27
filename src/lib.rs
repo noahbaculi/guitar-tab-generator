@@ -1,4 +1,5 @@
 use anyhow::Result;
+use arrangement::BeatVec;
 use guitar::Guitar;
 use itertools::Itertools;
 use pitch::Pitch;
@@ -24,10 +25,10 @@ pub struct CompositionInput {
     pub playback_index: Option<u16>,
 }
 
-#[wasm_bindgen(getter_with_clone)]
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Composition {
     pub tab: String,
+    pub pitches: Vec<BeatVec<String>>,
     pub max_fret_span: u8,
 }
 
@@ -60,6 +61,17 @@ pub fn wrapper_create_arrangements(
 
     let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = parser::parse_lines(input_pitches)?;
 
+    let pitches: Vec<BeatVec<String>> = input_lines
+        .iter()
+        .map(|line| match line {
+            arrangement::Line::Playable(pitches) => {
+                pitches.iter().map(|p| p.plain_text()).collect()
+            }
+            arrangement::Line::Rest => vec!["REST".to_owned()],
+            arrangement::Line::MeasureBreak => vec!["MEASURE_BREAK".to_owned()],
+        })
+        .collect_vec();
+
     let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tuning_name));
 
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
@@ -71,6 +83,7 @@ pub fn wrapper_create_arrangements(
         .iter()
         .map(|arrangement| Composition {
             tab: renderer::render_tab(&arrangement.lines, &guitar, width, padding, playback_index),
+            pitches: pitches.clone(),
             max_fret_span: arrangement.max_fret_span(),
         })
         .collect_vec();
@@ -84,19 +97,29 @@ mod test_wrapper_create_arrangements {
     #[test]
     fn test_create_guitar_compositions_valid_input() {
         let composition_input = CompositionInput {
-            pitches: "E2\nA2\nD3\nG3\nB3\nE4".to_owned(),
+            pitches: "E2\nA2\nD3\n\nG3\nB3\n---\nE4".to_owned(),
             tuning_name: "standard".to_string(),
             guitar_num_frets: 20,
             guitar_capo: 0,
             num_arrangements: 1,
-            width: 24,
+            width: 30,
             padding: 2,
             playback_index: Some(3),
         };
 
         let compositions = wrapper_create_arrangements(composition_input).unwrap();
         let expected_composition = Composition {
-            tab: "           ▼\n-----------------0------\n--------------0---------\n-----------0------------\n--------0---------------\n-----0------------------\n--0---------------------\n           ▲\n".to_owned(),
+            tab: "           ▼\n--------------------|--0------\n-----------------0--|---------\n--------------0-----|---------\n--------0-----------|---------\n-----0--------------|---------\n--0-----------------|---------\n           ▲\n".to_owned(),
+            pitches: vec![
+                vec!["E2".to_owned()],
+                vec!["A2".to_owned()], 
+                vec!["D3".to_owned()], 
+                vec!["REST".to_owned()], 
+                vec!["G3".to_owned()], 
+                vec!["B3".to_owned()], 
+                vec!["MEASURE_BREAK".to_owned()], 
+                vec!["E4".to_owned()]
+                ],
             max_fret_span: 0,
         };
 
