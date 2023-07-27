@@ -251,7 +251,37 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::from_parameter(input_lines_num),
             &input_lines_num,
-            |b, &playback_index| {
+            |b, _| {
+                b.iter(|| {
+                    guitar_tab_generator::wrapper_create_arrangements(black_box(input.clone()));
+                });
+            },
+        );
+    }
+    group.finish();
+}
+
+fn bench_create_single_composition_large_scaling(c: &mut Criterion) {
+    let mut group = c.benchmark_group("bench_create_single_composition_large_scaling");
+    for fur_elise_repetitions in (1..=10).step_by(1) {
+        let input = guitar_tab_generator::CompositionInput {
+            pitches: fur_elise_input().repeat(fur_elise_repetitions),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 18,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            width: 40,
+            padding: 2,
+            playback_index: Some(12),
+        };
+
+        // group
+        //     .sample_size(20)
+        //     .warm_up_time(Duration::from_secs_f32(3.0));
+        group.bench_with_input(
+            BenchmarkId::from_parameter(fur_elise_repetitions),
+            &fur_elise_repetitions,
+            |b, _| {
                 b.iter(|| {
                     guitar_tab_generator::wrapper_create_arrangements(black_box(input.clone()));
                 });
@@ -303,7 +333,8 @@ criterion_group! {
         // bench_arrangement_scaling,
         // parse_lines,
         // create_string_tuning_offset,
-        bench_create_single_composition_scaling,
-        bench_render_tab
+        // bench_create_single_composition_scaling,
+        bench_create_single_composition_large_scaling,
+        // bench_render_tab
 }
 criterion_main!(benches);
