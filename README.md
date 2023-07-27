@@ -5,12 +5,12 @@
 
 <img src="examples/logo.jpeg" alt="Guitar Tab Generator logo" width="300">
 
-Generate fingerstyle guitar tabs from note names and account for the difficulty of different finger positions. Built with Rust. Designed for compilation to WebAssembly for use in web applications.
+Generate fingerstyle guitar tabs based on the difficulty of different finger positions. Built with Rust. Designed for compilation to WebAssembly for use in web applications.
 
-[<img align="right" width="26px" alt="Web Assembly"
+[<img align="right" width="30px" alt="Web Assembly"
 src="https://upload.wikimedia.org/wikipedia/commons/1/1f/WebAssembly_Logo.svg"
 />][wasm_site]
-[<img align="right" width="26px" alt="Rust"
+[<img align="right" width="30px" alt="Rust"
 src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c-b6a0-badc0b09560e"
 />][rust_site]
 
@@ -60,6 +60,8 @@ IMAGE
 - Pathfinding algorithm leverage Dijkstra's algorithm to calculate the arrangement with the least difficulty.
 
 ## Previous versions
+
+This project has been attempted numerous times with varying levels of success. This attempt utilizes Rust and WASM to overcome the previously-encountered roadblocks regarding performance, distribution, and developer ergonomics.
 
 - [Typescript version](https://github.com/noahbaculi/guitar-tab-generator_typescript) (2022)
 - [Java version](https://github.com/noahbaculi/guitar-tab-generator_java) (2019 - 2022)
@@ -112,7 +114,7 @@ The different fingerings are then calculated for each pitch. For example, a G3 c
 
 ### Fingering combinations for each beat
 
-For beat 1 and beat 3, the fingering combinations identical to the pitch fingerings since those beats only play one pitch each. For beat 4, we calculate the [cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) of the pitch fingerings to consider all of the fingerings combinations that do not share a string.
+For beat 1 and beat 3, the fingering combinations identical to the pitch fingerings since those beats only play one pitch each. For beat 4, we calculate the [cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) of the pitch fingerings to consider all of the fingerings combinations.
 
 #### Beat 4 fingering combinations
 
