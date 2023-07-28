@@ -29,7 +29,10 @@ fn main() -> Result<()> {
         A3"
     .to_string();
 
-    let lines: Vec<Line<Vec<Pitch>>> = parse_lines(input)?;
+    let lines: Vec<Line<Vec<Pitch>>> = match parse_lines(input) {
+        Ok(input_lines) => input_lines,
+        Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
+    };
 
     let tuning = create_string_tuning(&[
         Pitch::E4,
@@ -46,7 +49,11 @@ fn main() -> Result<()> {
     // dbg!(&guitar);
 
     let num_arrangements = 1;
-    let arrangements = create_arrangements(guitar.clone(), lines, num_arrangements)?;
+    let arrangements = match create_arrangements(guitar.clone(), lines, num_arrangements) {
+        Ok(arrangements) => arrangements,
+        Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
+    };
+
     // dbg!(&arrangements);
 
     let tab_width = 20;

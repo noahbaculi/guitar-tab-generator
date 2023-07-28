@@ -7,7 +7,7 @@ use average::Mean;
 use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
 #[derive(Debug)]
 pub struct InvalidInput {
@@ -251,20 +251,22 @@ mod test_max_fret_span {
 }
 
 // TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
+use memoize::memoize;
+#[memoize(Capacity: 10)]
 pub fn create_arrangements(
     guitar: Guitar,
     input_pitches: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: u8,
-) -> Result<Vec<Arrangement>> {
+) -> Result<Vec<Arrangement>, Arc<anyhow::Error>> {
     const MAX_NUM_ARRANGEMENTS: u8 = 20;
     match num_arrangements {
         1..=MAX_NUM_ARRANGEMENTS => (),
-        0 => return Err(anyhow!("No arrangements were requested.")),
+        0 => return Err(Arc::new(anyhow!("No arrangements were requested."))),
         _ => {
-            return Err(anyhow!(
+            return Err(Arc::new(anyhow!(
                 "Too many arrangements to calculate. The maximum is {}.",
                 MAX_NUM_ARRANGEMENTS
-            ))
+            )))
         }
     };
 
@@ -320,7 +322,7 @@ pub fn create_arrangements(
     // dbg!(&path_results);
 
     if path_results.is_empty() {
-        return Err(anyhow!("No arrangements could be calculated."));
+        return Err(Arc::new(anyhow!("No arrangements could be calculated.")));
     }
 
     let arrangements = path_results

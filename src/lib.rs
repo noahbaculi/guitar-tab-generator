@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use arrangement::BeatVec;
 use guitar::Guitar;
 use itertools::Itertools;
@@ -59,7 +59,13 @@ pub fn wrapper_create_arrangements(
         playback_index,
     } = composition_input;
 
-    let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = parser::parse_lines(input_pitches)?;
+    let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = match parser::parse_lines(input_pitches) {
+        Ok(input_lines) => input_lines,
+        Err(e) => {
+            return Err(std::sync::Arc::into_inner(e)
+                .unwrap_or(anyhow!("Could not access parse lines error.")))
+        }
+    };
 
     let pitches: Vec<BeatVec<String>> = input_lines
         .iter()
@@ -77,7 +83,10 @@ pub fn wrapper_create_arrangements(
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
 
     let arrangements =
-        arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements)?;
+        match arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements) {
+            Ok(arrangements) => arrangements,
+            Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
+        };
 
     let compositions = arrangements
         .iter()

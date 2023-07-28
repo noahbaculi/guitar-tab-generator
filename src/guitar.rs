@@ -1,7 +1,7 @@
 use crate::{arrangement::PitchVec, pitch::Pitch, string_number::StringNumber};
 use anyhow::{anyhow, Result};
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fmt,
 };
 use strum::IntoEnumIterator;
@@ -58,11 +58,11 @@ pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> BTreeMap<StringNum
         .collect::<BTreeMap<StringNumber, Pitch>>()
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Guitar {
     pub tuning: BTreeMap<StringNumber, Pitch>,
     pub num_frets: u8,
-    pub range: HashSet<Pitch>,
+    pub range: BTreeSet<Pitch>,
     pub string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
 }
 impl Default for Guitar {
@@ -91,7 +91,7 @@ impl Guitar {
         }
 
         let range = string_ranges.clone().into_iter().fold(
-            HashSet::new(),
+            BTreeSet::new(),
             |mut all_pitches, string_pitches| {
                 all_pitches.extend(string_pitches.1);
                 all_pitches
@@ -119,7 +119,7 @@ mod test_create_guitar {
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
             num_frets: NUM_FRETS,
-            range: HashSet::from([
+            range: BTreeSet::from([
                 Pitch::E2,
                 Pitch::F2,
                 Pitch::FSharpGFlat2,
@@ -192,7 +192,7 @@ mod test_create_guitar {
         let expected_guitar = Guitar {
             tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3]),
             num_frets: NUM_FRETS - CAPO,
-            range: HashSet::from([
+            range: BTreeSet::from([
                 Pitch::G5,
                 Pitch::D4,
                 Pitch::A5,
@@ -295,7 +295,7 @@ mod test_create_guitar {
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
             num_frets: NUM_FRETS,
-            range: HashSet::from([
+            range: BTreeSet::from([
                 Pitch::E2,
                 Pitch::F2,
                 Pitch::FSharpGFlat2,
