@@ -123,7 +123,7 @@
             let endTime = performance.now();
             let duration = (endTime - startTime).toFixed(1);
             console.log(`Arrangement generated in ${duration} milliseconds:`, compositions[0]);
-            console.log(`Tab:\n`, compositions[0].tab);
+            console.log(`Tab:\n${compositions[0].tab}`);
 
             console.log(get_tuning_names());
         });

@@ -6,8 +6,8 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
-use regex::RegexBuilder;
-use std::{collections::BTreeMap, result::Result::Ok};
+use regex::{Regex, RegexBuilder};
+use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
 use std::{collections::HashSet, str::FromStr};
 use strum::VariantNames;
 use strum_macros::{EnumString, EnumVariantNames};
@@ -140,11 +140,19 @@ mod test_create_string_tuning_offset {
     }
 }
 
-pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
+use memoize::memoize;
+#[memoize(Capacity: 10)]
+pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyhow::Error>> {
+    let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
+    let pitch_regex = RegexBuilder::new(pattern)
+        .case_insensitive(true)
+        .build()
+        .expect("Regex pattern should be valid");
+
     let line_parse_results: Vec<Result<Line<BeatVec<Pitch>>, anyhow::Error>> = input
         .lines()
         .enumerate()
-        .map(|(input_index, input_line)| parse_line(input_index, input_line))
+        .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
         .collect_vec();
 
     let unparsable_lines_error_msg = line_parse_results
@@ -156,7 +164,7 @@ pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>> {
         .collect::<Vec<String>>()
         .join("\n");
     if !unparsable_lines_error_msg.is_empty() {
-        return Err(anyhow!(unparsable_lines_error_msg));
+        return Err(anyhow!(unparsable_lines_error_msg).into());
     }
 
     let parsed_lines: Vec<Line<BeatVec<Pitch>>> = line_parse_results
@@ -197,7 +205,7 @@ mod test_parse_lines {
     }
 }
 
-fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
+fn parse_line(regex: &Regex, input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
     input_line = remove_comments(input_line);
     let line_content: String = remove_whitespace(input_line);
 
@@ -207,34 +215,58 @@ fn parse_line(input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch
     if let Some(measure_break) = parse_measure_break(&line_content) {
         return Ok(measure_break);
     }
-    parse_pitch(input_index, &line_content)
+    parse_pitch(regex, input_index, &line_content)
 }
 #[cfg(test)]
 mod test_parse_line {
     use super::*;
 
+    fn pitch_regex() -> Regex {
+        let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
+
+        RegexBuilder::new(pattern)
+            .case_insensitive(true)
+            .build()
+            .expect("Regex pattern should be valid")
+    }
+
     #[test]
     fn empty() {
-        assert_eq!(parse_line(0, "").unwrap(), Line::Rest);
+        assert_eq!(parse_line(&pitch_regex(), 0, "").unwrap(), Line::Rest);
     }
     #[test]
     fn only_comment() {
-        assert_eq!(parse_line(0, "  // Long comment.... ").unwrap(), Line::Rest);
+        assert_eq!(
+            parse_line(&pitch_regex(), 0, "  // Long comment.... ").unwrap(),
+            Line::Rest
+        );
     }
     #[test]
     fn measure_break() {
-        assert_eq!(parse_line(0, "    --    ").unwrap(), Line::MeasureBreak);
-        assert_eq!(parse_line(0, "- //comment").unwrap(), Line::MeasureBreak);
+        assert_eq!(
+            parse_line(&pitch_regex(), 0, "    --    ").unwrap(),
+            Line::MeasureBreak
+        );
+        assert_eq!(
+            parse_line(&pitch_regex(), 0, "- //comment").unwrap(),
+            Line::MeasureBreak
+        );
     }
     #[test]
     fn valid_pitch() {
         let expected = Line::Playable(vec![Pitch::GSharpAFlat2, Pitch::A4, Pitch::E3, Pitch::G2]);
-        assert_eq!(parse_line(123, "    G#2A4  E3 G2 ").unwrap(), expected);
-        assert_eq!(parse_line(123, "G#2A4E3 G2// Comment").unwrap(), expected);
+        assert_eq!(
+            parse_line(&pitch_regex(), 123, "    G#2A4  E3 G2 ").unwrap(),
+            expected
+        );
+        assert_eq!(
+            parse_line(&pitch_regex(), 123, "G#2A4E3 G2// Comment").unwrap(),
+            expected
+        );
     }
     #[test]
     fn test_parse_line_invalid_input() {
-        let error = parse_line(4, "  Invalid Text  ").unwrap_err();
+        let error = parse_line(&pitch_regex(), 4, "  Invalid Text  ").unwrap_err();
         let error_msg = format!("{error}");
 
         assert_eq!(
@@ -354,14 +386,8 @@ mod test_parse_measure_break {
 
 /// Parses input line to extract valid musical pitches, returning an error if any part of the
 /// input line cannot be parsed into a pitch.
-fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
-    let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
-    // let re = Regex::new(pattern);
-    let re = RegexBuilder::new(pattern)
-        .case_insensitive(true)
-        .build()
-        .expect("Regex pattern should be valid");
-    let (matched_index_ranges, matched_pitches): (Vec<Vec<usize>>, Vec<Pitch>) = re
+fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
+    let (matched_index_ranges, matched_pitches): (Vec<Vec<usize>>, Vec<Pitch>) = regex
         .find_iter(input_line)
         .filter_map(|regex_match| match Pitch::from_str(regex_match.as_str()) {
             Ok(pitch) => Some(((regex_match.start()..regex_match.end()).collect(), pitch)),
@@ -405,75 +431,96 @@ fn parse_pitch(input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>>
 mod test_parse_pitch {
     use super::*;
 
+    fn pitch_regex() -> Regex {
+        let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
+
+        RegexBuilder::new(pattern)
+            .case_insensitive(true)
+            .build()
+            .expect("Regex pattern should be valid")
+    }
+
     #[test]
     fn single_natural_pitch() -> Result<()> {
-        assert_eq!(parse_pitch(0, "A0")?, Line::Playable(vec![Pitch::A0]));
-        assert_eq!(parse_pitch(0, "E6")?, Line::Playable(vec![Pitch::E6]));
+        assert_eq!(
+            parse_pitch(&pitch_regex(), 0, "A0")?,
+            Line::Playable(vec![Pitch::A0])
+        );
+        assert_eq!(
+            parse_pitch(&pitch_regex(), 0, "E6")?,
+            Line::Playable(vec![Pitch::E6])
+        );
         Ok(())
     }
     #[test]
     fn single_sharp_pitch() {
         assert_eq!(
-            parse_pitch(0, "D#2").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "D#2").unwrap(),
             Line::Playable(vec![Pitch::DSharpEFlat2])
         );
     }
     #[test]
     fn single_flat_pitch() {
         assert_eq!(
-            parse_pitch(0, "Db2").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "Db2").unwrap(),
             Line::Playable(vec![Pitch::CSharpDFlat2])
         );
         assert_eq!(
-            parse_pitch(0, "Bb2").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "Bb2").unwrap(),
             Line::Playable(vec![Pitch::ASharpBFlat2])
         );
     }
     #[test]
     fn case_insensitivity() {
         assert_eq!(
-            parse_pitch(0, "A3").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "A3").unwrap(),
             Line::Playable(vec![Pitch::A3])
         );
         assert_eq!(
-            parse_pitch(0, "a3").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "a3").unwrap(),
             Line::Playable(vec![Pitch::A3])
         );
         assert_eq!(
-            parse_pitch(0, "Bb2").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "Bb2").unwrap(),
             Line::Playable(vec![Pitch::ASharpBFlat2])
         );
         assert_eq!(
-            parse_pitch(0, "bB2").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "bB2").unwrap(),
             Line::Playable(vec![Pitch::ASharpBFlat2])
         );
         assert_eq!(
-            parse_pitch(0, "bb2").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "bb2").unwrap(),
             Line::Playable(vec![Pitch::ASharpBFlat2])
         );
     }
     #[test]
     fn multiple_pitches() {
         assert_eq!(
-            parse_pitch(0, "C3G2A#1F8").unwrap(),
+            parse_pitch(&pitch_regex(), 0, "C3G2A#1F8").unwrap(),
             Line::Playable(vec![Pitch::C3, Pitch::G2, Pitch::ASharpBFlat1, Pitch::F8])
         );
     }
     #[test]
     fn invalid_typo() {
-        let error_msg = format!("{}", parse_pitch(12, "ZA2G#444B3").unwrap_err());
+        let error_msg = format!(
+            "{}",
+            parse_pitch(&pitch_regex(), 12, "ZA2G#444B3").unwrap_err()
+        );
         let expected_error_msg = "Input 'Z' on line 13 could not be parsed into a pitch.\nInput '44' on line 13 could not be parsed into a pitch.";
         assert_eq!(error_msg, expected_error_msg);
     }
     #[test]
     fn invalid_pitch() {
-        let error_msg = format!("{}", parse_pitch(28, "Fb3").unwrap_err());
+        let error_msg = format!("{}", parse_pitch(&pitch_regex(), 28, "Fb3").unwrap_err());
         let expected_error_msg = "Input 'Fb3' on line 29 could not be parsed into a pitch.";
         assert_eq!(error_msg, expected_error_msg);
     }
     #[test]
     fn invalid_random() {
-        let error_msg = format!("{}", parse_pitch(0, "baS3Q-hNr").unwrap_err());
+        let error_msg = format!(
+            "{}",
+            parse_pitch(&pitch_regex(), 0, "baS3Q-hNr").unwrap_err()
+        );
         let expected_error_msg = "Input 'baS3Q-hNr' on line 1 could not be parsed into a pitch.";
         assert_eq!(error_msg, expected_error_msg);
     }
