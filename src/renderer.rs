@@ -12,6 +12,9 @@ pub fn render_tab(
     padding: u8,
     playback: Option<u16>,
 ) -> String {
+    if arrangement_lines.is_empty() {
+        return "".to_owned();
+    }
     let num_strings = guitar.string_ranges.len();
 
     let line_index_of_playback: Option<usize> = match playback {

@@ -250,12 +250,11 @@ mod test_max_fret_span {
     }
 }
 
-// TODO! Handle duplicate pitches in the same line? BeatVec -> Hashset?
 use memoize::memoize;
 #[memoize(Capacity: 10)]
 pub fn create_arrangements(
     guitar: Guitar,
-    input_pitches: Vec<Line<BeatVec<Pitch>>>,
+    input_lines: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: u8,
 ) -> Result<Vec<Arrangement>, Arc<anyhow::Error>> {
     const MAX_NUM_ARRANGEMENTS: u8 = 20;
@@ -270,8 +269,25 @@ pub fn create_arrangements(
         }
     };
 
+    let input_playable_lines = input_lines
+        .iter()
+        .filter(|line| matches!(line, Line::Playable(_)))
+        .collect_vec();
+
+    if input_playable_lines.is_empty() {
+        let empty_compositions = vec![
+            Arrangement {
+                lines: vec![],
+                difficulty: 0,
+                max_fret_span: 0,
+            };
+            num_arrangements as usize
+        ];
+        return Ok(empty_compositions);
+    }
+
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
-        validate_fingerings(&guitar, &input_pitches)?;
+        validate_fingerings(&guitar, &input_lines)?;
 
     let measure_break_indices: Vec<usize> = pitch_fingering_candidates
         .iter()
@@ -433,9 +449,18 @@ mod test_create_arrangements {
     fn empty_input() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![];
 
-        let error = create_arrangements(Guitar::default(), input_pitches, 1).unwrap_err();
-        let error_msg = format!("{error}");
-        assert_eq!(error_msg, "No arrangements could be calculated.");
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 2).unwrap();
+
+        let expected_arrangements: Vec<Arrangement> = vec![
+            Arrangement {
+                lines: vec![],
+                difficulty: 0,
+                max_fret_span: 0,
+            };
+            2
+        ];
+
+        assert_eq!(arrangements, expected_arrangements);
     }
     #[test]
     fn zero_arrangements_requested() {

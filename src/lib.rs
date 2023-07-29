@@ -25,7 +25,7 @@ pub struct CompositionInput {
     pub playback_index: Option<u16>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Composition {
     pub tab: String,
     pub pitches: Vec<BeatVec<String>>,
@@ -61,10 +61,7 @@ pub fn wrapper_create_arrangements(
 
     let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = match parser::parse_lines(input_pitches) {
         Ok(input_lines) => input_lines,
-        Err(e) => {
-            return Err(std::sync::Arc::into_inner(e)
-                .unwrap_or(anyhow!("Could not access parse lines error.")))
-        }
+        Err(e) => return Err(anyhow!(format!("{}", e))),
     };
 
     let pitches: Vec<BeatVec<String>> = input_lines
@@ -85,7 +82,7 @@ pub fn wrapper_create_arrangements(
     let arrangements =
         match arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements) {
             Ok(arrangements) => arrangements,
-            Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
+            Err(e) => return Err(anyhow!(format!("{}", e))),
         };
 
     let compositions = arrangements
@@ -104,7 +101,7 @@ mod test_wrapper_create_arrangements {
     use super::*;
 
     #[test]
-    fn test_create_guitar_compositions_valid_input() {
+    fn valid_input() {
         let composition_input = CompositionInput {
             pitches: "E2\nA2\nD3\n\nG3\nB3\n---\nE4".to_owned(),
             tuning_name: "standard".to_string(),
@@ -135,7 +132,38 @@ mod test_wrapper_create_arrangements {
         assert_eq!(compositions[0], expected_composition);
     }
     #[test]
-    fn test_error() {
+    fn empty_input() {
+        let composition_input = CompositionInput {
+            pitches: "\n\n\n---\n \n".to_owned(),
+            tuning_name: "standard".to_string(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 2,
+            width: 30,
+            padding: 2,
+            playback_index: Some(3),
+        };
+
+        let compositions = wrapper_create_arrangements(composition_input).unwrap();
+        let expected_compositions = vec![
+            Composition {
+                tab: "".to_owned(),
+                pitches: vec![
+                    vec!["REST".to_owned()],
+                    vec!["REST".to_owned()],
+                    vec!["REST".to_owned()],
+                    vec!["MEASURE_BREAK".to_owned()],
+                    vec!["REST".to_owned()]
+                ],
+                max_fret_span: 0,
+            };
+            2
+        ];
+
+        assert_eq!(compositions, expected_compositions);
+    }
+    #[test]
+    fn invalid_input() {
         let composition_input = CompositionInput {
             pitches: "E2\nA2\nD3\n???\nG3\nB3\nE4".to_owned(),
             tuning_name: "standard".to_string(),
