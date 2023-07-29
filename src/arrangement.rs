@@ -273,7 +273,6 @@ pub fn create_arrangements(
         .iter()
         .filter(|line| matches!(line, Line::Playable(_)))
         .collect_vec();
-
     if input_playable_lines.is_empty() {
         let empty_compositions = vec![
             Arrangement {
@@ -286,8 +285,19 @@ pub fn create_arrangements(
         return Ok(empty_compositions);
     }
 
+    let first_playable_index = input_lines
+        .iter()
+        .position(|line| matches!(line, Line::Playable(_)))
+        .unwrap_or(0);
+
+    let lines = input_lines
+        .iter()
+        .skip(first_playable_index)
+        .cloned()
+        .collect_vec();
+
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
-        validate_fingerings(&guitar, &input_lines)?;
+        validate_fingerings(&guitar, &lines)?;
 
     let measure_break_indices: Vec<usize> = pitch_fingering_candidates
         .iter()
@@ -459,6 +469,33 @@ mod test_create_arrangements {
             };
             2
         ];
+
+        assert_eq!(arrangements, expected_arrangements);
+    }
+    #[test]
+    fn empty_start_lines_input() {
+        let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![
+            Line::Rest,
+            Line::MeasureBreak,
+            Line::Rest,
+            Line::Playable(vec![Pitch::E4]),
+            Line::Rest,
+        ];
+
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1).unwrap();
+
+        let expected_arrangements: Vec<Arrangement> = vec![Arrangement {
+            lines: vec![
+                Line::Playable(vec![PitchFingering {
+                    pitch: Pitch::E4,
+                    string_number: StringNumber::new(1).unwrap(),
+                    fret: 0,
+                }]),
+                Line::Rest,
+            ],
+            difficulty: 0,
+            max_fret_span: 0,
+        }];
 
         assert_eq!(arrangements, expected_arrangements);
     }

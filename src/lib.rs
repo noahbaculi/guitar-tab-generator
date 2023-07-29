@@ -64,8 +64,14 @@ pub fn wrapper_create_arrangements(
         Err(e) => return Err(anyhow!(format!("{}", e))),
     };
 
+    let first_playable_index = input_lines
+        .iter()
+        .position(|line| matches!(line, arrangement::Line::Playable(_)))
+        .unwrap_or(0);
+
     let pitches: Vec<BeatVec<String>> = input_lines
         .iter()
+        .skip(first_playable_index)
         .map(|line| match line {
             arrangement::Line::Playable(pitches) => {
                 pitches.iter().map(|p| p.plain_text()).collect()
