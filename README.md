@@ -46,7 +46,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 
 [Example web application 🚀](https://noahbaculi.com/guitartab)
 
-<img src="examples/demo_mockup.png" alt="Guitar Tab Generator Demo" align="center">
+<a href="https://noahbaculi.com/guitartab"><img src="examples/demo_mockup.png" alt="Guitar Tab Generator Demo" align="center"></a>
 
 ## Features
 
