@@ -3,7 +3,7 @@
 [![Build + Test](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust_build_and_test.yml/badge.svg)](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust_build_and_test.yml)
 [![Coverage](https://codecov.io/gh/noahbaculi/guitar-tab-generator/branch/main/graph/badge.svg?token=BB01PPL4LF)](https://codecov.io/gh/noahbaculi/guitar-tab-generator)
 
-<img src="examples/logo.jpeg" alt="Guitar Tab Generator logo" width="300">
+<img src="examples/logo.PNG" alt="Guitar Tab Generator logo" width="300">
 
 Generate fingerstyle guitar tabs based on the difficulty of different finger positions. Built with Rust. Designed for compilation to WebAssembly for use in web applications.
 
