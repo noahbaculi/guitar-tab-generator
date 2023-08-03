@@ -247,8 +247,8 @@ flowchart TB
 
 The number of fingering combinations grows exponentially with more beats and pitches so the choice of [shortest path algorithm](https://en.wikipedia.org/wiki/Shortest_path_problem) is critical. The [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) pathfinding algorithm was chosen for this application of the "shortest path exercise" for the following reasons:
 
-- The sequential nature of the musical arrangement problem results in a _directed_ graph where only nodes representing consecutive beat fingering combinations have edges.
-- The edges between nodes are _weighted_ with the difficulty of moving from one fingering combination to another graph above is already constructed with the only possible next nodes connected.
+- The sequential nature of the musical arrangement problem results in a _directed_ graph where only nodes representing consecutive beat fingering combinations have edges from one to the next.
+- The edges between nodes are _weighted_ with the difficulty of moving from one fingering combination to another so the graph above is already constructed with the only possible next nodes connected.
 
 ## Contributing and Installation
 
