@@ -1011,7 +1011,7 @@ mod test_calc_next_nodes {
     fn from_start_to_note() {
         let current_node = Node::Start;
 
-        let expected_nodes_and_costs = vec![
+        let expected_nodes_and_costs = [
             Node::Note {
                 line_index: 0,
                 beat_fingering_combo: BeatFingeringCombo {
@@ -1049,7 +1049,7 @@ mod test_calc_next_nodes {
             },
         };
 
-        let expected_nodes_and_costs = vec![Node::Note {
+        let expected_nodes_and_costs = [Node::Note {
             line_index: 1,
             beat_fingering_combo: BeatFingeringCombo {
                 fingering_combo: vec![],
@@ -1077,7 +1077,7 @@ mod test_calc_next_nodes {
             },
         };
 
-        let expected_nodes_and_costs = vec![Node::Rest { line_index: 2 }]
+        let expected_nodes_and_costs = [Node::Rest { line_index: 2 }]
             .iter()
             .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
             .collect_vec();
@@ -1091,7 +1091,7 @@ mod test_calc_next_nodes {
     fn from_rest_to_rest() {
         let current_node = Node::Rest { line_index: 2 };
 
-        let expected_nodes_and_costs = vec![Node::Rest { line_index: 3 }]
+        let expected_nodes_and_costs = [Node::Rest { line_index: 3 }]
             .iter()
             .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
             .collect_vec();
@@ -1105,7 +1105,7 @@ mod test_calc_next_nodes {
     fn from_rest_to_note() {
         let current_node = Node::Rest { line_index: 3 };
 
-        let expected_nodes_and_costs = vec![
+        let expected_nodes_and_costs = [
             Node::Note {
                 line_index: 4,
                 beat_fingering_combo: BeatFingeringCombo {
