@@ -114,7 +114,7 @@ The different fingerings are then calculated for each pitch. For example, a G3 c
 
 ### Fingering combinations for each beat
 
-For beat 1 and beat 3, the fingering combinations identical to the pitch fingerings since those beats only play one pitch each. For beat 4, we calculate the [cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) of the pitch fingerings to consider all of the fingerings combinations.
+For beat 1 and beat 3, the fingering combinations are identical to the pitch fingerings since those beats only play one pitch each. For beat 4, we calculate the [cartesian product](https://en.wikipedia.org/wiki/Cartesian_product) of the pitch fingerings to consider all of the fingerings combinations.
 
 #### Beat 4 fingering combinations
 
