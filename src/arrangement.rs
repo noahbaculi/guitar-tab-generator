@@ -526,9 +526,9 @@ mod test_create_arrangements {
 /// Arguments:
 ///
 /// * `guitar`: A reference to a `Guitar` object, which contains information about the guitar's
-/// string ranges.
+///   string ranges.
 /// * `input_pitches`: A slice of vectors, where each vector represents a beat and contains a
-/// vector of pitches.
+///   vector of pitches.
 ///
 /// Returns a `Result` containing either a
 /// `Vec<Vec<Vec<Fingering>>>` if the input pitches are valid, or an `Err` containing an error

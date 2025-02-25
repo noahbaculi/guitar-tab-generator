@@ -49,7 +49,7 @@ pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
 /// Arguments:
 ///
 /// * `open_string_pitches`: An array slice containing the pitches of the open strings in a guitar
-/// starting at string 1 (the highest string), and ending with string _N_ (the lowest string) where _N_ > 1.
+///   starting at string 1 (the highest string), and ending with string _N_ (the lowest string) where _N_ > 1.
 pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> BTreeMap<StringNumber, Pitch> {
     open_string_pitches
         .iter()
@@ -560,7 +560,7 @@ mod test_check_capo_number {
 /// Arguments:
 ///
 /// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
-/// string.
+///   string.
 /// * `num_frets`: The `num_frets` parameter represents the number of
 ///   subsequent number of half steps to include in the range.
 fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
