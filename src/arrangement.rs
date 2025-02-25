@@ -868,10 +868,7 @@ fn calc_fret_span(beat_fingering_candidate: Vec<&PitchFingering>) -> Option<u8> 
         .filter(|fingering| fingering.fret != 0)
         .map(|fingering| fingering.fret);
 
-    let min_non_zero_fret = match beat_fingering_option_fret_numbers.clone().min() {
-        None => return None,
-        Some(fret_num) => fret_num,
-    };
+    let min_non_zero_fret = beat_fingering_option_fret_numbers.clone().min()?;
     let max_non_zero_fret = match beat_fingering_option_fret_numbers.clone().max() {
         None => unreachable!("A maximum should exist if a minimum exists."),
         Some(fret_num) => fret_num,
