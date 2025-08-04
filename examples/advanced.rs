@@ -66,7 +66,7 @@ fn main() -> Result<()> {
         padding,
         playback_index,
     );
-    println!("Tab:\n{}", tab);
+    println!("Tab:\n{tab}");
 
     Ok(())
 }

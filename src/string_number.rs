@@ -51,7 +51,7 @@ impl fmt::Debug for StringNumber {
             6 => "6_E".to_owned(),
             string_number => string_number.to_string(),
         };
-        write!(f, "{}", string_pitch_letter)
+        write!(f, "{string_pitch_letter}")
     }
 }
 #[cfg(test)]

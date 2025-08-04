@@ -181,10 +181,10 @@ pub enum Pitch {
 
 impl fmt::Display for Pitch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let pitch_str_repr = format!("{:?}", self)
+        let pitch_str_repr = format!("{self:?}")
             .replace("Sharp", "♯")
             .replace("Flat", "♭");
-        write!(f, "{}", pitch_str_repr)
+        write!(f, "{pitch_str_repr}")
     }
 }
 #[cfg(test)]
@@ -206,7 +206,7 @@ impl Pitch {
     }
 
     pub fn plain_text(&self) -> String {
-        let pitch_variant_name = format!("{:?}", self);
+        let pitch_variant_name = format!("{self:?}");
 
         let pitch_plain_text = &pitch_variant_name[pitch_variant_name.find("Sharp").unwrap_or(0)..]
             .replace("Sharp", "")

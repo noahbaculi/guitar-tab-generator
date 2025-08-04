@@ -32,7 +32,7 @@ mod test_pitch_fingering_debug {
             fret: 3,
         };
 
-        assert_eq!(format!("{:?}", pitch_fingering), "A♯B♭4 | 2_B => 3");
+        assert_eq!(format!("{pitch_fingering:?}"), "A♯B♭4 | 2_B => 3");
     }
 }
 

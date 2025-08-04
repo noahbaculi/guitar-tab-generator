@@ -158,7 +158,7 @@ pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyho
     let unparsable_lines_error_msg = line_parse_results
         .iter()
         .filter_map(|line| match line {
-            Err(err) => Some(format!("{}", err)),
+            Err(err) => Some(format!("{err}")),
             Ok(_) => None,
         })
         .collect::<Vec<String>>()
@@ -415,8 +415,7 @@ fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Li
                 let last_idx = *unmatched_input_indices.last().unwrap();
                 let unmatched_input = &input_line[first_idx..=last_idx];
                 format!(
-                    "Input '{}' on line {} could not be parsed into a pitch.",
-                    unmatched_input, line_number
+                    "Input '{unmatched_input}' on line {line_number} could not be parsed into a pitch."
                 )
             })
             .collect::<Vec<_>>()

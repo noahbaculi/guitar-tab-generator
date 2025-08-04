@@ -552,7 +552,7 @@ fn validate_fingerings(
                             generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                         if pitch_fingerings.is_empty() {
                             impossible_pitches.push(InvalidInput {
-                                value: format!("{:?}", beat_pitch),
+                                value: format!("{beat_pitch:?}"),
                                 line_number: (beat_index as u16) + 1,
                             })
                         }
