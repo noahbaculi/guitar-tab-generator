@@ -25,6 +25,9 @@ strum = "0.25.0"
 strum_macros = "0.25.1"
 wasm-bindgen = "0.2.87"
 
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+
 [profile.release]
 strip = true      # Automatically strip symbols from the binary.
 opt-level = "z"   # Optimize for size.
