@@ -249,8 +249,8 @@ mod test_max_fret_span {
     }
 }
 
-// use memoize::memoize;
-// #[memoize(Capacity: 10)]
+use memoize::memoize;
+#[memoize(Capacity: 10)]
 pub fn create_arrangements(
     guitar: Guitar,
     input_lines: Vec<Line<BeatVec<Pitch>>>,
