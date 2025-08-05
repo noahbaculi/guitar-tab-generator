@@ -10,10 +10,10 @@ use regex::{Regex, RegexBuilder};
 use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
 use std::{collections::HashSet, str::FromStr};
 use strum::VariantNames;
-use strum_macros::{EnumString, EnumVariantNames};
+use strum_macros::{EnumString, VariantNames};
 use wasm_bindgen::prelude::*;
 
-#[derive(Debug, EnumString, EnumVariantNames)]
+#[derive(Debug, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
 pub enum TuningName {
     OpenG,
