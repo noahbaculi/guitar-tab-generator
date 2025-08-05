@@ -331,7 +331,7 @@ pub fn create_arrangements(
 
     let path_results: Vec<(Vec<Node>, i32)> = yen(
         &Node::Start,
-        |current_node| calc_next_nodes(current_node, path_nodes.clone()),
+        |current_node| calc_next_nodes(current_node, &path_nodes),
         |current_node| match current_node {
             Node::Start => false,
             Node::Rest { line_index } | Node::Note { line_index, .. } => {
@@ -924,7 +924,7 @@ mod test_calc_fret_span {
 ///
 /// Returns a vector of tuples, where each tuple contains a `Node` the `i32`
 /// cost of moving to that node.
-fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32)> {
+fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, i32)> {
     let next_node_index = match current_node {
         Node::Start => 0,
         Node::Rest { line_index } | Node::Note { line_index, .. } => line_index + 1,
@@ -953,8 +953,8 @@ fn calc_next_nodes(current_node: &Node, path_nodes: Vec<Node>) -> Vec<(Node, i32
 mod test_calc_next_nodes {
     use super::*;
 
-    fn create_test_path_nodes() -> Vec<Node> {
-        vec![
+    fn create_test_path_nodes() -> [Node; 7] {
+        [
             Node::Note {
                 line_index: 0,
                 beat_fingering_combo: BeatFingeringCombo {
@@ -1027,7 +1027,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -1055,7 +1055,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -1076,7 +1076,7 @@ mod test_calc_next_nodes {
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -1090,7 +1090,7 @@ mod test_calc_next_nodes {
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -1121,7 +1121,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_nodes()),
             expected_nodes_and_costs
         );
     }
@@ -1131,7 +1131,7 @@ mod test_calc_next_nodes {
     fn to_start() {
         calc_next_nodes(
             &Node::Rest { line_index: 3 },
-            vec![Node::Rest { line_index: 4 }, Node::Start],
+            &[Node::Rest { line_index: 4 }, Node::Start],
         );
     }
 }
