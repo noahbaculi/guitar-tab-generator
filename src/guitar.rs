@@ -85,7 +85,7 @@ impl Guitar {
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
         for (string_number, string_open_pitch) in adjusted_tuning.iter() {
             string_ranges.insert(
-                string_number.clone().to_owned(),
+                *string_number,
                 create_string_range(string_open_pitch, num_frets)?,
             );
         }
