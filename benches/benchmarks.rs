@@ -1,7 +1,7 @@
 #![allow(unused)]
 
 use anyhow::{anyhow, Result};
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use guitar_tab_generator::{
     arrangement::{self, create_arrangements, BeatVec, Line},
     guitar::{create_string_tuning, Guitar, STD_6_STRING_TUNING_OPEN_PITCHES},
@@ -11,7 +11,7 @@ use guitar_tab_generator::{
     string_number::StringNumber,
 };
 use itertools::Itertools;
-use std::{collections::BTreeMap, time::Duration};
+use std::{collections::BTreeMap, hint::black_box, time::Duration};
 
 fn fur_elise_input() -> &'static str {
     "E4

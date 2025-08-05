@@ -12,18 +12,18 @@ license = "GPL-3.0-only"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-anyhow = "1.0.71"
-average = { version = "0.14.1", features = ["rayon"] }
-itertools = "0.11.0"
-memoize = "0.4.0"
-ordered-float = "3.7.0"
-pathfinding = "4.3.0"
-regex = "1.9.1"
-serde = { version = "1.0.175", features = ["derive"] }
-serde-wasm-bindgen = "0.5.0"
+anyhow = "1.0.98"
+average = { version = "0.16.0", features = ["rayon"] }
+itertools = "0.14.0"
+memoize = "0.5.1"
+ordered-float = "5.0.0"
+pathfinding = "4.14.0"
+regex = "1.11.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde-wasm-bindgen = "0.6.5"
 strum = "0.25.0"
 strum_macros = "0.25.1"
-wasm-bindgen = "0.2.87"
+wasm-bindgen = "0.2.100"
 
 [package.metadata.wasm-pack.profile.release]
 wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
@@ -35,7 +35,7 @@ lto = true
 codegen-units = 1
 
 [dev-dependencies]
-criterion = { version = "0.4", features = ["html_reports"] }
+criterion = { version = "0.7", features = ["html_reports"] }
 
 [[bench]]
 name = "benchmarks"
