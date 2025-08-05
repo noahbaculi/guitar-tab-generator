@@ -90,13 +90,13 @@ impl Guitar {
             );
         }
 
-        let range = string_ranges.clone().into_iter().fold(
-            BTreeSet::new(),
-            |mut all_pitches, string_pitches| {
-                all_pitches.extend(string_pitches.1);
-                all_pitches
-            },
-        );
+        let range =
+            string_ranges
+                .iter()
+                .fold(BTreeSet::new(), |mut all_pitches, string_pitches| {
+                    all_pitches.extend(string_pitches.1);
+                    all_pitches
+                });
 
         Ok(Guitar {
             tuning: adjusted_tuning,

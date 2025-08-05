@@ -46,15 +46,14 @@ pub struct BeatFingeringCombo {
     non_zero_fret_span: u8,
 }
 impl BeatFingeringCombo {
-    pub fn new(beat_fingering_candidate: BeatVec<&PitchFingering>) -> Self {
+    pub fn new(beat_fingering_candidate: BeatVec<PitchFingering>) -> Self {
+        let avg_non_zero_fret = calc_avg_non_zero_fret(&beat_fingering_candidate);
+        let non_zero_fret_span = calc_fret_span(&beat_fingering_candidate).unwrap_or(0);
+
         BeatFingeringCombo {
-            fingering_combo: beat_fingering_candidate
-                .clone()
-                .into_iter()
-                .cloned()
-                .collect(),
-            avg_non_zero_fret: calc_avg_non_zero_fret(&beat_fingering_candidate),
-            non_zero_fret_span: calc_fret_span(beat_fingering_candidate).unwrap_or(0),
+            fingering_combo: beat_fingering_candidate,
+            avg_non_zero_fret,
+            non_zero_fret_span,
         }
     }
 }
@@ -75,7 +74,7 @@ mod test_create_beat_fingering_combo {
             fingering_combo,
             avg_non_zero_fret,
             non_zero_fret_span,
-        } = BeatFingeringCombo::new(vec![&pitch_fingering_1]);
+        } = BeatFingeringCombo::new(vec![pitch_fingering_1]);
 
         assert_eq!(fingering_combo, vec![pitch_fingering_1]);
         assert_eq!(avg_non_zero_fret, Some(OrderedFloat(2.0)));
@@ -109,10 +108,10 @@ mod test_create_beat_fingering_combo {
             avg_non_zero_fret,
             non_zero_fret_span,
         } = BeatFingeringCombo::new(vec![
-            &pitch_fingering_1,
-            &pitch_fingering_2,
-            &pitch_fingering_3,
-            &pitch_fingering_4,
+            pitch_fingering_1,
+            pitch_fingering_2,
+            pitch_fingering_3,
+            pitch_fingering_4,
         ]);
 
         assert_eq!(
@@ -130,7 +129,7 @@ mod test_create_beat_fingering_combo {
 }
 
 fn calc_avg_non_zero_fret(
-    beat_fingering_candidate: &[&PitchFingering],
+    beat_fingering_candidate: &[PitchFingering],
 ) -> Option<OrderedFloat<f32>> {
     let non_zero_fingerings = beat_fingering_candidate
         .iter()
@@ -157,7 +156,7 @@ mod test_calc_avg_non_zero_fret {
         };
 
         assert_eq!(
-            calc_avg_non_zero_fret(&[&pitch_fingering_1]),
+            calc_avg_non_zero_fret(&[pitch_fingering_1]),
             Some(OrderedFloat(2.0))
         );
     }
@@ -169,7 +168,7 @@ mod test_calc_avg_non_zero_fret {
             fret: 0,
         };
 
-        assert_eq!(calc_avg_non_zero_fret(&[&pitch_fingering_1]), None);
+        assert_eq!(calc_avg_non_zero_fret(&[pitch_fingering_1]), None);
     }
     #[test]
     fn multiple_zero_frets() {
@@ -185,7 +184,7 @@ mod test_calc_avg_non_zero_fret {
         };
 
         assert_eq!(
-            calc_avg_non_zero_fret(&[&pitch_fingering_1, &pitch_fingering_2]),
+            calc_avg_non_zero_fret(&[pitch_fingering_1, pitch_fingering_2]),
             None
         );
     }
@@ -214,10 +213,10 @@ mod test_calc_avg_non_zero_fret {
 
         assert_eq!(
             calc_avg_non_zero_fret(&[
-                &pitch_fingering_1,
-                &pitch_fingering_2,
-                &pitch_fingering_3,
-                &pitch_fingering_4,
+                pitch_fingering_1,
+                pitch_fingering_2,
+                pitch_fingering_3,
+                pitch_fingering_4,
             ]),
             Some(OrderedFloat(8.0 / 3.0))
         );
@@ -250,8 +249,8 @@ mod test_max_fret_span {
     }
 }
 
-use memoize::memoize;
-#[memoize(Capacity: 10)]
+// use memoize::memoize;
+// #[memoize(Capacity: 10)]
 pub fn create_arrangements(
     guitar: Guitar,
     input_lines: Vec<Line<BeatVec<Pitch>>>,
@@ -291,9 +290,8 @@ pub fn create_arrangements(
         .unwrap_or(0);
 
     let lines = input_lines
-        .iter()
+        .into_iter()
         .skip(first_playable_index)
-        .cloned()
         .collect_vec();
 
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
@@ -307,7 +305,7 @@ pub fn create_arrangements(
         .collect_vec();
 
     let path_node_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
-        .iter()
+        .into_iter()
         .filter(|line_candidate| !matches!(line_candidate, MeasureBreak))
         .enumerate()
         .map(|(line_index, line_candidate)| match line_candidate {
@@ -316,13 +314,11 @@ pub fn create_arrangements(
                 line_index: line_index as u16,
             }],
             Playable(beat_fingerings_per_pitch) => {
-                generate_fingering_combos(beat_fingerings_per_pitch)
-                    .iter()
+                generate_fingering_combos(&beat_fingerings_per_pitch)
+                    .into_iter()
                     .map(|pitch_fingering_group| Node::Note {
                         line_index: line_index as u16,
-                        beat_fingering_combo: BeatFingeringCombo::new(
-                            pitch_fingering_group.to_vec(),
-                        ),
+                        beat_fingering_combo: BeatFingeringCombo::new(pitch_fingering_group),
                     })
                     .collect()
             }
@@ -667,7 +663,7 @@ mod test_validate_fingerings {
 /// Generates all playable combinations of fingerings for all the pitches in a beat.
 fn generate_fingering_combos(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
-) -> Vec<BeatVec<&PitchFingering>> {
+) -> Vec<BeatVec<PitchFingering>> {
     if beat_fingerings_per_pitch.is_empty() {
         unreachable!("Beat pitch fingerings should not be empty.")
     }
@@ -675,8 +671,9 @@ fn generate_fingering_combos(
     beat_fingerings_per_pitch
         .iter()
         .multi_cartesian_product()
-        .filter(no_duplicate_strings)
-        .collect_vec()
+        .map(|combo| combo.into_iter().copied().collect::<Vec<PitchFingering>>())
+        .filter(|x| no_duplicate_strings(x))
+        .collect()
 }
 #[cfg(test)]
 mod test_generate_fingering_combos {
@@ -691,12 +688,11 @@ mod test_generate_fingering_combos {
             fret: 3,
         };
 
-        let beat_fingerings_per_pitch = vec![vec![pitch_fingering]];
-        let expected_fingering_combos = vec![vec![&pitch_fingering]];
+        let beat_fingerings_per_pitch = &[vec![pitch_fingering]];
 
         assert_eq!(
-            generate_fingering_combos(&beat_fingerings_per_pitch),
-            expected_fingering_combos
+            generate_fingering_combos(beat_fingerings_per_pitch),
+            beat_fingerings_per_pitch
         );
     }
     #[test]
@@ -736,10 +732,10 @@ mod test_generate_fingering_combos {
             ],
         ];
         let expected_fingering_combos = vec![
-            vec![&pitch_fingering_a_string_2, &pitch_fingering_b_string_3],
-            vec![&pitch_fingering_a_string_2, &pitch_fingering_b_string_4],
-            vec![&pitch_fingering_a_string_3, &pitch_fingering_b_string_2],
-            vec![&pitch_fingering_a_string_3, &pitch_fingering_b_string_4],
+            vec![pitch_fingering_a_string_2, pitch_fingering_b_string_3],
+            vec![pitch_fingering_a_string_2, pitch_fingering_b_string_4],
+            vec![pitch_fingering_a_string_3, pitch_fingering_b_string_2],
+            vec![pitch_fingering_a_string_3, pitch_fingering_b_string_4],
         ];
 
         assert_eq!(
@@ -758,15 +754,11 @@ mod test_generate_fingering_combos {
 #[allow(clippy::ptr_arg)]
 /// Checks if there are any duplicate strings in a vector of `Fingering`
 /// objects to ensure that all pitches can be played.
-fn no_duplicate_strings(beat_fingering_option: &Vec<&PitchFingering>) -> bool {
-    let num_pitches = beat_fingering_option.len();
-    let num_strings = beat_fingering_option
+fn no_duplicate_strings(beat_fingering_option: &[PitchFingering]) -> bool {
+    let mut seen_strings = HashSet::with_capacity(beat_fingering_option.len());
+    beat_fingering_option
         .iter()
-        .map(|fingering| fingering.string_number)
-        .collect::<HashSet<_>>()
-        .len();
-
-    num_pitches == num_strings
+        .all(|fingering| seen_strings.insert(fingering.string_number))
 }
 #[cfg(test)]
 mod test_no_duplicate_strings {
@@ -780,9 +772,8 @@ mod test_no_duplicate_strings {
             string_number: StringNumber::new(2).unwrap(),
             fret: 3,
         };
-        let beat_fingering_option: &Vec<&PitchFingering> = &vec![&fingering_1];
 
-        assert!(no_duplicate_strings(beat_fingering_option));
+        assert!(no_duplicate_strings(&[fingering_1]));
     }
     #[test]
     fn valid_complex() {
@@ -806,10 +797,13 @@ mod test_no_duplicate_strings {
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: &Vec<&PitchFingering> =
-            &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
-        assert!(no_duplicate_strings(beat_fingering_option));
+        assert!(no_duplicate_strings(&[
+            fingering_1,
+            fingering_2,
+            fingering_3,
+            fingering_4
+        ]));
     }
     #[test]
     fn invalid_simple() {
@@ -823,9 +817,8 @@ mod test_no_duplicate_strings {
             string_number: StringNumber::new(4).unwrap(),
             fret: 3,
         };
-        let beat_fingering_option: &Vec<&PitchFingering> = &vec![&fingering_1, &fingering_2];
 
-        assert!(!no_duplicate_strings(beat_fingering_option));
+        assert!(!no_duplicate_strings(&[fingering_1, fingering_2]));
     }
     #[test]
     fn invalid_complex() {
@@ -849,20 +842,23 @@ mod test_no_duplicate_strings {
             string_number: StringNumber::new(3).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: &Vec<&PitchFingering> =
-            &vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
 
-        assert!(!no_duplicate_strings(beat_fingering_option));
+        assert!(!no_duplicate_strings(&[
+            fingering_1,
+            fingering_2,
+            fingering_3,
+            fingering_4,
+        ]));
     }
     #[test]
     fn empty_input() {
-        assert!(no_duplicate_strings(&vec![]));
+        assert!(no_duplicate_strings(&[]));
     }
 }
 
 /// Calculates the difference between the maximum and minimum non-zero
 /// fret numbers in a given vector of fingerings.
-fn calc_fret_span(beat_fingering_candidate: Vec<&PitchFingering>) -> Option<u8> {
+fn calc_fret_span(beat_fingering_candidate: &[PitchFingering]) -> Option<u8> {
     let beat_fingering_option_fret_numbers = beat_fingering_candidate
         .iter()
         .filter(|fingering| fingering.fret != 0)
@@ -889,7 +885,7 @@ mod test_calc_fret_span {
             fret: 3,
         };
 
-        assert_eq!(calc_fret_span(vec![&fingering_1]).unwrap(), 0);
+        assert_eq!(calc_fret_span(&[fingering_1]).unwrap(), 0);
     }
     #[test]
     fn complex() {
@@ -913,14 +909,13 @@ mod test_calc_fret_span {
             string_number: StringNumber::new(11).unwrap(),
             fret: 0,
         };
-        let beat_fingering_option: Vec<&PitchFingering> =
-            vec![&fingering_1, &fingering_2, &fingering_3, &fingering_4];
+        let beat_fingering_option = &[fingering_1, fingering_2, fingering_3, fingering_4];
 
         assert_eq!(calc_fret_span(beat_fingering_option).unwrap(), 3);
     }
     #[test]
     fn empty_input() {
-        assert!(calc_fret_span(vec![]).is_none());
+        assert!(calc_fret_span(&[]).is_none());
     }
 }
 

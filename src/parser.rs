@@ -401,7 +401,7 @@ fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Li
     let unmatched_indices: Vec<usize> = input_indices
         .difference(&matched_indices)
         .sorted()
-        .cloned()
+        .copied()
         .collect();
 
     if !unmatched_indices.is_empty() {
