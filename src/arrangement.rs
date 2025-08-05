@@ -39,7 +39,6 @@ pub type PitchVec<T> = Vec<T>;
 pub type BeatVec<T> = Vec<T>;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-#[allow(dead_code)]
 pub struct BeatFingeringCombo {
     fingering_combo: BeatVec<PitchFingering>,
     avg_non_zero_fret: Option<OrderedFloat<f32>>,
@@ -919,18 +918,20 @@ mod test_calc_fret_span {
     }
 }
 
+type NodeDifficulty = i32;
+
 /// Calculates the next nodes and their costs based on the current node and a
 /// list of all path nodes.
 ///
-/// Returns a vector of tuples, where each tuple contains a `Node` the `i32`
-/// cost of moving to that node.
-fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, i32)> {
+/// Returns a vector of tuples, where each tuple contains a `Node` and the `NodeDifficulty`
+/// which quantifies the cost of moving to that node.
+fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, NodeDifficulty)> {
     let next_node_index = match current_node {
         Node::Start => 0,
         Node::Rest { line_index } | Node::Note { line_index, .. } => line_index + 1,
     };
 
-    let next_nodes: Vec<(Node, i32)> = path_nodes
+    let next_nodes: Vec<(Node, NodeDifficulty)> = path_nodes
         .iter()
         .filter(|&node| {
             next_node_index
@@ -1138,7 +1139,7 @@ mod test_calc_next_nodes {
 
 /// Calculates the cost of transitioning from one node to another based on the
 /// average fret difference and fret span.
-fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
+fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDifficulty {
     let current_avg_fret = match current_node {
         Node::Note {
             beat_fingering_combo,
@@ -1167,7 +1168,7 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> i32 {
 
     ((avg_fret_difference * 100.0)
         + (next_fret_span * 10.0)
-        + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner()) as i32
+        + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner()) as NodeDifficulty
 }
 #[cfg(test)]
 mod test_calculate_node_difficulty {
