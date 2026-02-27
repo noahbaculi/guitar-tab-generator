@@ -44,9 +44,9 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 
 ## Demo
 
-[Example web application 🚀](https://noahbaculi.com/guitartab)
+[Example web application 🚀](https://noahbaculi.com/projects/guitar-tab-generator)
 
-<a href="https://noahbaculi.com/guitartab"><img src="examples/demo_mockup.png" alt="Guitar Tab Generator Demo" align="center"></a>
+<a href="https://noahbaculi.com/projects/guitar-tab-generator"><img src="examples/demo_mockup.png" alt="Guitar Tab Generator Demo" align="center"></a>
 
 ## Features
 
@@ -256,7 +256,7 @@ The number of fingering combinations grows exponentially with more beats and pit
 
 Requires:
 
-- The [Rust toolchain](https://www.rust-lang.org/tools/install)
+- The [Rust toolchain](https://rust-lang.org/tools/install)
 - The [Git version control system](https://git-scm.com/)
 
 ```shell
@@ -307,5 +307,5 @@ ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
 - [ ] Audit namespace of functions (object functions vs standalone) (public vs private)
 - [ ] Property testing with [Proptest](https://altsysrq.github.io/proptest-book/)
 
-[rust_site]: https://www.rust-lang.org/
+[rust_site]: https://rust-lang.org/tools/install
 [wasm_site]: https://webassembly.org/
