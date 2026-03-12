@@ -11,12 +11,12 @@ Benchmarks run on: Apple M-series (darwin 25.3.0)
 
 | Benchmark | Baseline | Site A (path_node_groups) | Site B (validate_fingerings) | Site C (process_path + render_tab) |
 |-----------|----------|--------------------------|------------------------------|-------------------------------------|
-| `fur_elise_1_arrangement` | 187.13 µs | 281.97 µs (+50%) | 315.08 µs (+68%) | — |
-| `fur_elise_3_arrangements` | 19.806 ms | 20.683 ms (+4.8%, noise) | 19.749 ms (no change) | — |
-| `fur_elise_5_arrangements` | 19.962 ms | 19.914 ms (no change) | 19.670 ms (no change) | — |
-| `bench_create_single_composition_scaling/5` | 10.016 µs | 10.296 µs (+3%, noise) | 10.081 µs (+0.7%, noise) | — |
-| `bench_create_single_composition_scaling/45` | 34.184 µs | 35.290 µs (+3%, noise) | 33.790 µs (-1.1%, noise) | — |
-| `bench_create_single_composition_scaling/85` | 58.631 µs | 59.349 µs (+1.7%, noise) | 57.569 µs (-1.8%, noise) | — |
+| `fur_elise_1_arrangement` | 187.13 µs | 281.97 µs (+50%) | 315.08 µs (+68%) | 313.28 µs (+67%) |
+| `fur_elise_3_arrangements` | 19.806 ms | 20.683 ms (+4.8%, noise) | 19.749 ms (no change) | 19.986 ms (no change) |
+| `fur_elise_5_arrangements` | 19.962 ms | 19.914 ms (no change) | 19.670 ms (no change) | 20.084 ms (no change) |
+| `bench_create_single_composition_scaling/5` | 10.016 µs | 10.296 µs (+3%, noise) | 10.081 µs (+0.7%, noise) | 10.371 µs (+3.5%, noise) |
+| `bench_create_single_composition_scaling/45` | 34.184 µs | 35.290 µs (+3%, noise) | 33.790 µs (-1.1%, noise) | 33.996 µs (-0.5%, noise) |
+| `bench_create_single_composition_scaling/85` | 58.631 µs | 59.349 µs (+1.7%, noise) | 57.569 µs (-1.8%, noise) | 57.750 µs (-1.5%, noise) |
 
 ## Analysis
 
@@ -37,7 +37,11 @@ The `bench_create_single_composition_scaling` values appear slightly better vs S
 The refactored `process_beat` helper function is a clean extraction regardless of parallelism; the `par_iter()` usage itself is not beneficial here.
 
 ### Site C: `process_path` + `render_tab` (`arrangement.rs:349`, `lib.rs:94`)
-_TBD after benchmarking_
+**Result: No improvement — Site C should be reverted.**
+
+The collection is 1–20 items. `fur_elise_1_arrangement` shows no additional regression vs Site B (313 µs vs 315 µs — within noise), confirming that parallelizing a single-item list does nothing useful. For 3 and 5 arrangements, also no statistically significant change.
+
+This confirms the plan's prediction: overhead > gain at ≤20 items.
 
 ## Conclusion
 

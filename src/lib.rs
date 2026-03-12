@@ -5,6 +5,8 @@ use itertools::Itertools;
 use pitch::Pitch;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+#[cfg(not(target_arch = "wasm32"))]
+use rayon::prelude::*;
 
 pub mod arrangement;
 pub mod guitar;
@@ -91,6 +93,17 @@ pub fn wrapper_create_arrangements(
             Err(e) => return Err(anyhow!(format!("{}", e))),
         };
 
+    #[cfg(not(target_arch = "wasm32"))]
+    let compositions = arrangements
+        .par_iter()
+        .map(|arrangement| Composition {
+            tab: renderer::render_tab(&arrangement.lines, &guitar, width, padding, playback_index),
+            pitches: pitches.clone(),
+            max_fret_span: arrangement.max_fret_span(),
+        })
+        .collect::<Vec<_>>();
+
+    #[cfg(target_arch = "wasm32")]
     let compositions = arrangements
         .iter()
         .map(|arrangement| Composition {

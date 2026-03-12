@@ -374,6 +374,15 @@ pub fn create_arrangements(
         return Err(Arc::new(anyhow!("No arrangements could be calculated.")));
     }
 
+    #[cfg(not(target_arch = "wasm32"))]
+    let arrangements = path_results
+        .into_par_iter()
+        .map(|path_result| {
+            process_path(path_result.0, path_result.1, measure_break_indices.clone())
+        })
+        .collect::<Vec<_>>();
+
+    #[cfg(target_arch = "wasm32")]
     let arrangements = path_results
         .into_iter()
         .map(|path_result| {
