@@ -8,6 +8,8 @@ use itertools::Itertools;
 use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
 use std::{collections::HashSet, sync::Arc};
+#[cfg(not(target_arch = "wasm32"))]
+use rayon::prelude::*;
 
 #[derive(Debug)]
 pub struct InvalidInput {
@@ -303,9 +305,35 @@ pub fn create_arrangements(
         .map(|(line_index, ..)| line_index)
         .collect_vec();
 
-    let path_node_groups: Vec<BeatVec<Node>> = pitch_fingering_candidates
+    let filtered_candidates: Vec<_> = pitch_fingering_candidates
         .into_iter()
         .filter(|line_candidate| !matches!(line_candidate, MeasureBreak))
+        .collect();
+
+    #[cfg(not(target_arch = "wasm32"))]
+    let path_node_groups: Vec<BeatVec<Node>> = filtered_candidates
+        .into_par_iter()
+        .enumerate()
+        .map(|(line_index, line_candidate)| match line_candidate {
+            MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
+            Rest => vec![Node::Rest {
+                line_index: line_index as u16,
+            }],
+            Playable(beat_fingerings_per_pitch) => {
+                generate_fingering_combos(&beat_fingerings_per_pitch)
+                    .into_iter()
+                    .map(|pitch_fingering_group| Node::Note {
+                        line_index: line_index as u16,
+                        beat_fingering_combo: BeatFingeringCombo::new(pitch_fingering_group),
+                    })
+                    .collect()
+            }
+        })
+        .collect();
+
+    #[cfg(target_arch = "wasm32")]
+    let path_node_groups: Vec<BeatVec<Node>> = filtered_candidates
+        .into_iter()
         .enumerate()
         .map(|(line_index, line_candidate)| match line_candidate {
             MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
