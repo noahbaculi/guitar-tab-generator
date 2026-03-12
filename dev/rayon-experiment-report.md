@@ -45,4 +45,34 @@ This confirms the plan's prediction: overhead > gain at ≤20 items.
 
 ## Conclusion
 
-_TBD — which sites to keep, revert, or explore further_
+**All three sites should be reverted.** None provided a net performance improvement; all regressed or showed no change.
+
+### Why Rayon didn't help here
+
+The guitar-tab-generator pipeline is **dominated by the sequential `yen()` pathfinding step**, which accounts for essentially all of the multi-arrangement benchmark time (~20 ms per run). Since `yen()` cannot be parallelized (each path depends on the previous), the pipeline has no parallel headroom at the macro level.
+
+The three candidate sites (`path_node_groups`, `validate_fingerings`, `process_path`/`render_tab`) are all pre- or post-`yen()` and individually fast (µs-range per element). Rayon's thread pool spin-up and work distribution overhead (~50–100 µs per `par_iter()` invocation on Apple M-series) exceeds the actual computation time at these sites.
+
+### Key findings
+
+| Site | Overhead | Computation | Result |
+|------|----------|-------------|--------|
+| A (`path_node_groups`) | High | Fast (µs/beat) | +50% regression on cold path |
+| B (`validate_fingerings`) | High | Very fast (range lookup) | +68% regression cumulative |
+| C (`process_path` + `render_tab`) | High | Fast (1–20 items) | No change |
+
+### When Rayon would start to pay off
+
+Parallelism would help if:
+- **Input size grows dramatically** (hundreds of beats per composition with complex chord combos)
+- **WASM threading support** (`wasm-bindgen-rayon`) is added, enabling parallel execution in browser workers
+- **The per-element work increases** (e.g., if chord fingering expansion becomes more computationally expensive)
+
+At present input sizes (5–85 lines of music), the sequential implementation is optimal.
+
+### Recommendation
+
+- Revert all Rayon changes from `src/arrangement.rs` and `src/lib.rs`
+- Keep the `process_beat` helper function extracted in Site B as a clean refactor
+- Remove the Rayon dependency from `Cargo.toml`
+- Track this finding in the README to avoid re-investigating the same approach
