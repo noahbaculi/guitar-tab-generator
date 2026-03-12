@@ -556,35 +556,56 @@ mod test_create_arrangements {
 /// Returns a `Result` containing either a
 /// `Vec<Vec<Vec<Fingering>>>` if the input pitches are valid, or an `Err` containing an error
 /// message if there are invalid pitches.
+fn process_beat(
+    guitar: &Guitar,
+    beat_input: &Line<BeatVec<Pitch>>,
+) -> Line<BeatVec<PitchVec<PitchFingering>>> {
+    match beat_input {
+        MeasureBreak => MeasureBreak,
+        Rest => Rest,
+        Playable(beat_pitches) => Playable(
+            beat_pitches
+                .iter()
+                .map(|beat_pitch| generate_pitch_fingerings(&guitar.string_ranges, beat_pitch))
+                .collect(),
+        ),
+    }
+}
+
 fn validate_fingerings(
     guitar: &Guitar,
     input_pitches: &[Line<BeatVec<Pitch>>],
 ) -> Result<Vec<Line<BeatVec<PitchVec<PitchFingering>>>>> {
-    let mut impossible_pitches: Vec<InvalidInput> = vec![];
+    #[cfg(not(target_arch = "wasm32"))]
+    let fingerings: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> = input_pitches
+        .par_iter()
+        .map(|beat_input| process_beat(guitar, beat_input))
+        .collect();
+
+    #[cfg(target_arch = "wasm32")]
     let fingerings: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> = input_pitches
         .iter()
-        .enumerate()
-        .map(|(beat_index, beat_input)| match beat_input {
-            MeasureBreak => MeasureBreak,
-            Rest => Rest,
-            Playable(beat_pitches) => Playable(
-                beat_pitches
-                    .iter()
-                    .map(|beat_pitch| {
-                        let pitch_fingerings: PitchVec<PitchFingering> =
-                            generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
-                        if pitch_fingerings.is_empty() {
-                            impossible_pitches.push(InvalidInput {
-                                value: format!("{beat_pitch:?}"),
-                                line_number: (beat_index as u16) + 1,
-                            })
-                        }
-                        pitch_fingerings
-                    })
-                    .collect(),
-            ),
-        })
+        .map(|beat_input| process_beat(guitar, beat_input))
         .collect();
+
+    // Sequential pass to find impossible pitches, using original input for pitch names.
+    let mut impossible_pitches: Vec<InvalidInput> = vec![];
+    for (beat_index, (beat_fingering, beat_input)) in
+        fingerings.iter().zip(input_pitches.iter()).enumerate()
+    {
+        if let (Playable(pitch_fingering_groups), Playable(beat_pitches)) =
+            (beat_fingering, beat_input)
+        {
+            for (pf, beat_pitch) in pitch_fingering_groups.iter().zip(beat_pitches.iter()) {
+                if pf.is_empty() {
+                    impossible_pitches.push(InvalidInput {
+                        value: format!("{beat_pitch:?}"),
+                        line_number: (beat_index as u16) + 1,
+                    });
+                }
+            }
+        }
+    }
 
     if !impossible_pitches.is_empty() {
         let error_msg = impossible_pitches
