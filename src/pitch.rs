@@ -219,12 +219,15 @@ impl Pitch {
     }
 
     pub fn plus_offset(&self, offset: i16) -> Result<Pitch> {
-        match Pitch::from_repr((self.index() as i16 + offset) as usize) {
-            Some(pitch) => Ok(pitch),
-            None => Err(anyhow!(
+        let new_index = self.index() as i16 + offset;
+        if new_index < 0 {
+            return Err(anyhow!(
                 "Pitch {self} offset by {offset} pitches results in a pitch out of range."
-            )),
+            ));
         }
+        Pitch::from_repr(new_index as usize).ok_or_else(|| {
+            anyhow!("Pitch {self} offset by {offset} pitches results in a pitch out of range.")
+        })
     }
 }
 #[cfg(test)]
