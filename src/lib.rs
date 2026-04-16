@@ -59,10 +59,8 @@ pub fn wrapper_create_arrangements(
         playback_index,
     } = composition_input;
 
-    let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = match parser::parse_lines(input_pitches) {
-        Ok(input_lines) => input_lines,
-        Err(e) => return Err(anyhow!(format!("{}", e))),
-    };
+    let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = parser::parse_lines(input_pitches)
+        .map_err(|e| anyhow!("{e}"))?;
 
     let first_playable_index = input_lines
         .iter()
@@ -86,10 +84,8 @@ pub fn wrapper_create_arrangements(
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
 
     let arrangements =
-        match arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements) {
-            Ok(arrangements) => arrangements,
-            Err(e) => return Err(anyhow!(format!("{}", e))),
-        };
+        arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements)
+            .map_err(|e| anyhow!("{e}"))?;
 
     let compositions = arrangements
         .iter()
