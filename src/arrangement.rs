@@ -356,7 +356,7 @@ pub fn create_arrangements(
     let arrangements = path_results
         .into_iter()
         .map(|path_result| {
-            process_path(path_result.0, path_result.1, measure_break_indices.clone())
+            process_path(path_result.0, path_result.1, &measure_break_indices)
         })
         .collect_vec();
 
@@ -1339,7 +1339,7 @@ mod test_calculate_node_difficulty {
 fn process_path(
     path_nodes: Vec<Node>,
     path_difficulty: i32,
-    measure_break_indices: Vec<usize>,
+    measure_break_indices: &[usize],
 ) -> Arrangement {
     let mut lines: Vec<Line<BeatVec<PitchFingering>>> = path_nodes
         .iter()
@@ -1354,7 +1354,7 @@ fn process_path(
         })
         .collect_vec();
     // Add measure breaks back in
-    for measure_break_index in measure_break_indices.into_iter().sorted() {
+    for &measure_break_index in measure_break_indices.iter().sorted() {
         lines.insert(measure_break_index, Line::MeasureBreak);
     }
 
@@ -1403,7 +1403,7 @@ mod test_process_path {
             },
         ];
 
-        let arrangement = process_path(path_nodes, 123, vec![]);
+        let arrangement = process_path(path_nodes, 123, &[]);
 
         let expected_arrangement = Arrangement {
             lines: vec![Playable(placeholder_beat_fingering_combo.fingering_combo)],
@@ -1446,7 +1446,7 @@ mod test_process_path {
             },
         ];
 
-        let arrangement = process_path(path_nodes, 321, vec![0, 2, 5, 7]);
+        let arrangement = process_path(path_nodes, 321, &[0, 2, 5, 7]);
 
         let expected_arrangement = Arrangement {
             lines: vec![
