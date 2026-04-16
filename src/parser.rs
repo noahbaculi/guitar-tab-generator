@@ -99,6 +99,7 @@ pub fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, P
         .collect();
 
     create_string_tuning(&offset_tuning_open_pitches)
+        .expect("BUG: standard tuning offsets produce valid pitches")
 }
 #[cfg(test)]
 mod test_create_string_tuning_offset {
@@ -108,7 +109,7 @@ mod test_create_string_tuning_offset {
     fn no_offset() {
         assert_eq!(
             create_string_tuning_offset([0, 0, 0, 0, 0, 0]),
-            create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)
+            create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap()
         );
     }
     #[test]
@@ -123,6 +124,7 @@ mod test_create_string_tuning_offset {
                 Pitch::A2,
                 Pitch::E2,
             ])
+            .unwrap()
         );
     }
     #[test]
@@ -138,6 +140,7 @@ mod test_create_string_tuning_offset {
                 Pitch::G2,
                 Pitch::F2,
             ])
+            .unwrap()
         );
     }
 }

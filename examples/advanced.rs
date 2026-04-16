@@ -41,7 +41,8 @@ fn main() -> Result<()> {
         Pitch::D3,
         Pitch::A2,
         Pitch::E2,
-    ]);
+    ])
+    .unwrap();
 
     let guitar_num_frets = 18;
     let guitar_capo = 0;

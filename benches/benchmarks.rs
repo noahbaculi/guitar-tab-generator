@@ -129,9 +129,9 @@ fn bench_create_string_tuning_offset(c: &mut Criterion) {
 }
 
 fn guitar_creation(c: &mut Criterion) {
-    let six_string_tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
+    let six_string_tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 
-    let three_string_tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]);
+    let three_string_tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]).unwrap();
     let twelve_string_tuning = create_string_tuning(&[
         Pitch::E4,
         Pitch::B3,
@@ -145,7 +145,8 @@ fn guitar_creation(c: &mut Criterion) {
         Pitch::E2,
         Pitch::E2,
         Pitch::E2,
-    ]);
+    ])
+    .unwrap();
 
     const STANDARD_NUM_FRETS: u8 = 18;
 
@@ -179,7 +180,7 @@ fn guitar_creation(c: &mut Criterion) {
 }
 
 fn bench_arrangement_creation(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
+    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 
     c.bench_function("fur_elise_1_arrangement", |b| {
         b.iter(|| {
@@ -211,7 +212,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
 }
 
 fn bench_arrangement_scaling(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
+    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 
     let mut group = c.benchmark_group("bench_arrangement_scaling");
     for num in (0..=22) {
