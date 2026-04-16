@@ -50,6 +50,7 @@ pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
 ///
 /// * `open_string_pitches`: An array slice containing the pitches of the open strings in a guitar
 ///   starting at string 1 (the highest string), and ending with string _N_ (the lowest string) where _N_ > 1.
+#[must_use]
 pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> BTreeMap<StringNumber, Pitch> {
     open_string_pitches
         .iter()
@@ -68,7 +69,7 @@ pub struct Guitar {
 impl Default for Guitar {
     fn default() -> Guitar {
         let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES);
-        Guitar::new(tuning, 18, 0).expect("Default guitar should be valid.")
+        Guitar::new(tuning, 18, 0).expect("BUG: Default guitar should be valid")
     }
 }
 impl Guitar {
@@ -575,7 +576,7 @@ fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<P
         None => {
             let highest_pitch = all_pitches_vec
                 .last()
-                .expect("The Pitch enum should not be empty.");
+                .expect("BUG: The Pitch enum should not be empty");
             let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
             let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
                 The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
@@ -634,6 +635,7 @@ mod test_create_string_range {
 /// If no fingerings are possible on any of the strings of the guitar, an
 /// empty vector is returned.
 // TODO benchmark memoization
+#[must_use]
 pub fn generate_pitch_fingerings(
     string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
     pitch: &Pitch,
@@ -651,10 +653,6 @@ pub fn generate_pitch_fingerings(
                 })
         })
         .collect();
-    // dbg!(&fingerings);
-
-    // let non_zero_fret_avg =
-    //     non_zero_frets.iter().sum::<usize>() as f32 / non_zero_frets.len() as f32;
 
     fingerings
 }
