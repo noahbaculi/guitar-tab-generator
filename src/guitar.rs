@@ -1,5 +1,5 @@
 use crate::{arrangement::PitchVec, pitch::Pitch, string_number::StringNumber};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fmt,
@@ -80,8 +80,13 @@ impl Guitar {
         num_frets -= capo;
         let adjusted_tuning = tuning
             .into_iter()
-            .map(|(string_num, pitch)| (string_num, pitch.plus_offset(capo as i16).unwrap()))
-            .collect::<BTreeMap<_, _>>();
+            .map(|(string_num, pitch)| -> Result<_> {
+                let adjusted = pitch
+                    .plus_offset(capo as i16)
+                    .context("capo adjustment pushed pitch out of range")?;
+                Ok((string_num, adjusted))
+            })
+            .collect::<Result<BTreeMap<_, _>>>()?;
 
         let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
         for (string_number, string_open_pitch) in adjusted_tuning.iter() {
