@@ -672,7 +672,7 @@ fn generate_fingering_combos(
 ) -> Result<Vec<BeatVec<PitchFingering>>, Arc<anyhow::Error>> {
     if beat_fingerings_per_pitch.is_empty() {
         return Err(Arc::new(anyhow!(
-            "BUG: generate_fingering_combos called with empty input"
+            "generate_fingering_combos called with empty input"
         )));
     }
 
@@ -757,7 +757,7 @@ mod test_generate_fingering_combos {
         let result = generate_fingering_combos(&[]);
         assert!(result.is_err());
         let error_msg = format!("{}", result.unwrap_err());
-        assert!(error_msg.contains("BUG: generate_fingering_combos called with empty input"));
+        assert!(error_msg.contains("generate_fingering_combos called with empty input"));
     }
 }
 
