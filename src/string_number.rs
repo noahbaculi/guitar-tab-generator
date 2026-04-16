@@ -13,7 +13,9 @@ impl StringNumber {
 
         }
     }
-    pub fn get(&self) -> u8 {
+    #[inline]
+    #[must_use]
+    pub fn number(&self) -> u8 {
         self.0
     }
 }
@@ -40,18 +42,15 @@ mod test_create_string_number {
 
 impl fmt::Debug for StringNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // write!(f, "{}", self.0)
-        let string_number = self.0;
-        let string_pitch_letter = match string_number {
-            1 => "1_e".to_owned(),
-            2 => "2_B".to_owned(),
-            3 => "3_G".to_owned(),
-            4 => "4_D".to_owned(),
-            5 => "5_A".to_owned(),
-            6 => "6_E".to_owned(),
-            string_number => string_number.to_string(),
-        };
-        write!(f, "{string_pitch_letter}")
+        match self.0 {
+            1 => f.write_str("1_e"),
+            2 => f.write_str("2_B"),
+            3 => f.write_str("3_G"),
+            4 => f.write_str("4_D"),
+            5 => f.write_str("5_A"),
+            6 => f.write_str("6_E"),
+            n => write!(f, "{n}"),
+        }
     }
 }
 #[cfg(test)]

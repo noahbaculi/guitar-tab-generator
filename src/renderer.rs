@@ -241,7 +241,7 @@ fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<
 
     // Add the rendered frets for the strings that are played
     for fingering in pitch_fingerings {
-        playable_render[fingering.string_number.get() as usize - 1] =
+        playable_render[fingering.string_number.number() as usize - 1] =
             render_fret(fingering.fret, fret_width_max)
     }
 
