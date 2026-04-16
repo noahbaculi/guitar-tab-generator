@@ -468,14 +468,17 @@ mod test_calc_fret_width_max {
 }
 
 fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
-    assert!(!v.is_empty());
+    assert!(
+        !v.is_empty(),
+        "BUG: transpose called with empty input -- caller should filter empty arrangements"
+    );
     let len = v[0].len();
     let mut iters: Vec<_> = v.into_iter().map(|n| n.into_iter()).collect();
     (0..len)
         .map(|_| {
             iters
                 .iter_mut()
-                .map(|n| n.next().unwrap())
+                .map(|n| n.next().expect("BUG: all inner vecs must have equal length for transpose"))
                 .collect::<Vec<T>>()
         })
         .collect()
