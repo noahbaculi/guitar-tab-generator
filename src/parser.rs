@@ -39,6 +39,7 @@ pub fn get_tuning_names() -> Result<JsValue, JsError> {
 /// Generates a open string offsets from a tuning name.
 ///
 /// Defaults to the standard tuning offsets if the tuning name cannot be matched.
+#[must_use]
 pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
     match TuningName::from_str(tuning_name) {
         Ok(TuningName::OpenG) => [-2, 0, 0, 0, -2, -2],
@@ -85,6 +86,7 @@ mod test_parse_tuning {
 ///
 /// Ex:
 /// `create_string_tuning_offset([0, 0, 0, 0, 0, 0])` creates the standard tuning.
+#[must_use]
 pub fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch> {
     let offset_tuning_open_pitches: Vec<Pitch> = STD_6_STRING_TUNING_OPEN_PITCHES
         .iter()
@@ -92,7 +94,7 @@ pub fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, P
         .map(|(std_tuning_pitch, offset)| {
             std_tuning_pitch
                 .plus_offset(offset as i16)
-                .expect("Tuning pitch offset should be valid.")
+                .expect("BUG: Tuning pitch offset should be valid")
         })
         .collect();
 
@@ -147,7 +149,7 @@ pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyho
     let pitch_regex = RegexBuilder::new(pattern)
         .case_insensitive(true)
         .build()
-        .expect("Regex pattern should be valid");
+        .expect("BUG: Regex pattern should be valid");
 
     let line_parse_results: Vec<Result<Line<BeatVec<Pitch>>, anyhow::Error>> = input
         .lines()
@@ -532,7 +534,7 @@ mod test_parse_pitch {
 /// Each returned slice is a reference to a subarray of `usize` elements from the original data array.
 fn consecutive_slices(numbers: &[usize]) -> Vec<&[usize]> {
     let mut slice_start = 0;
-    let mut result = Vec::new();
+    let mut result = Vec::with_capacity(numbers.len());
     for i in 1..numbers.len() {
         if numbers[i - 1] + 1 != numbers[i] {
             result.push(&numbers[slice_start..i]);
