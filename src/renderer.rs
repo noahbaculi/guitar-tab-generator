@@ -5,6 +5,7 @@ use crate::{
 use itertools::Itertools;
 use std::collections::VecDeque;
 
+#[must_use]
 pub fn render_tab(
     arrangement_lines: &[Line<BeatVec<PitchFingering>>],
     guitar: &Guitar,
@@ -13,7 +14,7 @@ pub fn render_tab(
     playback: Option<u16>,
 ) -> String {
     if arrangement_lines.is_empty() {
-        return "".to_owned();
+        return String::new();
     }
     let num_strings = guitar.string_ranges.len();
 
@@ -399,7 +400,7 @@ fn calc_fret_width_max(pitch_fingerings: &[&PitchFingering]) -> usize {
         .iter()
         .map(|fingering| fingering.fret.to_string().len())
         .max()
-        .expect("Playable line pitch fingerings should not be empty.")
+        .expect("BUG: Playable line pitch fingerings should not be empty")
 }
 #[cfg(test)]
 mod test_calc_fret_width_max {
@@ -726,15 +727,15 @@ fn render_string_output(
     strings_rows: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
-    let mut output_lines: Vec<String> = vec![];
-
     let num_row_groups = strings_rows[0].len();
+    let num_strings = strings_rows.len();
+    let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
     for row_group_index in 0..num_row_groups {
         let upper_playback_row_render = match playback_indicator_position {
-            None => "".to_owned(),
+            None => String::new(),
             Some(ref pos) => match row_group_index == pos.row_group_index {
-                false => "".to_owned(),
+                false => String::new(),
                 true => " ".repeat(pos.column_index) + "▼",
             },
         };
@@ -749,15 +750,15 @@ fn render_string_output(
             );
         }
         let lower_playback_row_render = match playback_indicator_position {
-            None => "".to_owned(),
+            None => String::new(),
             Some(ref pos) => match row_group_index == pos.row_group_index {
-                false => "".to_owned(),
+                false => String::new(),
                 true => " ".repeat(pos.column_index) + "▲",
             },
         };
 
         output_lines.push(lower_playback_row_render);
-        output_lines.push("".to_owned());
+        output_lines.push(String::new());
     }
     output_lines.join("\n")
 }
