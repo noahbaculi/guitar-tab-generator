@@ -201,10 +201,13 @@ mod test_pitch_display {
 }
 
 impl Pitch {
+    #[inline]
+    #[must_use]
     pub fn index(&self) -> u8 {
         *self as u8
     }
 
+    #[must_use]
     pub fn plain_text(&self) -> String {
         let pitch_variant_name = format!("{self:?}");
 
