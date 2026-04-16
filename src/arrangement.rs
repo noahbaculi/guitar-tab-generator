@@ -229,6 +229,7 @@ pub struct Arrangement {
     max_fret_span: u8,
 }
 impl Arrangement {
+    #[must_use]
     pub fn max_fret_span(&self) -> u8 {
         self.max_fret_span
     }
@@ -750,7 +751,6 @@ mod test_generate_fingering_combos {
     }
 }
 
-#[allow(clippy::ptr_arg)]
 /// Checks if there are any duplicate strings in a vector of `Fingering`
 /// objects to ensure that all pitches can be played.
 fn no_duplicate_strings(beat_fingering_option: &[PitchFingering]) -> bool {
