@@ -1,10 +1,6 @@
 use anyhow::Result;
 use guitar_tab_generator::{
-    arrangement::{create_arrangements, Line},
-    guitar::{create_string_tuning, Guitar},
-    parser::parse_lines,
-    pitch::Pitch,
-    renderer::render_tab,
+    create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar, Line, Pitch,
 };
 
 extern crate guitar_tab_generator;

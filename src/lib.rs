@@ -1,17 +1,27 @@
 use anyhow::{anyhow, Result};
-use arrangement::BeatVec;
-use guitar::Guitar;
 use itertools::Itertools;
-use pitch::Pitch;
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
-pub mod arrangement;
-pub mod guitar;
-pub mod parser;
-pub mod pitch;
-pub mod renderer;
-pub mod string_number;
+pub(crate) mod arrangement;
+pub(crate) mod guitar;
+pub(crate) mod parser;
+pub(crate) mod pitch;
+pub(crate) mod renderer;
+pub(crate) mod string_number;
+
+pub use arrangement::{
+    create_arrangements, memoized_original_create_arrangements, Arrangement, BeatVec, Line,
+};
+pub use guitar::{
+    create_string_tuning, Guitar, PitchFingering, STD_6_STRING_TUNING_OPEN_PITCHES,
+};
+pub use parser::{
+    create_string_tuning_offset, memoized_original_parse_lines, parse_lines, parse_tuning,
+};
+pub use pitch::Pitch;
+pub use renderer::render_tab;
+pub use string_number::StringNumber;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionInput {
