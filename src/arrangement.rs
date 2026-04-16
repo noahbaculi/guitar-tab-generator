@@ -308,22 +308,28 @@ pub fn create_arrangements(
         .into_iter()
         .filter(|line_candidate| !matches!(line_candidate, MeasureBreak))
         .enumerate()
-        .map(|(line_index, line_candidate)| match line_candidate {
-            MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
-            Rest => vec![Node::Rest {
-                line_index: line_index as u16,
-            }],
-            Playable(beat_fingerings_per_pitch) => {
-                generate_fingering_combos(&beat_fingerings_per_pitch)
-                    .into_iter()
-                    .map(|pitch_fingering_group| Node::Note {
+        .map(
+            |(line_index, line_candidate)| -> Result<BeatVec<Node>, Arc<anyhow::Error>> {
+                match line_candidate {
+                    MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
+                    Rest => Ok(vec![Node::Rest {
                         line_index: line_index as u16,
-                        beat_fingering_combo: BeatFingeringCombo::new(pitch_fingering_group),
-                    })
-                    .collect()
-            }
-        })
-        .collect();
+                    }]),
+                    Playable(beat_fingerings_per_pitch) => {
+                        Ok(generate_fingering_combos(&beat_fingerings_per_pitch)?
+                            .into_iter()
+                            .map(|pitch_fingering_group| Node::Note {
+                                line_index: line_index as u16,
+                                beat_fingering_combo: BeatFingeringCombo::new(
+                                    pitch_fingering_group,
+                                ),
+                            })
+                            .collect())
+                    }
+                }
+            },
+        )
+        .collect::<Result<Vec<_>, _>>()?;
 
     let num_path_node_groups = path_node_groups.len();
 
@@ -663,17 +669,19 @@ mod test_validate_fingerings {
 /// Generates all playable combinations of fingerings for all the pitches in a beat.
 fn generate_fingering_combos(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
-) -> Vec<BeatVec<PitchFingering>> {
+) -> Result<Vec<BeatVec<PitchFingering>>, Arc<anyhow::Error>> {
     if beat_fingerings_per_pitch.is_empty() {
-        unreachable!("Beat pitch fingerings should not be empty.")
+        return Err(Arc::new(anyhow!(
+            "BUG: generate_fingering_combos called with empty input"
+        )));
     }
 
-    beat_fingerings_per_pitch
+    Ok(beat_fingerings_per_pitch
         .iter()
         .multi_cartesian_product()
         .map(|combo| combo.into_iter().copied().collect::<Vec<PitchFingering>>())
         .filter(|x| no_duplicate_strings(x))
-        .collect()
+        .collect())
 }
 #[cfg(test)]
 mod test_generate_fingering_combos {
@@ -691,7 +699,7 @@ mod test_generate_fingering_combos {
         let beat_fingerings_per_pitch = &[vec![pitch_fingering]];
 
         assert_eq!(
-            generate_fingering_combos(beat_fingerings_per_pitch),
+            generate_fingering_combos(beat_fingerings_per_pitch).unwrap(),
             beat_fingerings_per_pitch
         );
     }
@@ -739,15 +747,17 @@ mod test_generate_fingering_combos {
         ];
 
         assert_eq!(
-            generate_fingering_combos(&beat_fingerings_per_pitch),
+            generate_fingering_combos(&beat_fingerings_per_pitch).unwrap(),
             expected_fingering_combos
         );
     }
 
     #[test]
-    #[should_panic]
     fn empty_input() {
-        generate_fingering_combos(&[]);
+        let result = generate_fingering_combos(&[]);
+        assert!(result.is_err());
+        let error_msg = format!("{}", result.unwrap_err());
+        assert!(error_msg.contains("BUG: generate_fingering_combos called with empty input"));
     }
 }
 
