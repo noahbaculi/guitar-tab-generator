@@ -15,7 +15,7 @@ impl StringNumber {
     }
     #[inline]
     #[must_use]
-    pub fn number(&self) -> u8 {
+    pub fn get(&self) -> u8 {
         self.0
     }
 }
