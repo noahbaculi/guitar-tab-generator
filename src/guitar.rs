@@ -118,7 +118,7 @@ mod test_create_guitar {
 
     #[test]
     fn valid_simple() -> Result<()> {
-        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)?;
 
         const NUM_FRETS: u8 = 3;
 
@@ -190,14 +190,13 @@ mod test_create_guitar {
     }
     #[test]
     fn valid_simple_capo() -> Result<()> {
-        let tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]).unwrap();
+        let tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3])?;
 
         const NUM_FRETS: u8 = 18;
         const CAPO: u8 = 4;
 
         let expected_guitar = Guitar {
-            tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3])
-                .unwrap(),
+            tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3])?,
             num_frets: NUM_FRETS - CAPO,
             range: BTreeSet::from([
                 Pitch::G5,
@@ -295,7 +294,7 @@ mod test_create_guitar {
     }
     #[test]
     fn valid_normal() -> Result<()> {
-        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)?;
 
         const NUM_FRETS: u8 = 18;
 
