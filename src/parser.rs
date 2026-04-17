@@ -154,28 +154,18 @@ pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyho
         .build()
         .expect("BUG: Regex pattern should be valid");
 
-    let line_parse_results: Vec<Result<Line<BeatVec<Pitch>>, anyhow::Error>> = input
+    let (parsed_lines, errors): (Vec<Line<BeatVec<Pitch>>>, Vec<String>) = input
         .lines()
         .enumerate()
         .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
-        .collect_vec();
+        .partition_map(|result| match result {
+            Ok(line) => itertools::Either::Left(line),
+            Err(err) => itertools::Either::Right(format!("{err}")),
+        });
 
-    let unparsable_lines_error_msg = line_parse_results
-        .iter()
-        .filter_map(|line| match line {
-            Err(err) => Some(format!("{err}")),
-            Ok(_) => None,
-        })
-        .collect::<Vec<String>>()
-        .join("\n");
-    if !unparsable_lines_error_msg.is_empty() {
-        return Err(anyhow!(unparsable_lines_error_msg).into());
+    if !errors.is_empty() {
+        return Err(anyhow!(errors.join("\n")).into());
     }
-
-    let parsed_lines: Vec<Line<BeatVec<Pitch>>> = line_parse_results
-        .into_iter()
-        .filter_map(|line| line.ok())
-        .collect::<Vec<_>>();
 
     Ok(parsed_lines)
 }
