@@ -63,7 +63,7 @@ pub struct Guitar {
     pub(crate) tuning: BTreeMap<StringNumber, Pitch>,
     pub(crate) num_frets: u8,
     pub(crate) range: BTreeSet<Pitch>,
-    pub(crate) string_ranges: BTreeMap<StringNumber, Vec<Pitch>>,
+    pub(crate) string_ranges: BTreeMap<StringNumber, Box<[Pitch]>>,
 }
 impl Default for Guitar {
     fn default() -> Guitar {
@@ -88,11 +88,11 @@ impl Guitar {
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
 
-        let mut string_ranges: BTreeMap<StringNumber, Vec<Pitch>> = BTreeMap::new();
+        let mut string_ranges: BTreeMap<StringNumber, Box<[Pitch]>> = BTreeMap::new();
         for (string_number, string_open_pitch) in adjusted_tuning.iter() {
             string_ranges.insert(
                 *string_number,
-                create_string_range(string_open_pitch, num_frets)?,
+                create_string_range(string_open_pitch, num_frets)?.into_boxed_slice(),
             );
         }
 
@@ -154,32 +154,32 @@ mod test_create_guitar {
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
-                    vec![Pitch::E4, Pitch::F4, Pitch::FSharpGFlat4, Pitch::G4],
+                    Box::from([Pitch::E4, Pitch::F4, Pitch::FSharpGFlat4, Pitch::G4]),
                 ),
                 (
                     StringNumber::new(2).unwrap(),
-                    vec![Pitch::B3, Pitch::C4, Pitch::CSharpDFlat4, Pitch::D4],
+                    Box::from([Pitch::B3, Pitch::C4, Pitch::CSharpDFlat4, Pitch::D4]),
                 ),
                 (
                     StringNumber::new(3).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::G3,
                         Pitch::GSharpAFlat3,
                         Pitch::A3,
                         Pitch::ASharpBFlat3,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(4).unwrap(),
-                    vec![Pitch::D3, Pitch::DSharpEFlat3, Pitch::E3, Pitch::F3],
+                    Box::from([Pitch::D3, Pitch::DSharpEFlat3, Pitch::E3, Pitch::F3]),
                 ),
                 (
                     StringNumber::new(5).unwrap(),
-                    vec![Pitch::A2, Pitch::ASharpBFlat2, Pitch::B2, Pitch::C3],
+                    Box::from([Pitch::A2, Pitch::ASharpBFlat2, Pitch::B2, Pitch::C3]),
                 ),
                 (
                     StringNumber::new(6).unwrap(),
-                    vec![Pitch::E2, Pitch::F2, Pitch::FSharpGFlat2, Pitch::G2],
+                    Box::from([Pitch::E2, Pitch::F2, Pitch::FSharpGFlat2, Pitch::G2]),
                 ),
             ]),
         };
@@ -227,7 +227,7 @@ mod test_create_guitar {
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::GSharpAFlat4,
                         Pitch::A4,
                         Pitch::ASharpBFlat4,
@@ -243,11 +243,11 @@ mod test_create_guitar {
                         Pitch::GSharpAFlat5,
                         Pitch::A5,
                         Pitch::ASharpBFlat5,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(2).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::DSharpEFlat4,
                         Pitch::E4,
                         Pitch::F4,
@@ -263,11 +263,11 @@ mod test_create_guitar {
                         Pitch::DSharpEFlat5,
                         Pitch::E5,
                         Pitch::F5,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(3).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::B3,
                         Pitch::C4,
                         Pitch::CSharpDFlat4,
@@ -283,7 +283,7 @@ mod test_create_guitar {
                         Pitch::B4,
                         Pitch::C5,
                         Pitch::CSharpDFlat5,
-                    ],
+                    ]),
                 ),
             ]),
         };
@@ -349,7 +349,7 @@ mod test_create_guitar {
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::E4,
                         Pitch::F4,
                         Pitch::FSharpGFlat4,
@@ -369,11 +369,11 @@ mod test_create_guitar {
                         Pitch::GSharpAFlat5,
                         Pitch::A5,
                         Pitch::ASharpBFlat5,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(2).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::B3,
                         Pitch::C4,
                         Pitch::CSharpDFlat4,
@@ -393,11 +393,11 @@ mod test_create_guitar {
                         Pitch::DSharpEFlat5,
                         Pitch::E5,
                         Pitch::F5,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(3).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::G3,
                         Pitch::GSharpAFlat3,
                         Pitch::A3,
@@ -417,11 +417,11 @@ mod test_create_guitar {
                         Pitch::B4,
                         Pitch::C5,
                         Pitch::CSharpDFlat5,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(4).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::D3,
                         Pitch::DSharpEFlat3,
                         Pitch::E3,
@@ -441,11 +441,11 @@ mod test_create_guitar {
                         Pitch::FSharpGFlat4,
                         Pitch::G4,
                         Pitch::GSharpAFlat4,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(5).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::A2,
                         Pitch::ASharpBFlat2,
                         Pitch::B2,
@@ -465,11 +465,11 @@ mod test_create_guitar {
                         Pitch::CSharpDFlat4,
                         Pitch::D4,
                         Pitch::DSharpEFlat4,
-                    ],
+                    ]),
                 ),
                 (
                     StringNumber::new(6).unwrap(),
-                    vec![
+                    Box::from([
                         Pitch::E2,
                         Pitch::F2,
                         Pitch::FSharpGFlat2,
@@ -489,7 +489,7 @@ mod test_create_guitar {
                         Pitch::GSharpAFlat3,
                         Pitch::A3,
                         Pitch::ASharpBFlat3,
-                    ],
+                    ]),
                 ),
             ]),
         };
@@ -643,7 +643,7 @@ mod test_create_string_range {
 // TODO benchmark memoization
 #[must_use]
 pub fn generate_pitch_fingerings(
-    string_ranges: &BTreeMap<StringNumber, Vec<Pitch>>,
+    string_ranges: &BTreeMap<StringNumber, Box<[Pitch]>>,
     pitch: &Pitch,
 ) -> PitchVec<PitchFingering> {
     let fingerings: PitchVec<PitchFingering> = string_ranges
@@ -672,27 +672,27 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                create_string_range(&Pitch::E4, NUM_FRETS)?,
+                create_string_range(&Pitch::E4, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(2).unwrap(),
-                create_string_range(&Pitch::B3, NUM_FRETS)?,
+                create_string_range(&Pitch::B3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(3).unwrap(),
-                create_string_range(&Pitch::G3, NUM_FRETS)?,
+                create_string_range(&Pitch::G3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(4).unwrap(),
-                create_string_range(&Pitch::D3, NUM_FRETS)?,
+                create_string_range(&Pitch::D3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(5).unwrap(),
-                create_string_range(&Pitch::A2, NUM_FRETS)?,
+                create_string_range(&Pitch::A2, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(6).unwrap(),
-                create_string_range(&Pitch::E2, NUM_FRETS)?,
+                create_string_range(&Pitch::E2, NUM_FRETS)?.into_boxed_slice(),
             ),
         ]);
 
@@ -753,11 +753,11 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                create_string_range(&Pitch::G4, NUM_FRETS)?,
+                create_string_range(&Pitch::G4, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(2).unwrap(),
-                create_string_range(&Pitch::DSharpEFlat4, NUM_FRETS)?,
+                create_string_range(&Pitch::DSharpEFlat4, NUM_FRETS)?.into_boxed_slice(),
             ),
         ]);
 
@@ -793,27 +793,27 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                create_string_range(&Pitch::E4, NUM_FRETS)?,
+                create_string_range(&Pitch::E4, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(2).unwrap(),
-                create_string_range(&Pitch::B3, NUM_FRETS)?,
+                create_string_range(&Pitch::B3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(3).unwrap(),
-                create_string_range(&Pitch::G3, NUM_FRETS)?,
+                create_string_range(&Pitch::G3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(4).unwrap(),
-                create_string_range(&Pitch::D3, NUM_FRETS)?,
+                create_string_range(&Pitch::D3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(5).unwrap(),
-                create_string_range(&Pitch::A2, NUM_FRETS)?,
+                create_string_range(&Pitch::A2, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(6).unwrap(),
-                create_string_range(&Pitch::E2, NUM_FRETS)?,
+                create_string_range(&Pitch::E2, NUM_FRETS)?.into_boxed_slice(),
             ),
         ]);
 
@@ -834,27 +834,27 @@ mod test_generate_pitch_fingering {
         let string_ranges = BTreeMap::from([
             (
                 StringNumber::new(1).unwrap(),
-                create_string_range(&Pitch::E4, NUM_FRETS)?,
+                create_string_range(&Pitch::E4, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(2).unwrap(),
-                create_string_range(&Pitch::B3, NUM_FRETS)?,
+                create_string_range(&Pitch::B3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(3).unwrap(),
-                create_string_range(&Pitch::G3, NUM_FRETS)?,
+                create_string_range(&Pitch::G3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(4).unwrap(),
-                create_string_range(&Pitch::D3, NUM_FRETS)?,
+                create_string_range(&Pitch::D3, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(5).unwrap(),
-                create_string_range(&Pitch::A2, NUM_FRETS)?,
+                create_string_range(&Pitch::A2, NUM_FRETS)?.into_boxed_slice(),
             ),
             (
                 StringNumber::new(6).unwrap(),
-                create_string_range(&Pitch::E2, NUM_FRETS)?,
+                create_string_range(&Pitch::E2, NUM_FRETS)?.into_boxed_slice(),
             ),
         ]);
 
