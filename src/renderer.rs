@@ -4,6 +4,7 @@ use crate::{
 };
 use itertools::Itertools;
 use std::collections::VecDeque;
+use std::fmt::Write;
 
 #[must_use]
 pub fn render_tab(
@@ -361,15 +362,24 @@ mod test_render_line {
 ///
 /// Panics if the width of the fret string representation is greater than `fret_width_max`.
 fn render_fret(fret: u8, fret_width_max: usize) -> String {
-    let fret_repr = fret.to_string();
-    let fret_width = fret_repr.len();
+    let fret_width = if fret < 10 {
+        1
+    } else if fret < 100 {
+        2
+    } else {
+        3
+    };
     assert!(
         fret_width_max >= fret_width,
         "fret_width_max ({fret_width_max}) is less than fret_width ({fret_width})"
     );
     let filler_width = fret_width_max - fret_width;
-    let filler: String = "-".repeat(filler_width);
-    format!("{filler}{fret_repr}")
+    let mut out = String::with_capacity(fret_width_max);
+    for _ in 0..filler_width {
+        out.push('-');
+    }
+    write!(&mut out, "{fret}").expect("BUG: writing to a String cannot fail");
+    out
 }
 #[cfg(test)]
 mod test_render_fret {
