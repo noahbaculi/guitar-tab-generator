@@ -868,18 +868,18 @@ mod test_no_duplicate_strings {
 /// Calculates the difference between the maximum and minimum non-zero
 /// fret numbers in a given vector of fingerings.
 fn calc_fret_span(beat_fingering_candidate: &[PitchFingering]) -> Option<u8> {
-    let beat_fingering_option_fret_numbers = beat_fingering_candidate
+    use itertools::MinMaxResult;
+
+    let non_zero_frets = beat_fingering_candidate
         .iter()
         .filter(|fingering| fingering.fret != 0)
         .map(|fingering| fingering.fret);
 
-    let min_non_zero_fret = beat_fingering_option_fret_numbers.clone().min()?;
-    let max_non_zero_fret = match beat_fingering_option_fret_numbers.clone().max() {
-        None => unreachable!("A maximum should exist if a minimum exists."),
-        Some(fret_num) => fret_num,
-    };
-
-    Some(max_non_zero_fret - min_non_zero_fret)
+    match non_zero_frets.minmax() {
+        MinMaxResult::NoElements => None,
+        MinMaxResult::OneElement(_) => Some(0),
+        MinMaxResult::MinMax(min, max) => Some(max - min),
+    }
 }
 #[cfg(test)]
 mod test_calc_fret_span {
