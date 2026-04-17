@@ -388,8 +388,12 @@ fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Li
     for regex_match in regex.find_iter(input_line) {
         if let Ok(pitch) = Pitch::from_str(regex_match.as_str()) {
             matched_pitches.push(pitch);
-            for idx in regex_match.start()..regex_match.end() {
-                matched_mask[idx] = true;
+            for slot in matched_mask
+                .iter_mut()
+                .take(regex_match.end())
+                .skip(regex_match.start())
+            {
+                *slot = true;
             }
         }
     }
