@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod arrangement;
@@ -38,7 +39,7 @@ pub struct CompositionInput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Composition {
     pub tab: String,
-    pub pitches: Vec<BeatVec<String>>,
+    pub pitches: Rc<Vec<BeatVec<String>>>,
     pub max_fret_span: u8,
 }
 
@@ -77,17 +78,19 @@ pub fn wrapper_create_arrangements(
         .position(|line| matches!(line, arrangement::Line::Playable(_)))
         .unwrap_or(0);
 
-    let pitches: Vec<BeatVec<String>> = input_lines
-        .iter()
-        .skip(first_playable_index)
-        .map(|line| match line {
-            arrangement::Line::Playable(pitches) => {
-                pitches.iter().map(|p| p.plain_text()).collect()
-            }
-            arrangement::Line::Rest => vec!["REST".to_owned()],
-            arrangement::Line::MeasureBreak => vec!["MEASURE_BREAK".to_owned()],
-        })
-        .collect_vec();
+    let pitches: Rc<Vec<BeatVec<String>>> = Rc::new(
+        input_lines
+            .iter()
+            .skip(first_playable_index)
+            .map(|line| match line {
+                arrangement::Line::Playable(pitches) => {
+                    pitches.iter().map(|p| p.plain_text().to_owned()).collect()
+                }
+                arrangement::Line::Rest => vec!["REST".to_owned()],
+                arrangement::Line::MeasureBreak => vec!["MEASURE_BREAK".to_owned()],
+            })
+            .collect_vec(),
+    );
 
     let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tuning_name));
 
@@ -101,7 +104,7 @@ pub fn wrapper_create_arrangements(
         .iter()
         .map(|arrangement| Composition {
             tab: renderer::render_tab(&arrangement.lines, &guitar, width, padding, playback_index),
-            pitches: pitches.clone(),
+            pitches: Rc::clone(&pitches),
             max_fret_span: arrangement.max_fret_span(),
         })
         .collect_vec();
@@ -128,16 +131,16 @@ mod test_wrapper_create_arrangements {
         let compositions = wrapper_create_arrangements(composition_input).unwrap();
         let expected_composition = Composition {
             tab: "           ▼\n--------------------|--0------\n-----------------0--|---------\n--------------0-----|---------\n--------0-----------|---------\n-----0--------------|---------\n--0-----------------|---------\n           ▲\n".to_owned(),
-            pitches: vec![
+            pitches: Rc::new(vec![
                 vec!["E2".to_owned()],
-                vec!["A2".to_owned()], 
-                vec!["D3".to_owned()], 
-                vec!["REST".to_owned()], 
-                vec!["G3".to_owned()], 
-                vec!["B3".to_owned()], 
-                vec!["MEASURE_BREAK".to_owned()], 
+                vec!["A2".to_owned()],
+                vec!["D3".to_owned()],
+                vec!["REST".to_owned()],
+                vec!["G3".to_owned()],
+                vec!["B3".to_owned()],
+                vec!["MEASURE_BREAK".to_owned()],
                 vec!["E4".to_owned()]
-                ],
+                ]),
             max_fret_span: 0,
         };
 
@@ -160,13 +163,13 @@ mod test_wrapper_create_arrangements {
         let expected_compositions = vec![
             Composition {
                 tab: "".to_owned(),
-                pitches: vec![
+                pitches: Rc::new(vec![
                     vec!["REST".to_owned()],
                     vec!["REST".to_owned()],
                     vec!["REST".to_owned()],
                     vec!["MEASURE_BREAK".to_owned()],
                     vec!["REST".to_owned()]
-                ],
+                ]),
                 max_fret_span: 0,
             };
             2
