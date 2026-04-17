@@ -571,23 +571,24 @@ mod test_check_capo_number {
 ///   subsequent number of half steps to include in the range.
 fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
     let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
+    let needed = num_frets as usize + 1;
 
-    let all_pitches_vec: Vec<Pitch> = Pitch::iter().collect();
-    let string_range_result =
-        all_pitches_vec.get(lowest_pitch_index..=lowest_pitch_index + num_frets as usize);
+    let string_range: Vec<Pitch> = Pitch::iter()
+        .skip(lowest_pitch_index)
+        .take(needed)
+        .collect();
 
-    match string_range_result {
-        Some(string_range_slice) => Ok(string_range_slice.to_vec()),
-        None => {
-            let highest_pitch = all_pitches_vec
-                .last()
-                .expect("BUG: The Pitch enum should not be empty");
-            let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
-            let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
-                The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
+    if string_range.len() == needed {
+        Ok(string_range)
+    } else {
+        let highest_pitch = Pitch::iter()
+            .next_back()
+            .expect("BUG: The Pitch enum should not be empty");
+        let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
+        let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
+            The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
 
-            Err(anyhow!(err_msg))
-        }
+        Err(anyhow!(err_msg))
     }
 }
 #[cfg(test)]
