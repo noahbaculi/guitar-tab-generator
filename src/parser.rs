@@ -382,21 +382,22 @@ mod test_parse_measure_break {
 /// Parses input line to extract valid musical pitches, returning an error if any part of the
 /// input line cannot be parsed into a pitch.
 fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
-    let (matched_index_ranges, matched_pitches): (Vec<Vec<usize>>, Vec<Pitch>) = regex
-        .find_iter(input_line)
-        .filter_map(|regex_match| match Pitch::from_str(regex_match.as_str()) {
-            Ok(pitch) => Some(((regex_match.start()..regex_match.end()).collect(), pitch)),
-            _ => None,
-        })
-        .unzip();
+    let mut matched_mask = vec![false; input_line.len()];
+    let mut matched_pitches: Vec<Pitch> = Vec::new();
 
-    let matched_indices: HashSet<usize> = matched_index_ranges.into_iter().flatten().collect();
-    let input_indices: HashSet<usize> = (0..input_line.len()).collect();
+    for regex_match in regex.find_iter(input_line) {
+        if let Ok(pitch) = Pitch::from_str(regex_match.as_str()) {
+            matched_pitches.push(pitch);
+            for idx in regex_match.start()..regex_match.end() {
+                matched_mask[idx] = true;
+            }
+        }
+    }
 
-    let unmatched_indices: Vec<usize> = input_indices
-        .difference(&matched_indices)
-        .sorted()
-        .copied()
+    let unmatched_indices: Vec<usize> = matched_mask
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, matched)| if *matched { None } else { Some(idx) })
         .collect();
 
     if !unmatched_indices.is_empty() {
@@ -404,7 +405,6 @@ fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Li
         let consecutive_indices = consecutive_slices(&unmatched_indices);
         let error_msg = consecutive_indices
             .into_iter()
-            .sorted()
             .map(|unmatched_input_indices| {
                 let first_idx = *unmatched_input_indices.first().unwrap();
                 let last_idx = *unmatched_input_indices.last().unwrap();
