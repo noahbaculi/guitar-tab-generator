@@ -6,6 +6,7 @@ use std::{
 };
 use strum::IntoEnumIterator;
 
+/// The assignment of a single `Pitch` to a specific `StringNumber` and `fret` position.
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PitchFingering {
     pub(crate) string_number: StringNumber,
@@ -36,6 +37,8 @@ mod test_pitch_fingering_debug {
     }
 }
 
+/// Open-string pitches for the standard 6-string guitar tuning, from string 1 (highest, E4)
+/// to string 6 (lowest, E2).
 pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
     Pitch::E4,
     Pitch::B3,
@@ -44,12 +47,13 @@ pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
     Pitch::A2,
     Pitch::E2,
 ];
-/// Creates a mapping of string numbers to pitch values based on an array of open string pitches.
+/// Builds a tuning map from a slice of open-string pitches, numbering them from string 1
+/// (highest) to string N (lowest).
 ///
-/// Arguments:
+/// # Errors
 ///
-/// * `open_string_pitches`: An array slice containing the pitches of the open strings in a guitar
-///   starting at string 1 (the highest string), and ending with string _N_ (the lowest string) where _N_ > 1.
+/// Returns an error if the input slice is longer than the maximum supported string count
+/// (12), which would cause `StringNumber::new` to reject the generated numbers.
 pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> Result<BTreeMap<StringNumber, Pitch>> {
     open_string_pitches
         .iter()
@@ -58,6 +62,10 @@ pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> Result<BTreeMap<St
         .collect()
 }
 
+/// A guitar configuration: tuning, fret count, effective pitch range, and per-string ranges.
+///
+/// Construct with `Guitar::new` for validated input or `Guitar::default` for a standard
+/// 18-fret 6-string instrument.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Guitar {
     pub(crate) tuning: BTreeMap<StringNumber, Pitch>,
@@ -73,6 +81,17 @@ impl Default for Guitar {
     }
 }
 impl Guitar {
+    /// Constructs a validated `Guitar` from a tuning map, fret count, and capo position.
+    ///
+    /// The capo is applied by shifting every open-string pitch up by `capo` semitones and
+    /// reducing the effective `num_frets` accordingly.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - `num_frets` is outside the supported range,
+    /// - `capo` is outside the supported range,
+    /// - or the capo shift pushes any open-string pitch out of the `Pitch` range.
     pub fn new(tuning: BTreeMap<StringNumber, Pitch>, mut num_frets: u8, capo: u8) -> Result<Self> {
         check_fret_number(num_frets)?;
 
@@ -635,12 +654,9 @@ mod test_create_string_range {
     }
 }
 
-/// Takes a pitch as input and returns the fingerings for that pitch on each
-///string of the guitar given its tuning.
+/// Returns all playable `PitchFingering`s for `pitch` on the supplied `string_ranges`.
 ///
-/// If no fingerings are possible on any of the strings of the guitar, an
-/// empty vector is returned.
-// TODO benchmark memoization
+/// An empty vector indicates the pitch cannot be played on any string of this guitar.
 #[must_use]
 pub fn generate_pitch_fingerings(
     string_ranges: &BTreeMap<StringNumber, Box<[Pitch]>>,
