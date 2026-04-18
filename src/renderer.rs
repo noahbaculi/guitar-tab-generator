@@ -6,6 +6,14 @@ use itertools::Itertools;
 use std::collections::VecDeque;
 use std::fmt::Write;
 
+/// Renders an `Arrangement`'s lines as an ASCII guitar tab.
+///
+/// The `width` parameter controls the character width of each row group (rows wrap to a
+/// new group when they reach `width`), and `padding` controls the number of dashes between
+/// beats. If `playback` is supplied, an indicator `▼`/`▲` is drawn above and below the
+/// beat column corresponding to the 0-indexed sonorous (non-rest) beat.
+///
+/// Returns an empty string if `arrangement_lines` is empty.
 #[must_use]
 pub fn render_tab(
     arrangement_lines: &[Line<BeatVec<PitchFingering>>],
