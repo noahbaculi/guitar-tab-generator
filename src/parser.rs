@@ -93,10 +93,17 @@ mod test_parse_tuning {
 }
 
 /// Generates a tuning map of open string pitches from an array of pitch offsets
-/// relative to the standard 6 string tuning open pitches.
+/// relative to the standard 6-string tuning open pitches.
 ///
-/// Ex:
+/// # Examples
+///
 /// `create_string_tuning_offset([0, 0, 0, 0, 0, 0])` creates the standard tuning.
+///
+/// # Panics
+///
+/// Panics only if an internal invariant is violated — an offset that pushes a standard
+/// open-string pitch out of the `Pitch` range, or a 6-element tuning that fails
+/// `create_string_tuning`. Both are BUG conditions given the fixed 6-string std tuning.
 #[must_use]
 pub fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, Pitch> {
     let offset_tuning_open_pitches: Vec<Pitch> = STD_6_STRING_TUNING_OPEN_PITCHES

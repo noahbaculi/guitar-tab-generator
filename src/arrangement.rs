@@ -250,6 +250,19 @@ mod test_max_fret_span {
 }
 
 use memoize::memoize;
+/// Computes the N best-scoring guitar arrangements for a parsed sequence of pitches,
+/// ranked by ascending difficulty.
+///
+/// # Errors
+///
+/// Returns an error if `num_arrangements` is zero or greater than the internal cap (20),
+/// or if any input line cannot be fingered on the supplied `guitar` (out-of-range pitches).
+///
+/// # Panics
+///
+/// Panics only if an internal invariant is violated — specifically, if a `MeasureBreak` line
+/// leaks past the filter stage of the pathfinding prep. This is a BUG condition, not reachable
+/// under any valid input.
 #[memoize(Capacity: 10)]
 pub fn create_arrangements(
     guitar: Guitar,
