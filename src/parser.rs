@@ -23,6 +23,10 @@ fn test_pitch_regex() -> Regex {
         .expect("Regex pattern should be valid")
 }
 
+/// Named tuning presets. Parsed case-insensitively from strings.
+///
+/// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
+/// attribute requires external matches to include a wildcard arm.
 #[derive(Debug, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
 #[non_exhaustive]
@@ -47,9 +51,11 @@ pub fn get_tuning_names() -> Result<JsValue, JsError> {
     Ok(serde_wasm_bindgen::to_value(&tuning_names)?)
 }
 
-/// Generates a open string offsets from a tuning name.
+/// Returns the 6-element semitone offsets for a named tuning, relative to standard 6-string
+/// tuning.
 ///
-/// Defaults to the standard tuning offsets if the tuning name cannot be matched.
+/// Falls back to standard tuning (all zeroes) if `tuning_name` does not match any known
+/// tuning — including empty or unrecognized input.
 #[must_use]
 pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
     match TuningName::from_str(tuning_name) {
@@ -164,6 +170,15 @@ mod test_create_string_tuning_offset {
 }
 
 use memoize::memoize;
+/// Parses a newline-delimited input string into a sequence of `Line` values.
+///
+/// Each input line is classified as `Playable` (one or more pitches, e.g. `"A3"` or
+/// `"G4Bb2"`), `Rest` (empty or comment-only), or `MeasureBreak` (a line of dash
+/// characters: `-`, `–`, or `—`). Call results are cached for the 10 most recent inputs.
+///
+/// # Errors
+///
+/// Returns an error listing every unparseable substring with its 1-indexed line number.
 #[memoize(Capacity: 10)]
 pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyhow::Error>> {
     let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
