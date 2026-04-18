@@ -1,3 +1,5 @@
+#![deny(clippy::correctness)]
+
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
