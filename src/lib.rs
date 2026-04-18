@@ -49,6 +49,11 @@ pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
 
+/// The fully-specified input for generating one set of compositions from a pitch string.
+///
+/// Values map directly to the WASM boundary via serde; `pitches` is the raw newline-
+/// delimited input text, `tuning_name` is one of the `TuningName` variants or `"standard"`,
+/// and `num_arrangements` must be in `1..=20`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionInput {
     pub pitches: String,
@@ -61,6 +66,11 @@ pub struct CompositionInput {
     pub playback_index: Option<u16>,
 }
 
+/// A single rendered arrangement returned from `wrapper_create_arrangements`.
+///
+/// `tab` is the rendered ASCII tab, `pitches` is the normalized input pitch sequence
+/// (shared across compositions via `Rc`), and `max_fret_span` reports the widest
+/// non-zero fret span across any beat.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Composition {
     pub tab: String,
@@ -81,6 +91,13 @@ pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsErro
     Ok(serde_wasm_bindgen::to_value(&compositions)?)
 }
 
+/// Parses, arranges, and renders a full set of compositions from a `CompositionInput`.
+///
+/// # Errors
+///
+/// Returns an error if any of the underlying steps fails: parsing (unparseable lines),
+/// guitar construction (invalid tuning, capo, or fret count), or arrangement (no valid
+/// fingering for a pitch).
 pub fn wrapper_create_arrangements(
     composition_input: CompositionInput,
 ) -> Result<Vec<Composition>> {
