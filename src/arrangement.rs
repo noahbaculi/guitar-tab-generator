@@ -1743,7 +1743,7 @@ mod proptest_invariants {
             prop_assert!(arrangements.len() <= case.num_arrangements as usize);
         }
 
-        // Invariant 8: deterministic — same input produces the same output twice.
+        // Invariant 8: deterministic. Same input produces the same output twice.
         #[test]
         fn invariant_deterministic(case in arb_case()) {
             let guitar1 = std_guitar();
