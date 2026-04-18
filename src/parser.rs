@@ -15,6 +15,7 @@ use wasm_bindgen::prelude::*;
 
 #[derive(Debug, EnumString, VariantNames)]
 #[strum(ascii_case_insensitive)]
+#[non_exhaustive]
 pub enum TuningName {
     OpenG,
     OpenD,
