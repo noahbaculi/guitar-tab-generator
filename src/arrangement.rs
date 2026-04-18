@@ -9,12 +9,18 @@ use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
 use std::{collections::HashSet, rc::Rc, sync::Arc};
 
+/// Records the location of an input value that could not be parsed into a pitch.
 #[derive(Debug)]
 pub struct InvalidInput {
     value: String,
     line_number: u16,
 }
 
+/// One logical line of a parsed or arranged composition.
+///
+/// `Playable` holds the line's content (pitches during parsing, fingerings after
+/// arrangement). `Rest` represents an empty line or a comment-only line. `MeasureBreak`
+/// represents a bar line drawn in the rendered tab.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Line<T> {
     MeasureBreak,
@@ -36,6 +42,7 @@ enum Node {
 }
 
 pub type PitchVec<T> = Vec<T>;
+/// One beat's worth of items (usually `Pitch` or `PitchFingering`).
 pub type BeatVec<T> = Vec<T>;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
@@ -222,13 +229,18 @@ mod test_calc_avg_non_zero_fret {
     }
 }
 
+/// A single ranked guitar arrangement: one fingering choice per beat, ordered by line.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Arrangement {
+    /// The ordered lines of the arrangement, one `Line` per input line.
     pub lines: Vec<Line<BeatVec<PitchFingering>>>,
     difficulty: i32,
     max_fret_span: u8,
 }
 impl Arrangement {
+    /// The maximum non-zero fret span reached on any beat in this arrangement.
+    ///
+    /// Useful as a coarse "playability" gauge — a smaller span means less hand stretch.
     #[must_use]
     pub fn max_fret_span(&self) -> u8 {
         self.max_fret_span
