@@ -41,10 +41,13 @@ enum Node {
     },
 }
 
+/// One pitch's set of candidate `PitchFingering`s across the guitar's strings.
 pub type PitchVec<T> = Vec<T>;
 /// One beat's worth of items (usually `Pitch` or `PitchFingering`).
 pub type BeatVec<T> = Vec<T>;
 
+/// A single playable assignment of fingerings for one beat, with precomputed difficulty
+/// inputs (average non-zero fret, non-zero fret span).
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct BeatFingeringCombo {
     fingering_combo: BeatVec<PitchFingering>,
@@ -52,6 +55,8 @@ pub struct BeatFingeringCombo {
     non_zero_fret_span: u8,
 }
 impl BeatFingeringCombo {
+    /// Builds a `BeatFingeringCombo` from a per-beat `PitchFingering` list, precomputing
+    /// the stats used by the pathfinding cost function.
     pub fn new(beat_fingering_candidate: BeatVec<PitchFingering>) -> Self {
         let avg_non_zero_fret = calc_avg_non_zero_fret(&beat_fingering_candidate);
         let non_zero_fret_span = calc_fret_span(&beat_fingering_candidate).unwrap_or(0);

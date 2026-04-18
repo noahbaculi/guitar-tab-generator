@@ -43,6 +43,12 @@ pub enum TuningName {
     OpenE,
 }
 
+/// Returns the list of supported tuning names as serialized string values, for the WASM
+/// boundary.
+///
+/// # Errors
+///
+/// Returns an error if the tuning name list fails to serialize.
 #[wasm_bindgen]
 #[cfg(not(tarpaulin_include))]
 pub fn get_tuning_names() -> Result<JsValue, JsError> {
