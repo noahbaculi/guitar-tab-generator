@@ -748,39 +748,36 @@ fn render_string_output(
     strings_rows: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
-    let num_row_groups = strings_rows[0].len();
     let num_strings = strings_rows.len();
+    let num_row_groups = strings_rows[0].len();
     let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
-    for row_group_index in 0..num_row_groups {
-        let upper_playback_row_render = match playback_indicator_position {
-            None => String::new(),
-            Some(ref pos) => match row_group_index == pos.row_group_index {
-                false => String::new(),
-                true => " ".repeat(pos.column_index) + "▼",
-            },
+    for (row_group_index, _) in strings_rows[0].iter().enumerate() {
+        let playback_line = |symbol: char| -> String {
+            match playback_indicator_position {
+                Some(ref pos) if row_group_index == pos.row_group_index => {
+                    " ".repeat(pos.column_index) + &symbol.to_string()
+                }
+                _ => String::new(),
+            }
         };
-        output_lines.push(upper_playback_row_render);
+
+        output_lines.push(playback_line('▼'));
 
         for string_rows in strings_rows {
             output_lines.push(
                 string_rows
                     .get(row_group_index)
-                    .unwrap_or(&"???".to_owned())
+                    .map(String::as_str)
+                    .unwrap_or("???")
                     .to_string(),
             );
         }
-        let lower_playback_row_render = match playback_indicator_position {
-            None => String::new(),
-            Some(ref pos) => match row_group_index == pos.row_group_index {
-                false => String::new(),
-                true => " ".repeat(pos.column_index) + "▲",
-            },
-        };
 
-        output_lines.push(lower_playback_row_render);
+        output_lines.push(playback_line('▲'));
         output_lines.push(String::new());
     }
+
     output_lines.join("\n")
 }
 
