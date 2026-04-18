@@ -185,7 +185,7 @@ mod test_parse_lines {
     use super::*;
 
     #[test]
-    fn valid() {
+    fn parses_mixed_pitches_rests_and_measure_breaks() {
         let input = "A3\nE2// Comment\n\nG4BB2G4\n-\nE4".to_owned();
         let expected = vec![
             Line::Playable(vec![Pitch::A3]),
@@ -198,7 +198,7 @@ mod test_parse_lines {
         assert_eq!(parse_lines(input).unwrap(), expected);
     }
     #[test]
-    fn invalid() {
+    fn reports_line_and_content_for_unparseable_input() {
         let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
 
         let error = parse_lines(input).unwrap_err();
@@ -250,7 +250,7 @@ mod test_parse_line {
         );
     }
     #[test]
-    fn valid_pitch() {
+    fn parses_line_with_pitches_whitespace_and_comments() {
         let expected = Line::Playable(vec![Pitch::GSharpAFlat2, Pitch::A4, Pitch::E3, Pitch::G2]);
         assert_eq!(
             parse_line(&test_pitch_regex(), 123, "    G#2A4  E3 G2 ").unwrap(),
@@ -262,7 +262,7 @@ mod test_parse_line {
         );
     }
     #[test]
-    fn test_parse_line_invalid_input() {
+    fn reports_error_for_unparseable_text() {
         let error = parse_line(&test_pitch_regex(), 4, "  Invalid Text  ").unwrap_err();
         let error_msg = format!("{error}");
 
