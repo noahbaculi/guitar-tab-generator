@@ -61,7 +61,7 @@ pub fn get_tuning_names() -> Result<JsValue, JsError> {
 /// tuning.
 ///
 /// Falls back to standard tuning (all zeroes) if `tuning_name` does not match any known
-/// tuning — including empty or unrecognized input.
+/// tuning, including empty or unrecognized input.
 #[must_use]
 pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
     match TuningName::from_str(tuning_name) {
@@ -113,7 +113,7 @@ mod test_parse_tuning {
 ///
 /// # Panics
 ///
-/// Panics only if an internal invariant is violated — an offset that pushes a standard
+/// Panics only if an internal invariant is violated: an offset that pushes a standard
 /// open-string pitch out of the `Pitch` range, or a 6-element tuning that fails
 /// `create_string_tuning`. Both are BUG conditions given the fixed 6-string std tuning.
 #[must_use]

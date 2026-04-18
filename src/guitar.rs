@@ -83,8 +83,8 @@ impl Default for Guitar {
 impl Guitar {
     /// Constructs a validated `Guitar` from a tuning map, fret count, and capo position.
     ///
-    /// The capo is applied by shifting every open-string pitch up by `capo` semitones and
-    /// reducing the effective `num_frets` accordingly.
+    /// The capo shifts every open-string pitch up by `capo` semitones and reduces the
+    /// effective `num_frets` by the same amount.
     ///
     /// # Errors
     ///

@@ -19,8 +19,8 @@ pub struct InvalidInput {
 /// One logical line of a parsed or arranged composition.
 ///
 /// `Playable` holds the line's content (pitches during parsing, fingerings after
-/// arrangement). `Rest` represents an empty line or a comment-only line. `MeasureBreak`
-/// represents a bar line drawn in the rendered tab.
+/// arrangement). `Rest` is an empty or comment-only line. `MeasureBreak` is a bar
+/// line drawn in the rendered tab.
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Line<T> {
     MeasureBreak,
@@ -245,7 +245,7 @@ pub struct Arrangement {
 impl Arrangement {
     /// The maximum non-zero fret span reached on any beat in this arrangement.
     ///
-    /// Useful as a coarse "playability" gauge — a smaller span means less hand stretch.
+    /// Useful as a coarse "playability" gauge: a smaller span means less hand stretch.
     #[must_use]
     pub fn max_fret_span(&self) -> u8 {
         self.max_fret_span
@@ -277,8 +277,8 @@ use memoize::memoize;
 ///
 /// # Panics
 ///
-/// Panics only if an internal invariant is violated — specifically, if a `MeasureBreak` line
-/// leaks past the filter stage of the pathfinding prep. This is a BUG condition, not reachable
+/// Panics only if an internal invariant is violated: a `MeasureBreak` line leaking past
+/// the filter stage of the pathfinding prep. This is a BUG condition, not reachable
 /// under any valid input.
 #[memoize(Capacity: 10)]
 pub fn create_arrangements(
@@ -1506,8 +1506,8 @@ mod proptest_invariants {
     use std::collections::HashSet;
 
     fn any_pitch() -> impl Strategy<Value = Pitch> {
-        // E2 (index 28) through C6 (index 72) — a comfortable range for a std-tuned
-        // 6-string guitar and ensures generate_pitch_fingerings returns ≥1 candidate.
+        // E2 (index 28) through C6 (index 72): a comfortable range for a std-tuned
+        // 6-string guitar and ensures generate_pitch_fingerings returns >=1 candidate.
         (28usize..=72usize).prop_map(|idx| Pitch::from_repr(idx).expect("BUG: index in range"))
     }
 
