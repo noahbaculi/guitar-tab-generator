@@ -1497,3 +1497,268 @@ mod test_process_path {
         assert_eq!(arrangement, expected_arrangement);
     }
 }
+
+#[cfg(test)]
+mod proptest_invariants {
+    use super::*;
+    use crate::guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES};
+    use proptest::prelude::*;
+    use std::collections::HashSet;
+
+    fn any_pitch() -> impl Strategy<Value = Pitch> {
+        // E2 (index 28) through C6 (index 72) — a comfortable range for a std-tuned
+        // 6-string guitar and ensures generate_pitch_fingerings returns ≥1 candidate.
+        (28usize..=72usize).prop_map(|idx| Pitch::from_repr(idx).expect("BUG: index in range"))
+    }
+
+    #[derive(Debug, Clone)]
+    #[allow(dead_code)] // fields are surfaced via Debug when proptest shrinks a failing case
+    struct ArrangementCase {
+        input_lines: Vec<Line<BeatVec<Pitch>>>,
+        num_arrangements: u8,
+        measure_break_positions: Vec<usize>,
+        rest_positions: Vec<usize>,
+        playable_pitches_per_line: Vec<Vec<Pitch>>,
+    }
+
+    fn arb_case() -> impl Strategy<Value = ArrangementCase> {
+        (
+            prop::collection::vec(
+                (
+                    prop::collection::vec(any_pitch(), 1..=3),
+                    any::<u8>(), // kind selector
+                ),
+                1..=6,
+            ),
+            1u8..=5u8,
+        )
+            .prop_map(|(line_specs, num_arrangements)| {
+                let mut input_lines: Vec<Line<BeatVec<Pitch>>> = Vec::with_capacity(line_specs.len());
+                let mut measure_break_positions = Vec::new();
+                let mut rest_positions = Vec::new();
+                let mut playable_pitches_per_line = Vec::new();
+
+                for (idx, (pitches, kind_byte)) in line_specs.into_iter().enumerate() {
+                    match kind_byte % 8 {
+                        0 => {
+                            input_lines.push(Line::Rest);
+                            rest_positions.push(idx);
+                            playable_pitches_per_line.push(Vec::new());
+                        }
+                        1 => {
+                            input_lines.push(Line::MeasureBreak);
+                            measure_break_positions.push(idx);
+                            playable_pitches_per_line.push(Vec::new());
+                        }
+                        _ => {
+                            playable_pitches_per_line.push(pitches.clone());
+                            input_lines.push(Line::Playable(pitches));
+                        }
+                    }
+                }
+
+                // Ensure at least one playable line so create_arrangements doesn't short-circuit.
+                if !input_lines.iter().any(|l| matches!(l, Line::Playable(_))) {
+                    input_lines[0] = Line::Playable(vec![Pitch::E4]);
+                    if let Some(pos) = rest_positions.iter().position(|&p| p == 0) {
+                        rest_positions.remove(pos);
+                    }
+                    if let Some(pos) = measure_break_positions.iter().position(|&p| p == 0) {
+                        measure_break_positions.remove(pos);
+                    }
+                    playable_pitches_per_line[0] = vec![Pitch::E4];
+                }
+
+                ArrangementCase {
+                    input_lines,
+                    num_arrangements,
+                    measure_break_positions,
+                    rest_positions,
+                    playable_pitches_per_line,
+                }
+            })
+    }
+
+    fn std_guitar() -> Guitar {
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)
+            .expect("BUG: standard tuning is always valid");
+        Guitar::new(tuning, 18, 0).expect("BUG: std guitar is always valid")
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(32))]
+
+        // Invariant 1: every input pitch is represented in each arrangement at the matching
+        // line_index via one of its candidate fingerings.
+        #[test]
+        fn invariant_input_pitches_represented(case in arb_case()) {
+            let guitar = std_guitar();
+            let Ok(arrangements) = create_arrangements(
+                guitar.clone(), case.input_lines.clone(), case.num_arrangements,
+            ) else { return Ok(()); };
+
+            // Map input line_index (skipping leading non-playable lines) to expected pitches.
+            let first_playable = case.input_lines
+                .iter()
+                .position(|l| matches!(l, Line::Playable(_)))
+                .unwrap_or(0);
+            let effective_lines: Vec<&Line<BeatVec<Pitch>>> = case.input_lines
+                .iter()
+                .skip(first_playable)
+                .collect();
+
+            for arrangement in &arrangements {
+                prop_assert_eq!(arrangement.lines.len(), effective_lines.len());
+                for (idx, (input_line, output_line)) in
+                    effective_lines.iter().zip(arrangement.lines.iter()).enumerate()
+                {
+                    match (input_line, output_line) {
+                        (Line::Playable(input_pitches), Line::Playable(fingerings)) => {
+                            let output_pitches: HashSet<Pitch> =
+                                fingerings.iter().map(|f| f.pitch).collect();
+                            let expected_pitches: HashSet<Pitch> =
+                                input_pitches.iter().copied().collect();
+                            prop_assert_eq!(
+                                output_pitches, expected_pitches,
+                                "line {} pitch mismatch", idx
+                            );
+                        }
+                        (Line::Rest, Line::Rest) | (Line::MeasureBreak, Line::MeasureBreak) => {}
+                        _ => prop_assert!(false, "line {} variant mismatch", idx),
+                    }
+                }
+            }
+        }
+
+        // Invariant 2: rests in the input appear as Line::Rest at the matching post-skip index.
+        #[test]
+        fn invariant_rests_preserved(case in arb_case()) {
+            let guitar = std_guitar();
+            let Ok(arrangements) = create_arrangements(
+                guitar, case.input_lines.clone(), case.num_arrangements,
+            ) else { return Ok(()); };
+
+            let first_playable = case.input_lines
+                .iter()
+                .position(|l| matches!(l, Line::Playable(_)))
+                .unwrap_or(0);
+
+            for arrangement in &arrangements {
+                for (idx, line) in arrangement.lines.iter().enumerate() {
+                    let input_idx = idx + first_playable;
+                    if matches!(case.input_lines.get(input_idx), Some(Line::Rest)) {
+                        prop_assert!(matches!(line, Line::Rest));
+                    }
+                }
+            }
+        }
+
+        // Invariant 3: no two fingerings in the same beat share a string_number.
+        #[test]
+        fn invariant_no_duplicate_strings(case in arb_case()) {
+            let guitar = std_guitar();
+            let Ok(arrangements) = create_arrangements(
+                guitar, case.input_lines, case.num_arrangements,
+            ) else { return Ok(()); };
+
+            for arrangement in &arrangements {
+                for line in &arrangement.lines {
+                    if let Line::Playable(fingerings) = line {
+                        let mut seen = HashSet::new();
+                        for f in fingerings {
+                            prop_assert!(
+                                seen.insert(f.string_number),
+                                "duplicate string_number in beat"
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Invariant 4: every fret is in [0, num_frets].
+        #[test]
+        fn invariant_fret_bounds(case in arb_case()) {
+            let guitar = std_guitar();
+            let num_frets = guitar.num_frets;
+            let Ok(arrangements) = create_arrangements(
+                guitar, case.input_lines, case.num_arrangements,
+            ) else { return Ok(()); };
+
+            for arrangement in &arrangements {
+                for line in &arrangement.lines {
+                    if let Line::Playable(fingerings) = line {
+                        for f in fingerings {
+                            prop_assert!(f.fret <= num_frets);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Invariant 5: arrangements are sorted by ascending difficulty.
+        #[test]
+        fn invariant_sorted_by_difficulty(case in arb_case()) {
+            let guitar = std_guitar();
+            let Ok(arrangements) = create_arrangements(
+                guitar, case.input_lines, case.num_arrangements,
+            ) else { return Ok(()); };
+
+            for pair in arrangements.windows(2) {
+                prop_assert!(pair[0].difficulty <= pair[1].difficulty);
+            }
+        }
+
+        // Invariant 6: measure breaks in the input are preserved at matching post-skip indices.
+        #[test]
+        fn invariant_measure_breaks_preserved(case in arb_case()) {
+            let guitar = std_guitar();
+            let Ok(arrangements) = create_arrangements(
+                guitar, case.input_lines.clone(), case.num_arrangements,
+            ) else { return Ok(()); };
+
+            let first_playable = case.input_lines
+                .iter()
+                .position(|l| matches!(l, Line::Playable(_)))
+                .unwrap_or(0);
+
+            for arrangement in &arrangements {
+                for (idx, line) in arrangement.lines.iter().enumerate() {
+                    let input_idx = idx + first_playable;
+                    if matches!(case.input_lines.get(input_idx), Some(Line::MeasureBreak)) {
+                        prop_assert!(matches!(line, Line::MeasureBreak));
+                    }
+                }
+            }
+        }
+
+        // Invariant 7: the number of arrangements returned is at most the requested max.
+        #[test]
+        fn invariant_count_bounded(case in arb_case()) {
+            let guitar = std_guitar();
+            let Ok(arrangements) = create_arrangements(
+                guitar, case.input_lines, case.num_arrangements,
+            ) else { return Ok(()); };
+
+            prop_assert!(arrangements.len() <= case.num_arrangements as usize);
+        }
+
+        // Invariant 8: deterministic — same input produces the same output twice.
+        #[test]
+        fn invariant_deterministic(case in arb_case()) {
+            let guitar1 = std_guitar();
+            let guitar2 = std_guitar();
+            let first = create_arrangements(
+                guitar1, case.input_lines.clone(), case.num_arrangements,
+            );
+            let second = create_arrangements(
+                guitar2, case.input_lines, case.num_arrangements,
+            );
+            match (first, second) {
+                (Ok(a), Ok(b)) => prop_assert_eq!(a, b),
+                (Err(_), Err(_)) => {},
+                _ => prop_assert!(false, "determinism violated: outcomes differ"),
+            }
+        }
+    }
+}
