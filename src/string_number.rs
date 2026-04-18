@@ -1,9 +1,19 @@
 use anyhow::{anyhow, Result};
 use std::fmt;
 
+/// A validated guitar string number in the range `1..=12`.
+///
+/// String numbers follow guitar convention: string 1 is the highest-pitched (thinnest)
+/// string, and higher numbers designate lower-pitched strings.
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StringNumber(u8);
 impl StringNumber {
+    /// Constructs a `StringNumber` after validating that `string_number` is in `1..=12`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if `string_number` is `0` or exceeds the maximum supported
+    /// string count of 12.
     pub fn new(string_number: u8) -> Result<Self> {
         const MAX_NUM_STRINGS: u8 = 12;
         match string_number {
@@ -13,6 +23,7 @@ impl StringNumber {
 
         }
     }
+    /// Returns the underlying string number as a `u8` in the range `1..=12`.
     #[inline]
     #[must_use]
     pub fn get(&self) -> u8 {
