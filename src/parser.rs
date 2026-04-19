@@ -13,11 +13,12 @@ use strum::VariantNames;
 use strum_macros::{EnumString, VariantNames};
 use wasm_bindgen::prelude::*;
 
+const PITCH_PATTERN: &str =
+    r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
+
 #[cfg(test)]
 fn test_pitch_regex() -> Regex {
-    let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
-
-    RegexBuilder::new(pattern)
+    RegexBuilder::new(PITCH_PATTERN)
         .case_insensitive(true)
         .build()
         .expect("Regex pattern should be valid")
@@ -187,8 +188,7 @@ use memoize::memoize;
 /// Returns an error listing every unparseable substring with its 1-indexed line number.
 #[memoize(Capacity: 10)]
 pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyhow::Error>> {
-    let pattern = r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
-    let pitch_regex = RegexBuilder::new(pattern)
+    let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
         .case_insensitive(true)
         .build()
         .expect("BUG: Regex pattern should be valid");
