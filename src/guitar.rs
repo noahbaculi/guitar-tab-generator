@@ -7,6 +7,8 @@ use std::{
 use strum::IntoEnumIterator;
 
 /// The assignment of a single `Pitch` to a specific `StringNumber` and `fret` position.
+///
+/// The `Debug` impl renders as `"<pitch> | <string> => <fret>"` (e.g. `"A♯B♭4 | 2_B => 3"`).
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PitchFingering {
     pub(crate) string_number: StringNumber,

@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use std::fmt;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 
-/// A musical pitch in the MIDI-reachable range C0 through B9.
+/// A musical pitch in the range C0 through B9.
 ///
 /// Each variant is one semitone. Accidentals carry both the sharp and flat spellings
 /// in the variant name (e.g. `CSharpDFlat1` is both C♯1 and D♭1), and the `EnumString`

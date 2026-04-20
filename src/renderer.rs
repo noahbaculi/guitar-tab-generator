@@ -502,7 +502,7 @@ fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
         .collect()
 }
 #[cfg(test)]
-mod transpose_tests {
+mod test_transpose {
     use super::*;
 
     #[test]
@@ -753,16 +753,16 @@ fn render_string_output(
     let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
     for (row_group_index, _) in strings_rows[0].iter().enumerate() {
-        let playback_line = |symbol: char| -> String {
+        let playback_line = |symbol: &str| -> String {
             match playback_indicator_position {
                 Some(ref pos) if row_group_index == pos.row_group_index => {
-                    " ".repeat(pos.column_index) + &symbol.to_string()
+                    " ".repeat(pos.column_index) + symbol
                 }
                 _ => String::new(),
             }
         };
 
-        output_lines.push(playback_line('▼'));
+        output_lines.push(playback_line("▼"));
 
         for string_rows in strings_rows {
             output_lines.push(
@@ -774,7 +774,7 @@ fn render_string_output(
             );
         }
 
-        output_lines.push(playback_line('▲'));
+        output_lines.push(playback_line("▲"));
         output_lines.push(String::new());
     }
 
