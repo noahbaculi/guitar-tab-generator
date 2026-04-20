@@ -23,7 +23,7 @@ impl StringNumber {
 
         }
     }
-    /// Returns the underlying string number as a `u8` in the range `1..=12`.
+    /// Returns the underlying `u8`.
     #[inline]
     #[must_use]
     pub fn get(&self) -> u8 {

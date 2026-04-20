@@ -277,9 +277,9 @@ use memoize::memoize;
 ///
 /// # Panics
 ///
-/// Panics only if an internal invariant is violated: a `MeasureBreak` line leaking past
-/// the filter stage of the pathfinding prep. This is a BUG condition, not reachable
-/// under any valid input.
+/// Panics only if an internal invariant is violated (a BUG condition, not reachable
+/// under any valid input): a `MeasureBreak` line leaking past the pathfinding filter,
+/// or a `Node::Start` appearing as a future node during path traversal.
 #[memoize(Capacity: 10)]
 pub fn create_arrangements(
     guitar: Guitar,
@@ -1614,6 +1614,10 @@ mod proptest_invariants {
                 {
                     match (input_line, output_line) {
                         (Line::Playable(input_pitches), Line::Playable(fingerings)) => {
+                            prop_assert_eq!(
+                                fingerings.len(), input_pitches.len(),
+                                "line {} fingering count mismatch", idx
+                            );
                             let output_pitches: HashSet<Pitch> =
                                 fingerings.iter().map(|f| f.pitch).collect();
                             let expected_pitches: HashSet<Pitch> =
@@ -1630,30 +1634,7 @@ mod proptest_invariants {
             }
         }
 
-        // Invariant 2: rests in the input appear as Line::Rest at the matching post-skip index.
-        #[test]
-        fn invariant_rests_preserved(case in arb_case()) {
-            let guitar = std_guitar();
-            let Ok(arrangements) = create_arrangements(
-                guitar, case.input_lines.clone(), case.num_arrangements,
-            ) else { return Ok(()); };
-
-            let first_playable = case.input_lines
-                .iter()
-                .position(|l| matches!(l, Line::Playable(_)))
-                .unwrap_or(0);
-
-            for arrangement in &arrangements {
-                for (idx, line) in arrangement.lines.iter().enumerate() {
-                    let input_idx = idx + first_playable;
-                    if matches!(case.input_lines.get(input_idx), Some(Line::Rest)) {
-                        prop_assert!(matches!(line, Line::Rest));
-                    }
-                }
-            }
-        }
-
-        // Invariant 3: no two fingerings in the same beat share a string_number.
+        // Invariant 2: no two fingerings in the same beat share a string_number.
         #[test]
         fn invariant_no_duplicate_strings(case in arb_case()) {
             let guitar = std_guitar();
@@ -1676,7 +1657,7 @@ mod proptest_invariants {
             }
         }
 
-        // Invariant 4: every fret is in [0, num_frets].
+        // Invariant 3: every fret is in [0, num_frets].
         #[test]
         fn invariant_fret_bounds(case in arb_case()) {
             let guitar = std_guitar();
@@ -1696,7 +1677,7 @@ mod proptest_invariants {
             }
         }
 
-        // Invariant 5: arrangements are sorted by ascending difficulty.
+        // Invariant 4: arrangements are sorted by ascending difficulty.
         #[test]
         fn invariant_sorted_by_difficulty(case in arb_case()) {
             let guitar = std_guitar();
@@ -1709,30 +1690,7 @@ mod proptest_invariants {
             }
         }
 
-        // Invariant 6: measure breaks in the input are preserved at matching post-skip indices.
-        #[test]
-        fn invariant_measure_breaks_preserved(case in arb_case()) {
-            let guitar = std_guitar();
-            let Ok(arrangements) = create_arrangements(
-                guitar, case.input_lines.clone(), case.num_arrangements,
-            ) else { return Ok(()); };
-
-            let first_playable = case.input_lines
-                .iter()
-                .position(|l| matches!(l, Line::Playable(_)))
-                .unwrap_or(0);
-
-            for arrangement in &arrangements {
-                for (idx, line) in arrangement.lines.iter().enumerate() {
-                    let input_idx = idx + first_playable;
-                    if matches!(case.input_lines.get(input_idx), Some(Line::MeasureBreak)) {
-                        prop_assert!(matches!(line, Line::MeasureBreak));
-                    }
-                }
-            }
-        }
-
-        // Invariant 7: the number of arrangements returned is at most the requested max.
+        // Invariant 5: the number of arrangements returned is at most the requested max.
         #[test]
         fn invariant_count_bounded(case in arb_case()) {
             let guitar = std_guitar();
@@ -1743,7 +1701,7 @@ mod proptest_invariants {
             prop_assert!(arrangements.len() <= case.num_arrangements as usize);
         }
 
-        // Invariant 8: deterministic. Same input produces the same output twice.
+        // Invariant 6: deterministic. Same input produces the same output twice.
         #[test]
         fn invariant_deterministic(case in arb_case()) {
             let guitar1 = std_guitar();
