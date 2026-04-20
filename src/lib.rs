@@ -1,3 +1,28 @@
+#![deny(clippy::correctness)]
+
+//! Generate fingerstyle guitar tabs from a sequence of pitches.
+//!
+//! Given a string of newline-separated pitches (e.g. `"E2\nA2\nD3"`), a tuning,
+//! and guitar parameters, this crate picks playable fingerings and renders an
+//! ASCII tab. Arrangements are ranked by difficulty and returned in ascending
+//! order; the first arrangement is the easiest to play.
+//!
+//! # Quick start
+//!
+//! ```no_run
+//! use guitar_tab_generator::{
+//!     create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar,
+//!     STD_6_STRING_TUNING_OPEN_PITCHES,
+//! };
+//!
+//! let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+//! let guitar = Guitar::new(tuning, 18, 0).unwrap();
+//! let input_lines = parse_lines("E2\nA2\nD3".to_owned()).unwrap();
+//! let arrangements = create_arrangements(guitar.clone(), input_lines, 1).unwrap();
+//! let tab = render_tab(&arrangements[0].lines, &guitar, 30, 2, None);
+//! println!("{tab}");
+//! ```
+
 use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -24,6 +49,11 @@ pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
 
+/// The fully-specified input for generating one set of compositions from a pitch string.
+///
+/// Values map directly to the WASM boundary via serde; `pitches` is the raw newline-
+/// delimited input text, `tuning_name` is one of the `TuningName` variants or `"standard"`,
+/// and `num_arrangements` must be in `1..=20`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompositionInput {
     pub pitches: String,
@@ -36,6 +66,11 @@ pub struct CompositionInput {
     pub playback_index: Option<u16>,
 }
 
+/// A single rendered arrangement returned from `wrapper_create_arrangements`.
+///
+/// `tab` is the rendered ASCII tab, `pitches` is the normalized input pitch sequence
+/// (shared across compositions via `Rc`), and `max_fret_span` reports the widest
+/// non-zero fret span across any beat.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Composition {
     pub tab: String,
@@ -56,6 +91,13 @@ pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsErro
     Ok(serde_wasm_bindgen::to_value(&compositions)?)
 }
 
+/// Parses, arranges, and renders a full set of compositions from a `CompositionInput`.
+///
+/// # Errors
+///
+/// Returns an error if any of the underlying steps fails: parsing (unparseable lines),
+/// guitar construction (invalid tuning, capo, or fret count), or arrangement (no valid
+/// fingering for a pitch).
 pub fn wrapper_create_arrangements(
     composition_input: CompositionInput,
 ) -> Result<Vec<Composition>> {

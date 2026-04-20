@@ -6,6 +6,14 @@ use itertools::Itertools;
 use std::collections::VecDeque;
 use std::fmt::Write;
 
+/// Renders an `Arrangement`'s lines as an ASCII guitar tab.
+///
+/// The `width` parameter controls the character width of each row group (rows wrap to a
+/// new group when they reach `width`), and `padding` controls the number of dashes between
+/// beats. If `playback` is supplied, an indicator `▼`/`▲` is drawn above and below the
+/// beat column corresponding to the 0-indexed sonorous (non-rest) beat.
+///
+/// Returns an empty string if `arrangement_lines` is empty.
 #[must_use]
 pub fn render_tab(
     arrangement_lines: &[Line<BeatVec<PitchFingering>>],
@@ -498,19 +506,19 @@ mod test_transpose {
     use super::*;
 
     #[test]
-    fn test_transpose_2x2() {
+    fn transposes_2x2_matrix() {
         let input_matrix = vec![vec!["A", "B"], vec!["C", "D"]];
         let expected_output = vec![vec!["A", "C"], vec!["B", "D"]];
         assert_eq!(transpose(input_matrix), expected_output);
     }
     #[test]
-    fn test_transpose_3x2() {
+    fn transposes_3x2_matrix() {
         let input_matrix = vec![vec!["A", "B"], vec!["C", "D"], vec!["E", "F"]];
         let expected_output = vec![vec!["A", "C", "E"], vec!["B", "D", "F"]];
         assert_eq!(transpose(input_matrix), expected_output);
     }
     #[test]
-    fn test_transpose_2x3() {
+    fn transposes_2x3_matrix() {
         let input_matrix = vec![vec!["A", "B", "C"], vec!["D", "E", "F"]];
         let expected_output = vec![vec!["A", "D"], vec!["B", "E"], vec!["C", "F"]];
         assert_eq!(transpose(input_matrix), expected_output);
@@ -740,39 +748,36 @@ fn render_string_output(
     strings_rows: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
-    let num_row_groups = strings_rows[0].len();
     let num_strings = strings_rows.len();
+    let num_row_groups = strings_rows[0].len();
     let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
-    for row_group_index in 0..num_row_groups {
-        let upper_playback_row_render = match playback_indicator_position {
-            None => String::new(),
-            Some(ref pos) => match row_group_index == pos.row_group_index {
-                false => String::new(),
-                true => " ".repeat(pos.column_index) + "▼",
-            },
+    for (row_group_index, _) in strings_rows[0].iter().enumerate() {
+        let playback_line = |symbol: &str| -> String {
+            match playback_indicator_position {
+                Some(ref pos) if row_group_index == pos.row_group_index => {
+                    " ".repeat(pos.column_index) + symbol
+                }
+                _ => String::new(),
+            }
         };
-        output_lines.push(upper_playback_row_render);
+
+        output_lines.push(playback_line("▼"));
 
         for string_rows in strings_rows {
             output_lines.push(
                 string_rows
                     .get(row_group_index)
-                    .unwrap_or(&"???".to_owned())
+                    .map(String::as_str)
+                    .unwrap_or("???")
                     .to_string(),
             );
         }
-        let lower_playback_row_render = match playback_indicator_position {
-            None => String::new(),
-            Some(ref pos) => match row_group_index == pos.row_group_index {
-                false => String::new(),
-                true => " ".repeat(pos.column_index) + "▲",
-            },
-        };
 
-        output_lines.push(lower_playback_row_render);
+        output_lines.push(playback_line("▲"));
         output_lines.push(String::new());
     }
+
     output_lines.join("\n")
 }
 
