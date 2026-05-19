@@ -76,16 +76,23 @@ NormalizedBeat                         <- ArrangementSet.normalized_input elemen
     kind: "rest" | "measureBreak" | "playable"
     pitches?: string[]                 (present when kind == "playable")
 
-TabError                               <- thrown by generate_arrangements / build_arrangement_set
-    kind: "parse" | "noArrangements"
-    errors?: ParseError[]              (present when kind == "parse")
+TabError                               <- thrown by build_arrangement_set / generateArrangements
+    kind: "parse"        + errors:  ParseError[]
+    kind: "guitar"       + message: string
+    kind: "arrangement"  + message: string
+    kind: "invalidInput" + field:   string, message: string
 
 ParseError
     line: u32
     text: String
+
+TuningName                             <- enum returned by getTuningNames()
+    "openG" | "openD" | "c6" | "dsus4" | "dropD"
+  | "dropC" | "openC" | "dropB" | "openE"
 ```
 
 The entry points are:
 
-- `generate_arrangements(input: TabInput) -> ArrangementSet` -- validates, builds the guitar, runs the pathfinder, and returns the opaque handle.
-- `build_arrangement_set(lines, guitar, num_arrangements, max_fret_span_filter) -> ArrangementSet` -- lower-level constructor used internally and in tests.
+- `generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError>` -- WASM entry point (JS name: `generateArrangements`). Validates, builds the guitar, runs the pathfinder, returns the opaque handle.
+- `build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError>` -- pure-Rust constructor. Same work; used by tests and direct Rust callers.
+- `getTuningNames() -> TuningName[]` -- enumerates the supported tuning presets, typed for JS via tsify.

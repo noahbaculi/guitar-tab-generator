@@ -61,7 +61,7 @@ The assignment of open-string pitches to a guitar's strings — a map from `Stri
 _Avoid_: Tuning offsets / tuning array as standalone terms (they're encodings of a tuning, not tunings in their own right)
 
 **Fret count**:
-The number of physical frets on the instrument — what the caller supplies (`CompositionInput.guitar_num_frets`). A property of the guitar hardware, independent of capo placement.
+The number of physical frets on the instrument — what the caller supplies (`TabInput.guitar_num_frets`). A property of the guitar hardware, independent of capo placement.
 _Avoid_: num_frets as a freestanding term (the bare name is currently overloaded with [[Playable fret count]])
 
 **Playable fret count**:
@@ -81,7 +81,7 @@ A guitar string's index, where **string 1 is the highest-pitched string** (thinn
 _Avoid_: String index (ambiguous about direction)
 
 **Playback cursor**:
-A 0-indexed [[Beat]] position passed in by a UI player so the rendered tab can draw `▼`/`▲` indicators above and below the corresponding beat column. Counts beats (Playable and Rest); skips `MeasureBreak`s. Carried as `CompositionInput.playback_index` / the `playback` parameter on `render_tab`.
+A 0-indexed [[Beat]] position passed in by a UI player so the rendered tab can draw `▼`/`▲` indicators above and below the corresponding beat column. Counts beats (Playable and Rest); skips `MeasureBreak`s. Carried as the `playback` parameter on `ArrangementSet::render` and `render_tab`.
 _Avoid_: Playhead, current position
 
 ## Flagged ambiguities

@@ -1,6 +1,6 @@
 # ArrangementSet crosses the WASM boundary as an opaque handle
 
-In 2.0.0, generating tabs splits into two calls: `wasm_generate_arrangements(TabInput) -> ArrangementSet`, then `set.render(i, width, padding, playback) -> RenderedTab`. `ArrangementSet` is a `#[wasm_bindgen]` struct, not a serde-serialized value, so the arrangements themselves stay Rust-side and only the rendered ASCII tabs cross the wire.
+In 2.0.0, generating tabs splits into two calls: `generate_arrangements(TabInput) -> Result<ArrangementSet, TabError>` (exported to JS as `generateArrangements`), then `set.render(i, width, padding, playback) -> String` (the rendered ASCII tab, the [[RenderedTab]] in CONTEXT.md). `ArrangementSet` is a `#[wasm_bindgen]` struct, not a serde-serialized value, so the arrangements themselves stay Rust-side and only the rendered ASCII tabs cross the wire.
 
 ## Considered Options
 
