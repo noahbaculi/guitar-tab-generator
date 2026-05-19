@@ -30,6 +30,7 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod arrangement;
+pub(crate) mod error;
 pub(crate) mod guitar;
 pub(crate) mod parser;
 pub(crate) mod pitch;
@@ -39,6 +40,7 @@ pub(crate) mod string_number;
 pub use arrangement::{
     create_arrangements, memoized_original_create_arrangements, Arrangement, BeatVec, Line,
 };
+pub use error::{ParseError, TabError};
 pub use guitar::{
     create_string_tuning, Guitar, PitchFingering, STD_6_STRING_TUNING_OPEN_PITCHES,
 };
