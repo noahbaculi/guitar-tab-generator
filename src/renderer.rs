@@ -11,7 +11,8 @@ use std::fmt::Write;
 /// The `width` parameter controls the character width of each row group (rows wrap to a
 /// new group when they reach `width`), and `padding` controls the number of dashes between
 /// beats. If `playback` is supplied, an indicator `▼`/`▲` is drawn above and below the
-/// beat column corresponding to the 0-indexed sonorous (non-rest) beat.
+/// beat column corresponding to the 0-indexed beat (counting `Playable` and `Rest` lines,
+/// skipping `MeasureBreak`s).
 ///
 /// Returns an empty string if `arrangement_lines` is empty.
 #[must_use]
@@ -29,8 +30,8 @@ pub fn render_tab(
 
     let line_index_of_playback: Option<usize> = match playback {
         None => None,
-        Some(playback_sonorous_index) => {
-            line_index_of_sonorous_index(arrangement_lines, playback_sonorous_index as usize)
+        Some(playback_beat_index) => {
+            line_index_of_beat_index(arrangement_lines, playback_beat_index as usize)
         }
     };
 
@@ -156,32 +157,32 @@ mod test_render_tab {
     }
 }
 
-fn line_index_of_sonorous_index(
+fn line_index_of_beat_index(
     lines: &[Line<BeatVec<PitchFingering>>],
-    playback_sonorous_index: usize,
+    playback_beat_index: usize,
 ) -> Option<usize> {
     lines
         .iter()
         .enumerate()
         .filter(|(_, line)| matches!(line, Line::Playable(_) | Line::Rest))
         .map(|(index, _)| index)
-        .nth(playback_sonorous_index)
+        .nth(playback_beat_index)
 }
 #[cfg(test)]
-mod test_line_index_of_sonorous_index {
+mod test_line_index_of_beat_index {
     use super::*;
     use crate::{pitch::Pitch, string_number::StringNumber};
 
     #[test]
     fn empty_lines() {
         let lines: Vec<Line<BeatVec<PitchFingering>>> = vec![];
-        assert_eq!(line_index_of_sonorous_index(&lines, 12), None);
+        assert_eq!(line_index_of_beat_index(&lines, 12), None);
     }
     #[test]
     fn only_measure_breaks() {
         let lines: Vec<Line<BeatVec<PitchFingering>>> =
             vec![Line::MeasureBreak, Line::MeasureBreak, Line::MeasureBreak];
-        assert_eq!(line_index_of_sonorous_index(&lines, 12), None);
+        assert_eq!(line_index_of_beat_index(&lines, 12), None);
     }
 
     fn get_lines() -> Vec<Line<BeatVec<PitchFingering>>> {
@@ -223,17 +224,17 @@ mod test_line_index_of_sonorous_index {
     #[test]
     fn include_playable() {
         let lines = get_lines();
-        assert_eq!(line_index_of_sonorous_index(&lines, 2), Some(2));
+        assert_eq!(line_index_of_beat_index(&lines, 2), Some(2));
     }
     #[test]
     fn include_rest() {
         let lines = get_lines();
-        assert_eq!(line_index_of_sonorous_index(&lines, 3), Some(3));
+        assert_eq!(line_index_of_beat_index(&lines, 3), Some(3));
     }
     #[test]
     fn exclude_measure_break() {
         let lines = get_lines();
-        assert_eq!(line_index_of_sonorous_index(&lines, 4), Some(5));
+        assert_eq!(line_index_of_beat_index(&lines, 4), Some(5));
     }
 }
 

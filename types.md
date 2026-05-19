@@ -1,11 +1,11 @@
 # Types and Data Flow
 
-Input: `CompositionInput`. Output: `Vec<Composition>`.
+Input: `RenderedTabInput`. Output: `Vec<RenderedTab>`.
 
 ## Pipeline
 
 ```
-                        CompositionInput
+                        RenderedTabInput
                         ────────────────
   pitches: String │ tuning_name: String │ guitar_num_frets, guitar_capo: u8
           │                  │                        │
@@ -57,11 +57,11 @@ Vec<Line<BeatVec<Pitch>>>             │              num_arrangements: u8
                       String  (ASCII tab)
                          │
                          ▼
-             Composition { tab, pitches: Rc<Vec<BeatVec<String>>>,
+             RenderedTab { tab, normalized_input: Rc<Vec<BeatVec<String>>>,
                            max_fret_span: u8 }
                          │
                          ▼
-                  Vec<Composition>
+                  Vec<RenderedTab>
 ```
 
 ## Types Up Close

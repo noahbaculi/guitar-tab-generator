@@ -71,7 +71,7 @@ pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> Result<BTreeMap<St
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Guitar {
     pub(crate) tuning: BTreeMap<StringNumber, Pitch>,
-    pub(crate) num_frets: u8,
+    pub(crate) playable_frets: u8,
     pub(crate) range: BTreeSet<Pitch>,
     pub(crate) string_ranges: BTreeMap<StringNumber, Box<[Pitch]>>,
 }
@@ -94,11 +94,11 @@ impl Guitar {
     /// - `num_frets` is outside the supported range,
     /// - `capo` is outside the supported range,
     /// - or the capo shift pushes any open-string pitch out of the `Pitch` range.
-    pub fn new(tuning: BTreeMap<StringNumber, Pitch>, mut num_frets: u8, capo: u8) -> Result<Self> {
+    pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8, capo: u8) -> Result<Self> {
         check_fret_number(num_frets)?;
 
         check_capo_number(capo)?;
-        num_frets -= capo;
+        let playable_frets = num_frets - capo;
         let adjusted_tuning = tuning
             .into_iter()
             .map(|(string_num, pitch)| -> Result<_> {
@@ -113,7 +113,7 @@ impl Guitar {
         for (string_number, string_open_pitch) in adjusted_tuning.iter() {
             string_ranges.insert(
                 *string_number,
-                create_string_range(string_open_pitch, num_frets)?.into_boxed_slice(),
+                create_string_range(string_open_pitch, playable_frets)?.into_boxed_slice(),
             );
         }
 
@@ -127,7 +127,7 @@ impl Guitar {
 
         Ok(Guitar {
             tuning: adjusted_tuning,
-            num_frets,
+            playable_frets,
             range,
             string_ranges,
         })
@@ -145,7 +145,7 @@ mod test_create_guitar {
 
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
-            num_frets: NUM_FRETS,
+            playable_frets: NUM_FRETS,
             range: BTreeSet::from([
                 Pitch::E2,
                 Pitch::F2,
@@ -218,7 +218,7 @@ mod test_create_guitar {
 
         let expected_guitar = Guitar {
             tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3])?,
-            num_frets: NUM_FRETS - CAPO,
+            playable_frets: NUM_FRETS - CAPO,
             range: BTreeSet::from([
                 Pitch::G5,
                 Pitch::D4,
@@ -321,7 +321,7 @@ mod test_create_guitar {
 
         let expected_guitar = Guitar {
             tuning: tuning.clone(),
-            num_frets: NUM_FRETS,
+            playable_frets: NUM_FRETS,
             range: BTreeSet::from([
                 Pitch::E2,
                 Pitch::F2,

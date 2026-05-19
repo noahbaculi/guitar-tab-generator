@@ -68,13 +68,14 @@ pub struct CompositionInput {
 
 /// A single rendered arrangement returned from `wrapper_create_arrangements`.
 ///
-/// `tab` is the rendered ASCII tab, `pitches` is the normalized input pitch sequence
-/// (shared across compositions via `Rc`), and `max_fret_span` reports the widest
+/// `tab` is the rendered ASCII tab, `normalized_input` is the per-beat input echoed back
+/// (pitch text for playable beats, the sentinels `"REST"` and `"MEASURE_BREAK"` otherwise;
+/// shared across the result set via `Rc`), and `max_fret_span` reports the widest
 /// non-zero fret span across any beat.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Composition {
+pub struct RenderedTab {
     pub tab: String,
-    pub pitches: Rc<Vec<BeatVec<String>>>,
+    pub normalized_input: Rc<Vec<BeatVec<String>>>,
     pub max_fret_span: u8,
 }
 
@@ -83,15 +84,15 @@ pub struct Composition {
 pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsError> {
     let composition_input: CompositionInput = serde_wasm_bindgen::from_value(input)?;
 
-    let compositions = match wrapper_create_arrangements(composition_input) {
-        Ok(compositions) => compositions,
+    let rendered_tabs = match wrapper_create_arrangements(composition_input) {
+        Ok(rendered_tabs) => rendered_tabs,
         Err(e) => return Err(JsError::new(&e.to_string())),
     };
 
-    Ok(serde_wasm_bindgen::to_value(&compositions)?)
+    Ok(serde_wasm_bindgen::to_value(&rendered_tabs)?)
 }
 
-/// Parses, arranges, and renders a full set of compositions from a `CompositionInput`.
+/// Parses, arranges, and renders a full set of `RenderedTab`s from a `CompositionInput`.
 ///
 /// # Errors
 ///
@@ -100,7 +101,7 @@ pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsErro
 /// fingering for a pitch).
 pub fn wrapper_create_arrangements(
     composition_input: CompositionInput,
-) -> Result<Vec<Composition>> {
+) -> Result<Vec<RenderedTab>> {
     let CompositionInput {
         pitches: input_pitches,
         tuning_name,
@@ -120,7 +121,7 @@ pub fn wrapper_create_arrangements(
         .position(|line| matches!(line, arrangement::Line::Playable(_)))
         .unwrap_or(0);
 
-    let pitches: Rc<Vec<BeatVec<String>>> = Rc::new(
+    let normalized_input: Rc<Vec<BeatVec<String>>> = Rc::new(
         input_lines
             .iter()
             .skip(first_playable_index)
@@ -142,16 +143,16 @@ pub fn wrapper_create_arrangements(
         arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements)
             .map_err(|e| anyhow!("{e}"))?;
 
-    let compositions = arrangements
+    let rendered_tabs = arrangements
         .iter()
-        .map(|arrangement| Composition {
+        .map(|arrangement| RenderedTab {
             tab: renderer::render_tab(&arrangement.lines, &guitar, width, padding, playback_index),
-            pitches: Rc::clone(&pitches),
+            normalized_input: Rc::clone(&normalized_input),
             max_fret_span: arrangement.max_fret_span(),
         })
         .collect_vec();
 
-    Ok(compositions)
+    Ok(rendered_tabs)
 }
 #[cfg(test)]
 mod test_wrapper_create_arrangements {
@@ -170,10 +171,10 @@ mod test_wrapper_create_arrangements {
             playback_index: Some(3),
         };
 
-        let compositions = wrapper_create_arrangements(composition_input).unwrap();
-        let expected_composition = Composition {
+        let rendered_tabs = wrapper_create_arrangements(composition_input).unwrap();
+        let expected = RenderedTab {
             tab: "           ▼\n--------------------|--0------\n-----------------0--|---------\n--------------0-----|---------\n--------0-----------|---------\n-----0--------------|---------\n--0-----------------|---------\n           ▲\n".to_owned(),
-            pitches: Rc::new(vec![
+            normalized_input: Rc::new(vec![
                 vec!["E2".to_owned()],
                 vec!["A2".to_owned()],
                 vec!["D3".to_owned()],
@@ -186,7 +187,7 @@ mod test_wrapper_create_arrangements {
             max_fret_span: 0,
         };
 
-        assert_eq!(compositions[0], expected_composition);
+        assert_eq!(rendered_tabs[0], expected);
     }
     #[test]
     fn empty_input() {
@@ -201,11 +202,11 @@ mod test_wrapper_create_arrangements {
             playback_index: Some(3),
         };
 
-        let compositions = wrapper_create_arrangements(composition_input).unwrap();
-        let expected_compositions = vec![
-            Composition {
+        let rendered_tabs = wrapper_create_arrangements(composition_input).unwrap();
+        let expected = vec![
+            RenderedTab {
                 tab: "".to_owned(),
-                pitches: Rc::new(vec![
+                normalized_input: Rc::new(vec![
                     vec!["REST".to_owned()],
                     vec!["REST".to_owned()],
                     vec!["REST".to_owned()],
@@ -217,7 +218,7 @@ mod test_wrapper_create_arrangements {
             2
         ];
 
-        assert_eq!(compositions, expected_compositions);
+        assert_eq!(rendered_tabs, expected);
     }
     #[test]
     fn invalid_input() {

@@ -1,6 +1,6 @@
 [package]
 name = "guitar-tab-generator"
-version = "1.2.0"
+version = "2.0.0"
 edition = "2021"
 authors = ["Noah Baculi <noahbaculi@gmail.com>"]
 description = "Generate fingerstyle guitar tabs based on the difficulty of different finger positions"
