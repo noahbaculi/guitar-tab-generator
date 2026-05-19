@@ -1,0 +1,15 @@
+# ArrangementSet crosses the WASM boundary as an opaque handle
+
+In 2.0.0, generating tabs splits into two calls: `wasm_generate_arrangements(TabInput) -> ArrangementSet`, then `set.render(i, width, padding, playback) -> RenderedTab`. `ArrangementSet` is a `#[wasm_bindgen]` struct, not a serde-serialized value, so the arrangements themselves stay Rust-side and only the rendered ASCII tabs cross the wire.
+
+## Considered Options
+
+- **Pattern A (serde wire).** Every `Arrangement` (including its `Vec<Line<Vec<PitchFingering>>>`) serializes to JS. Rejected: the demo never inspects fingerings, and for `num_arrangements = 20` the wire payload runs ~100KB of structured data that gets thrown away.
+- **Pattern B (opaque handle).** `ArrangementSet` exposes getter and render methods. Demo holds the handle across width / playback / padding changes and re-renders cheaply without re-pathfinding. Picked.
+- **Hybrid.** Opaque handle plus a separate serde-friendly view when the demo wants to introspect one arrangement. Rejected as speculative; no consumer needs it today.
+
+## Consequences
+
+- The demo on noahbaculi.com must manage the `ArrangementSet` lifecycle. Modern wasm-bindgen wires it through `FinalizationRegistry`; an explicit `set.free()` is the fallback for older runtimes.
+- Adding a new piece of per-arrangement information (e.g. a fingering inspector) means adding a getter method on `ArrangementSet`, not a field on a serialized struct. This is the deliberate trade-off: cheaper hot path, slightly more API surface to grow.
+- The codebase otherwise uses `serde-wasm-bindgen` for boundary crossings. `ArrangementSet` is the documented exception; `TabInput`, `RenderedTab` (the rendered string), `NormalizedBeat`, and `TabError` keep the serde-via-tsify path.
