@@ -49,7 +49,7 @@ fn main() -> Result<()> {
     // dbg!(&guitar);
 
     let num_arrangements = 1;
-    let arrangements = match create_arrangements(guitar.clone(), lines, num_arrangements) {
+    let arrangements = match create_arrangements(guitar.clone(), lines, num_arrangements, None) {
         Ok(arrangements) => arrangements,
         Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
     };

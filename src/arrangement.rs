@@ -292,6 +292,7 @@ pub fn create_arrangements(
     guitar: Guitar,
     input_lines: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: u8,
+    max_fret_span_filter: Option<u8>,
 ) -> Result<Vec<Arrangement>, Arc<anyhow::Error>> {
     const MAX_NUM_ARRANGEMENTS: u8 = 20;
     match num_arrangements {
@@ -390,7 +391,7 @@ pub fn create_arrangements(
         return Err(Arc::new(anyhow!("No arrangements could be calculated.")));
     }
 
-    let arrangements = path_results
+    let mut arrangements = path_results
         .into_iter()
         .map(|path_result| {
             process_path(path_result.0, path_result.1, &measure_break_indices)
@@ -398,6 +399,10 @@ pub fn create_arrangements(
         .collect_vec();
 
     // const WARNING_FRET_SPAN: u8 = 4;
+
+    if let Some(max_span) = max_fret_span_filter {
+        arrangements.retain(|a| a.max_fret_span() <= max_span);
+    }
 
     Ok(arrangements)
 }
@@ -419,7 +424,7 @@ mod test_create_arrangements {
             max_fret_span: 0,
         }];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1).unwrap();
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1, None).unwrap();
 
         assert_eq!(arrangements, expected_arrangements);
     }
@@ -465,7 +470,7 @@ mod test_create_arrangements {
             },
         ];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, 10).unwrap();
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 10, None).unwrap();
 
         assert_eq!(arrangements, expected_arrangements);
     }
@@ -490,7 +495,7 @@ mod test_create_arrangements {
             max_fret_span: 0,
         }];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1).unwrap();
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1, None).unwrap();
 
         assert_eq!(arrangements, expected_arrangements);
     }
@@ -498,7 +503,7 @@ mod test_create_arrangements {
     fn empty_input() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, 2).unwrap();
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 2, None).unwrap();
 
         let expected_arrangements: Vec<Arrangement> = vec![
             Arrangement {
@@ -521,7 +526,7 @@ mod test_create_arrangements {
             Line::Rest,
         ];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1).unwrap();
+        let arrangements = create_arrangements(Guitar::default(), input_pitches, 1, None).unwrap();
 
         let expected_arrangements: Vec<Arrangement> = vec![Arrangement {
             lines: vec![
@@ -542,7 +547,7 @@ mod test_create_arrangements {
     fn zero_arrangements_requested() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
 
-        let error = create_arrangements(Guitar::default(), input_pitches, 0).unwrap_err();
+        let error = create_arrangements(Guitar::default(), input_pitches, 0, None).unwrap_err();
         let error_msg = format!("{error}");
         assert_eq!(error_msg, "No arrangements were requested.");
     }
@@ -550,12 +555,32 @@ mod test_create_arrangements {
     fn too_many_arrangements_requested() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
 
-        let error = create_arrangements(Guitar::default(), input_pitches, 22).unwrap_err();
+        let error = create_arrangements(Guitar::default(), input_pitches, 22, None).unwrap_err();
         let error_msg = format!("{error}");
         assert_eq!(
             error_msg,
             "Too many arrangements to calculate. The maximum is 20."
         );
+    }
+    #[test]
+    fn max_fret_span_filter_drops_high_span_arrangements() {
+        let tuning = crate::guitar::create_string_tuning(
+            &crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES,
+        )
+        .unwrap();
+        let guitar = crate::guitar::Guitar::new(tuning, 20, 0).unwrap();
+        // G2B4 is a chord beat: G2 lands at fret 3 on string 6, B4 at fret 7 on string 1.
+        // Some arrangements will have both notes at non-zero frets, producing a span > 0.
+        let lines = crate::parser::parse_lines("G2B4".to_owned()).unwrap();
+
+        // Without a filter, at least one arrangement has a non-zero fret span.
+        let unfiltered = create_arrangements(guitar.clone(), lines.clone(), 5, None).unwrap();
+        assert!(unfiltered.iter().any(|a| a.max_fret_span() > 0));
+
+        // With filter = Some(0), only arrangements that never stretch survive.
+        let filtered = create_arrangements(guitar.clone(), lines, 5, Some(0)).unwrap();
+        assert!(filtered.iter().all(|a| a.max_fret_span() == 0));
+        assert!(filtered.len() <= 5);
     }
 }
 
@@ -1601,7 +1626,7 @@ mod proptest_invariants {
         fn invariant_input_pitches_represented(case in arb_case()) {
             let guitar = std_guitar();
             let Ok(arrangements) = create_arrangements(
-                guitar.clone(), case.input_lines.clone(), case.num_arrangements,
+                guitar.clone(), case.input_lines.clone(), case.num_arrangements, None,
             ) else { return Ok(()); };
 
             // Map input line_index (skipping leading non-playable lines) to expected pitches.
@@ -1646,7 +1671,7 @@ mod proptest_invariants {
         fn invariant_no_duplicate_strings(case in arb_case()) {
             let guitar = std_guitar();
             let Ok(arrangements) = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements,
+                guitar, case.input_lines, case.num_arrangements, None,
             ) else { return Ok(()); };
 
             for arrangement in &arrangements {
@@ -1670,7 +1695,7 @@ mod proptest_invariants {
             let guitar = std_guitar();
             let playable_frets = guitar.playable_frets;
             let Ok(arrangements) = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements,
+                guitar, case.input_lines, case.num_arrangements, None,
             ) else { return Ok(()); };
 
             for arrangement in &arrangements {
@@ -1689,7 +1714,7 @@ mod proptest_invariants {
         fn invariant_sorted_by_difficulty(case in arb_case()) {
             let guitar = std_guitar();
             let Ok(arrangements) = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements,
+                guitar, case.input_lines, case.num_arrangements, None,
             ) else { return Ok(()); };
 
             for pair in arrangements.windows(2) {
@@ -1702,7 +1727,7 @@ mod proptest_invariants {
         fn invariant_count_bounded(case in arb_case()) {
             let guitar = std_guitar();
             let Ok(arrangements) = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements,
+                guitar, case.input_lines, case.num_arrangements, None,
             ) else { return Ok(()); };
 
             prop_assert!(arrangements.len() <= case.num_arrangements as usize);
@@ -1714,10 +1739,10 @@ mod proptest_invariants {
             let guitar1 = std_guitar();
             let guitar2 = std_guitar();
             let first = create_arrangements(
-                guitar1, case.input_lines.clone(), case.num_arrangements,
+                guitar1, case.input_lines.clone(), case.num_arrangements, None,
             );
             let second = create_arrangements(
-                guitar2, case.input_lines, case.num_arrangements,
+                guitar2, case.input_lines, case.num_arrangements, None,
             );
             match (first, second) {
                 (Ok(a), Ok(b)) => prop_assert_eq!(a, b),

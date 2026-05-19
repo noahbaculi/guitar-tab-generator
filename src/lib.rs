@@ -18,7 +18,7 @@
 //! let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 //! let guitar = Guitar::new(tuning, 18, 0).unwrap();
 //! let input_lines = parse_lines("E2\nA2\nD3".to_owned()).unwrap();
-//! let arrangements = create_arrangements(guitar.clone(), input_lines, 1).unwrap();
+//! let arrangements = create_arrangements(guitar.clone(), input_lines, 1, None).unwrap();
 //! let tab = render_tab(&arrangements[0].lines, &guitar, 30, 2, None);
 //! println!("{tab}");
 //! ```
@@ -208,6 +208,7 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
         guitar.clone(),
         input_lines,
         tab_input.num_arrangements,
+        tab_input.max_fret_span_filter,
     )
     .map_err(|e| TabError::Arrangement { message: e.to_string() })?;
 
@@ -325,7 +326,7 @@ pub fn wrapper_create_arrangements(
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
 
     let arrangements =
-        arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements)
+        arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements, None)
             .map_err(|e| anyhow!("{e}"))?;
 
     let rendered_tabs = arrangements
