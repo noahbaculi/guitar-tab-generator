@@ -7,10 +7,12 @@ use crate::{
 use anyhow::Result;
 use itertools::Itertools;
 use regex::{Regex, RegexBuilder};
+use serde::Serialize;
 use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
 use std::{collections::HashSet, str::FromStr};
 use strum::VariantNames;
 use strum_macros::{EnumString, VariantNames};
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 const PITCH_PATTERN: &str =
@@ -28,8 +30,10 @@ fn test_pitch_regex() -> Regex {
 ///
 /// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
 /// attribute requires external matches to include a wildcard arm.
-#[derive(Debug, EnumString, VariantNames)]
+#[derive(Debug, EnumString, VariantNames, Serialize, Tsify)]
 #[strum(ascii_case_insensitive)]
+#[tsify(into_wasm_abi)]
+#[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub enum TuningName {
     OpenG,
@@ -44,18 +48,14 @@ pub enum TuningName {
     OpenE,
 }
 
-/// Returns the list of supported tuning names as serialized string values, for the WASM
-/// boundary.
-///
-/// # Errors
-///
-/// Returns an error if the tuning name list fails to serialize.
-#[wasm_bindgen]
+/// Returns the supported `TuningName` variants, typed for JS consumption via tsify.
+#[wasm_bindgen(js_name = "getTuningNames")]
 #[cfg(not(tarpaulin_include))]
-pub fn get_tuning_names() -> Result<JsValue, JsError> {
-    let tuning_names: Vec<String> = TuningName::VARIANTS.iter().map(|&x| x.into()).collect_vec();
-
-    Ok(serde_wasm_bindgen::to_value(&tuning_names)?)
+pub fn get_tuning_names() -> Vec<TuningName> {
+    TuningName::VARIANTS
+        .iter()
+        .map(|&v| TuningName::from_str(v).expect("BUG: VARIANTS yields parseable strings"))
+        .collect()
 }
 
 /// Returns the 6-element semitone offsets for a named tuning, relative to standard 6-string
