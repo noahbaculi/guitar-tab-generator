@@ -218,6 +218,19 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
     })
 }
 
+/// WASM-facing entry point. Generates an `ArrangementSet` from a `TabInput`.
+///
+/// # Errors
+///
+/// Returns `TabError::InvalidInput` when `num_arrangements` is outside `1..=20`, `TabError::Parse`
+/// when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning or capo or
+/// fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
+#[wasm_bindgen(js_name = "generateArrangements")]
+#[cfg(not(tarpaulin_include))]
+pub fn generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError> {
+    build_arrangement_set(input)
+}
+
 /// The fully-specified input for generating one set of compositions from a pitch string.
 ///
 /// Values map directly to the WASM boundary via serde; `pitches` is the raw newline-
