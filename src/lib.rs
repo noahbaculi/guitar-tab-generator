@@ -116,7 +116,10 @@ pub fn wrapper_create_arrangements(
     } = composition_input;
 
     let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = parser::parse_lines(input_pitches)
-        .map_err(|e| anyhow!("{e}"))?;
+        .map_err(|errs| {
+            let joined = errs.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
+            anyhow!("{joined}")
+        })?;
 
     let first_playable_index = input_lines
         .iter()

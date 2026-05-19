@@ -4,7 +4,7 @@ use crate::{
     pitch::Pitch,
     string_number::StringNumber,
 };
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use itertools::Itertools;
 use regex::{Regex, RegexBuilder};
 use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
@@ -187,23 +187,27 @@ use memoize::memoize;
 ///
 /// Returns an error listing every unparseable substring with its 1-indexed line number.
 #[memoize(Capacity: 10)]
-pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyhow::Error>> {
+pub fn parse_lines(
+    input: String,
+) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<Vec<crate::error::ParseError>>> {
     let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
         .case_insensitive(true)
         .build()
         .expect("BUG: Regex pattern should be valid");
 
-    let (parsed_lines, errors): (Vec<Line<BeatVec<Pitch>>>, Vec<String>) = input
-        .lines()
-        .enumerate()
-        .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
-        .partition_map(|result| match result {
-            Ok(line) => itertools::Either::Left(line),
-            Err(err) => itertools::Either::Right(format!("{err}")),
-        });
+    let (parsed_lines, errors): (Vec<Line<BeatVec<Pitch>>>, Vec<Vec<crate::error::ParseError>>) =
+        input
+            .lines()
+            .enumerate()
+            .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
+            .partition_map(|result| match result {
+                Ok(line) => itertools::Either::Left(line),
+                Err(errs) => itertools::Either::Right(errs),
+            });
 
-    if !errors.is_empty() {
-        return Err(anyhow!(errors.join("\n")).into());
+    let flat_errors: Vec<crate::error::ParseError> = errors.into_iter().flatten().collect();
+    if !flat_errors.is_empty() {
+        return Err(Arc::new(flat_errors));
     }
 
     Ok(parsed_lines)
@@ -229,17 +233,20 @@ mod test_parse_lines {
     fn reports_line_and_content_for_unparseable_input() {
         let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
 
-        let error = parse_lines(input).unwrap_err();
-        let error_msg = format!("{error}");
-
-        assert_eq!(
-            error_msg,
-            "Input 'xyz' on line 1 could not be parsed into a pitch.\nInput 'BB.2' on line 4 could not be parsed into a pitch."
-        );
+        let errors = parse_lines(input).unwrap_err();
+        assert_eq!(errors.len(), 2);
+        assert_eq!(errors[0].line, 1);
+        assert_eq!(errors[0].text, "xyz");
+        assert_eq!(errors[1].line, 4);
+        assert_eq!(errors[1].text, "BB.2");
     }
 }
 
-fn parse_line(regex: &Regex, input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
+fn parse_line(
+    regex: &Regex,
+    input_index: usize,
+    mut input_line: &str,
+) -> Result<Line<Vec<Pitch>>, Vec<crate::error::ParseError>> {
     input_line = remove_comments(input_line);
     let line_content: String = remove_whitespace(input_line);
 
@@ -291,13 +298,10 @@ mod test_parse_line {
     }
     #[test]
     fn reports_error_for_unparseable_text() {
-        let error = parse_line(&test_pitch_regex(), 4, "  Invalid Text  ").unwrap_err();
-        let error_msg = format!("{error}");
-
-        assert_eq!(
-            error_msg,
-            "Input 'InvalidText' on line 5 could not be parsed into a pitch."
-        );
+        let errors = parse_line(&test_pitch_regex(), 4, "  Invalid Text  ").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 5);
+        assert_eq!(errors[0].text, "InvalidText");
     }
 }
 
@@ -409,9 +413,13 @@ mod test_parse_measure_break {
     }
 }
 
-/// Parses input line to extract valid musical pitches, returning an error if any part of the
-/// input line cannot be parsed into a pitch.
-fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
+/// Parses input line to extract valid musical pitches, returning structured errors for any
+/// substring that cannot be parsed.
+fn parse_pitch(
+    regex: &Regex,
+    input_index: usize,
+    input_line: &str,
+) -> Result<Line<Vec<Pitch>>, Vec<crate::error::ParseError>> {
     let mut matched_mask = vec![false; input_line.len()];
     let mut matched_pitches: Vec<Pitch> = Vec::new();
 
@@ -435,22 +443,21 @@ fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Li
         .collect();
 
     if !unmatched_indices.is_empty() {
-        let line_number = input_index + 1;
+        let line_number = (input_index + 1) as u32;
         let consecutive_indices = consecutive_slices(&unmatched_indices);
-        let error_msg = consecutive_indices
+        let errors: Vec<crate::error::ParseError> = consecutive_indices
             .into_iter()
             .map(|unmatched_input_indices| {
                 let first_idx = *unmatched_input_indices.first().unwrap();
                 let last_idx = *unmatched_input_indices.last().unwrap();
                 let unmatched_input = &input_line[first_idx..=last_idx];
-                format!(
-                    "Input '{unmatched_input}' on line {line_number} could not be parsed into a pitch."
-                )
+                crate::error::ParseError {
+                    line: line_number,
+                    text: unmatched_input.to_owned(),
+                }
             })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        return Err(anyhow!(error_msg));
+            .collect();
+        return Err(errors);
     }
 
     Ok(Line::Playable(matched_pitches))
@@ -460,16 +467,15 @@ mod test_parse_pitch {
     use super::*;
 
     #[test]
-    fn single_natural_pitch() -> Result<()> {
+    fn single_natural_pitch() {
         assert_eq!(
-            parse_pitch(&test_pitch_regex(), 0, "A0")?,
+            parse_pitch(&test_pitch_regex(), 0, "A0").unwrap(),
             Line::Playable(vec![Pitch::A0])
         );
         assert_eq!(
-            parse_pitch(&test_pitch_regex(), 0, "E6")?,
+            parse_pitch(&test_pitch_regex(), 0, "E6").unwrap(),
             Line::Playable(vec![Pitch::E6])
         );
-        Ok(())
     }
     #[test]
     fn single_sharp_pitch() {
@@ -521,27 +527,26 @@ mod test_parse_pitch {
     }
     #[test]
     fn invalid_typo() {
-        let error_msg = format!(
-            "{}",
-            parse_pitch(&test_pitch_regex(), 12, "ZA2G#444B3").unwrap_err()
-        );
-        let expected_error_msg = "Input 'Z' on line 13 could not be parsed into a pitch.\nInput '44' on line 13 could not be parsed into a pitch.";
-        assert_eq!(error_msg, expected_error_msg);
+        let errors = parse_pitch(&test_pitch_regex(), 12, "ZA2G#444B3").unwrap_err();
+        assert_eq!(errors.len(), 2);
+        assert_eq!(errors[0].line, 13);
+        assert_eq!(errors[0].text, "Z");
+        assert_eq!(errors[1].line, 13);
+        assert_eq!(errors[1].text, "44");
     }
     #[test]
     fn invalid_pitch() {
-        let error_msg = format!("{}", parse_pitch(&test_pitch_regex(), 28, "Fb3").unwrap_err());
-        let expected_error_msg = "Input 'Fb3' on line 29 could not be parsed into a pitch.";
-        assert_eq!(error_msg, expected_error_msg);
+        let errors = parse_pitch(&test_pitch_regex(), 28, "Fb3").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 29);
+        assert_eq!(errors[0].text, "Fb3");
     }
     #[test]
     fn invalid_random() {
-        let error_msg = format!(
-            "{}",
-            parse_pitch(&test_pitch_regex(), 0, "baS3Q-hNr").unwrap_err()
-        );
-        let expected_error_msg = "Input 'baS3Q-hNr' on line 1 could not be parsed into a pitch.";
-        assert_eq!(error_msg, expected_error_msg);
+        let errors = parse_pitch(&test_pitch_regex(), 0, "baS3Q-hNr").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 1);
+        assert_eq!(errors[0].text, "baS3Q-hNr");
     }
 }
 

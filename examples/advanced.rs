@@ -27,7 +27,10 @@ fn main() -> Result<()> {
 
     let lines: Vec<Line<Vec<Pitch>>> = match parse_lines(input) {
         Ok(input_lines) => input_lines,
-        Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
+        Err(errs) => {
+            let joined = errs.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
+            return Err(anyhow::anyhow!(joined));
+        }
     };
 
     let tuning = create_string_tuning(&[
