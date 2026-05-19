@@ -1,13 +1,13 @@
 # Types and Data Flow
 
-Input: `RenderedTabInput`. Output: `Vec<RenderedTab>`.
+Input: `TabInput`. Output: `ArrangementSet` (opaque handle).
 
 ## Pipeline
 
 ```
-                        RenderedTabInput
-                        ────────────────
-  pitches: String │ tuning_name: String │ guitar_num_frets, guitar_capo: u8
+                        TabInput
+                        ────────
+  input: String │ tuning_name: String │ guitar_num_frets, guitar_capo: u8
           │                  │                        │
           ▼                  ▼                        │
     parse_lines         parse_tuning                  │
@@ -27,14 +27,9 @@ Input: `RenderedTabInput`. Output: `Vec<RenderedTab>`.
           │                           │
           │                           ▼
           │                        Guitar
-          │                        ─────────────────────────────────────────
-          │                         tuning       : BTreeMap<StringNumber, Pitch>
-          │                         num_frets    : u8
-          │                         range        : BTreeSet<Pitch>
-          │                         string_ranges: BTreeMap<StringNumber, Box<[Pitch]>>
           │                           │
-          ▼                           │
-Vec<Line<BeatVec<Pitch>>>             │              num_arrangements: u8
+          ▼                           │              num_arrangements: u8
+Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Option<u8>
           │                           │                        │
           └──────────────┬────────────┴────────────────────────┘
                          ▼
@@ -47,36 +42,50 @@ Vec<Line<BeatVec<Pitch>>>             │              num_arrangements: u8
                  difficulty   : i32
                  max_fret_span: u8
                          │
-                 (for each arrangement)
                          ▼
-                    render_tab
-                 args: &[Line<BeatVec<PitchFingering>>], &Guitar,
-                       width: u16, padding: u8, playback: Option<u16>
-                         │
-                         ▼
-                      String  (ASCII tab)
-                         │
-                         ▼
-             RenderedTab { tab, normalized_input: Rc<Vec<BeatVec<String>>>,
-                           max_fret_span: u8 }
-                         │
-                         ▼
-                  Vec<RenderedTab>
+               ArrangementSet (handle)
+               ────────────────────────
+                arrangements      : Vec<Arrangement>
+                guitar            : Guitar
+                normalized_input  : Vec<NormalizedBeat>
+
+  per-arrangement reach: set.render(i, width, padding, playback) -> String
+                         set.max_fret_span(i) -> u8
+                         set.difficulty(i) -> i32
 ```
 
 ## Types Up Close
 
 ```
-Vec<Line<BeatVec<Pitch>>>              ← parser output
-    │       │        └─ Pitch          (C0..B9, one semitone each)
-    │       └─ BeatVec<T> = Vec<T>     (one beat's worth)
-    └─ Line<T> = Playable(T) | Rest | MeasureBreak
+Vec<Line<BeatVec<Pitch>>>              <- parser output
+    |       |        +- Pitch          (C0..B9, one semitone each)
+    |       +- BeatVec<T> = Vec<T>     (one beat's worth)
+    +- Line<T> = Playable(T) | Rest | MeasureBreak
 
-Vec<Line<BeatVec<PitchFingering>>>     ← arrangement output
-    │       │        └─ PitchFingering { pitch, string_number, fret }
-    │       └─ BeatVec<T> = Vec<T>
-    └─ Line<T> = Playable(T) | Rest | MeasureBreak
+Vec<Line<BeatVec<PitchFingering>>>     <- arrangement output
+    |       |        +- PitchFingering { pitch, string_number, fret }
+    |       +- BeatVec<T> = Vec<T>
+    +- Line<T> = Playable(T) | Rest | MeasureBreak
 ```
 
 > `Line<T>` has the same shape in both stages. Only the leaf inside `Playable`
 > changes: `Pitch` after parsing, `PitchFingering` after arranging.
+
+```
+NormalizedBeat                         <- ArrangementSet.normalized_input element
+    kind: "rest" | "measureBreak" | "playable"
+    pitches?: string[]                 (present when kind == "playable")
+
+TabError                               <- thrown by generate_arrangements / build_arrangement_set
+    kind: "parse" | "noArrangements"
+    errors?: ParseError[]              (present when kind == "parse")
+
+ParseError
+    line: u32
+    text: String
+```
+
+The entry points are:
+
+- `generate_arrangements(input: TabInput) -> ArrangementSet` -- validates, builds the guitar, runs the pathfinder, and returns the opaque handle.
+- `build_arrangement_set(lines, guitar, num_arrangements, max_fret_span_filter) -> ArrangementSet` -- lower-level constructor used internally and in tests.

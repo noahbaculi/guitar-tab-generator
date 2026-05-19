@@ -303,7 +303,6 @@ ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
 
 - [ ] Borrowed types vs box vs RC
 - [ ] Parallelism with [Rayon](https://docs.rs/rayon/latest/rayon/#how-to-use-rayon)
-- [ ] Add filter for max_fret_span in `arrangements`
 - [ ] Audit namespace of functions (object functions vs standalone) (public vs private)
 - [ ] Property testing with [Proptest](https://altsysrq.github.io/proptest-book/)
 
