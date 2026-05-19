@@ -63,6 +63,8 @@ pub struct TabInput {
     pub guitar_num_frets: u8,
     pub guitar_capo: u8,
     pub num_arrangements: u8,
+    /// Upper bound on per-beat fret span. An aggressive value can drop the set to zero
+    /// arrangements; callers receive `Ok(set)` with `set.len() == 0`, not `Err`.
     pub max_fret_span_filter: Option<u8>,
 }
 
@@ -109,6 +111,8 @@ impl ArrangementSet {
 
     /// The per-beat input echoed back as a sequence of tagged `NormalizedBeat` variants.
     /// Shared across all arrangements; lives once on the set.
+    ///
+    /// Returns a fresh `Vec` on each call; cache on the JS side if reading repeatedly.
     #[wasm_bindgen(getter, js_name = "normalizedInput")]
     pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
         self.normalized_input.clone()

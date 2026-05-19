@@ -295,6 +295,8 @@ pub fn create_arrangements(
     max_fret_span_filter: Option<u8>,
 ) -> Result<Vec<Arrangement>, Arc<anyhow::Error>> {
     const MAX_NUM_ARRANGEMENTS: u8 = 20;
+    // Boundary callers validate in `build_arrangement_set`; this guard protects
+    // direct Rust callers (e.g. proptests).
     match num_arrangements {
         1..=MAX_NUM_ARRANGEMENTS => (),
         0 => return Err(Arc::new(anyhow!("No arrangements were requested."))),
