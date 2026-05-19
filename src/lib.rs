@@ -87,6 +87,7 @@ pub enum NormalizedBeat {
 /// Owns the arrangements, the guitar configuration, and the normalized input shared across
 /// arrangements. Per-arrangement metadata (`difficulty`, `max_fret_span`) and the rendered
 /// tab string are reached by index through methods on the handle.
+#[derive(Debug)]
 #[wasm_bindgen]
 pub struct ArrangementSet {
     arrangements: Vec<arrangement::Arrangement>,
@@ -341,84 +342,122 @@ pub fn wrapper_create_arrangements(
     Ok(rendered_tabs)
 }
 #[cfg(test)]
-mod test_wrapper_create_arrangements {
+mod test_generate_arrangements_and_render {
     use super::*;
 
     #[test]
     fn valid_input() {
-        let composition_input = CompositionInput {
-            pitches: "E2\nA2\nD3\n\nG3\nB3\n---\nE4".to_owned(),
-            tuning_name: "standard".to_string(),
+        let tab_input = TabInput {
+            input: "E2\nA2\nD3\n\nG3\nB3\n---\nE4".to_owned(),
+            tuning_name: "standard".to_owned(),
             guitar_num_frets: 20,
             guitar_capo: 0,
             num_arrangements: 1,
-            width: 30,
-            padding: 2,
-            playback_index: Some(3),
+            max_fret_span_filter: None,
         };
+        let set = build_arrangement_set(tab_input).unwrap();
 
-        let rendered_tabs = wrapper_create_arrangements(composition_input).unwrap();
-        let expected = RenderedTab {
-            tab: "           ▼\n--------------------|--0------\n-----------------0--|---------\n--------------0-----|---------\n--------0-----------|---------\n-----0--------------|---------\n--0-----------------|---------\n           ▲\n".to_owned(),
-            normalized_input: Rc::new(vec![
-                vec!["E2".to_owned()],
-                vec!["A2".to_owned()],
-                vec!["D3".to_owned()],
-                vec!["REST".to_owned()],
-                vec!["G3".to_owned()],
-                vec!["B3".to_owned()],
-                vec!["MEASURE_BREAK".to_owned()],
-                vec!["E4".to_owned()]
-                ]),
-            max_fret_span: 0,
-        };
+        assert_eq!(set.len(), 1);
+        assert_eq!(set.max_fret_span(0).unwrap(), 0);
 
-        assert_eq!(rendered_tabs[0], expected);
+        let tab = set.render(0, 30, 2, Some(3)).unwrap();
+        assert_eq!(
+            tab,
+            "           \u{25bc}\n--------------------|--0------\n-----------------0--|---------\n--------------0-----|---------\n--------0-----------|---------\n-----0--------------|---------\n--0-----------------|---------\n           \u{25b2}\n"
+        );
+
+        let beats = set.normalized_input();
+        assert_eq!(beats.len(), 8);
+        assert!(matches!(beats[0], NormalizedBeat::Playable { ref pitches } if pitches == &["E2".to_owned()]));
+        assert!(matches!(beats[3], NormalizedBeat::Rest));
+        assert!(matches!(beats[6], NormalizedBeat::MeasureBreak));
     }
+
     #[test]
-    fn empty_input() {
-        let composition_input = CompositionInput {
-            pitches: "\n\n\n---\n \n".to_owned(),
-            tuning_name: "standard".to_string(),
+    fn empty_input_returns_set_with_requested_count() {
+        let tab_input = TabInput {
+            input: "\n\n\n---\n \n".to_owned(),
+            tuning_name: "standard".to_owned(),
             guitar_num_frets: 20,
             guitar_capo: 0,
             num_arrangements: 2,
-            width: 30,
-            padding: 2,
-            playback_index: Some(3),
+            max_fret_span_filter: None,
         };
-
-        let rendered_tabs = wrapper_create_arrangements(composition_input).unwrap();
-        let expected = vec![
-            RenderedTab {
-                tab: "".to_owned(),
-                normalized_input: Rc::new(vec![
-                    vec!["REST".to_owned()],
-                    vec!["REST".to_owned()],
-                    vec!["REST".to_owned()],
-                    vec!["MEASURE_BREAK".to_owned()],
-                    vec!["REST".to_owned()]
-                ]),
-                max_fret_span: 0,
-            };
-            2
-        ];
-
-        assert_eq!(rendered_tabs, expected);
+        let set = build_arrangement_set(tab_input).unwrap();
+        assert_eq!(set.len(), 2);
+        assert_eq!(set.render(0, 30, 2, Some(3)).unwrap(), "");
+        assert_eq!(set.render(1, 30, 2, Some(3)).unwrap(), "");
     }
+
     #[test]
-    fn invalid_input() {
-        let composition_input = CompositionInput {
-            pitches: "E2\nA2\nD3\n???\nG3\nB3\nE4".to_owned(),
-            tuning_name: "standard".to_string(),
+    fn invalid_input_returns_parse_error() {
+        let tab_input = TabInput {
+            input: "E2\nA2\nD3\n???\nG3\nB3\nE4".to_owned(),
+            tuning_name: "standard".to_owned(),
             guitar_num_frets: 20,
             guitar_capo: 0,
             num_arrangements: 1,
-            width: 20,
-            padding: 2,
-            playback_index: Some(3),
+            max_fret_span_filter: None,
         };
-        assert!(wrapper_create_arrangements(composition_input).is_err());
+        let err = build_arrangement_set(tab_input).unwrap_err();
+        match err {
+            TabError::Parse { errors } => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0].line, 4);
+                assert_eq!(errors[0].text, "???");
+            }
+            other => panic!("expected Parse, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn num_arrangements_zero_is_invalid() {
+        let tab_input = TabInput {
+            input: "E2".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 0,
+            max_fret_span_filter: None,
+        };
+        let err = build_arrangement_set(tab_input).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, .. } => assert_eq!(field, "numArrangements"),
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn num_arrangements_above_cap_is_invalid() {
+        let tab_input = TabInput {
+            input: "E2".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 21,
+            max_fret_span_filter: None,
+        };
+        let err = build_arrangement_set(tab_input).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, .. } => assert_eq!(field, "numArrangements"),
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn render_at_two_widths_produces_different_outputs() {
+        let tab_input = TabInput {
+            input: "E2\nA2\nD3".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            max_fret_span_filter: None,
+        };
+        let set = build_arrangement_set(tab_input).unwrap();
+        let narrow = set.render(0, 12, 1, None).unwrap();
+        let wide = set.render(0, 100, 1, None).unwrap();
+        assert_ne!(narrow, wide);
     }
 }
 
