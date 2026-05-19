@@ -27,6 +27,7 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::rc::Rc;
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod arrangement;
@@ -50,6 +51,36 @@ pub use parser::{
 pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
+
+/// Configuration bundle for one tab-generation request.
+///
+/// Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
+/// alongside the `.wasm`. `num_arrangements` must be in `1..=20`; the value is validated
+/// at the boundary and a `TabError::InvalidInput` is thrown when out of range.
+#[derive(Debug, Clone, Deserialize, Tsify)]
+#[tsify(from_wasm_abi)]
+#[serde(rename_all = "camelCase")]
+pub struct TabInput {
+    pub input: String,
+    pub tuning_name: String,
+    pub guitar_num_frets: u8,
+    pub guitar_capo: u8,
+    pub num_arrangements: u8,
+    pub max_fret_span_filter: Option<u8>,
+}
+
+/// One beat in the normalized input echoed back from `ArrangementSet::normalized_input`.
+///
+/// Serialized as a discriminated union tagged by `kind`, so JS code can `switch (b.kind)`
+/// instead of comparing strings.
+#[derive(Debug, Clone, Serialize, Tsify)]
+#[tsify(into_wasm_abi)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum NormalizedBeat {
+    Playable { pitches: Vec<String> },
+    Rest,
+    MeasureBreak,
+}
 
 /// The fully-specified input for generating one set of compositions from a pitch string.
 ///
@@ -238,5 +269,45 @@ mod test_wrapper_create_arrangements {
             playback_index: Some(3),
         };
         assert!(wrapper_create_arrangements(composition_input).is_err());
+    }
+}
+
+#[cfg(test)]
+mod test_boundary_types {
+    use super::*;
+
+    #[test]
+    fn tab_input_deserializes_from_camelcase_json() {
+        let json = r#"{
+            "input": "E2\nA2",
+            "tuningName": "standard",
+            "guitarNumFrets": 18,
+            "guitarCapo": 0,
+            "numArrangements": 1,
+            "maxFretSpanFilter": null
+        }"#;
+        let input: TabInput = serde_json::from_str(json).unwrap();
+        assert_eq!(input.input, "E2\nA2");
+        assert_eq!(input.tuning_name, "standard");
+        assert_eq!(input.guitar_num_frets, 18);
+        assert_eq!(input.num_arrangements, 1);
+        assert!(input.max_fret_span_filter.is_none());
+    }
+
+    #[test]
+    fn normalized_beat_serializes_with_kind_discriminant() {
+        let playable = NormalizedBeat::Playable {
+            pitches: vec!["E2".to_owned()],
+        };
+        let json = serde_json::to_string(&playable).unwrap();
+        assert_eq!(json, r#"{"kind":"playable","pitches":["E2"]}"#);
+
+        let rest = NormalizedBeat::Rest;
+        let json = serde_json::to_string(&rest).unwrap();
+        assert_eq!(json, r#"{"kind":"rest"}"#);
+
+        let mb = NormalizedBeat::MeasureBreak;
+        let json = serde_json::to_string(&mb).unwrap();
+        assert_eq!(json, r#"{"kind":"measureBreak"}"#);
     }
 }
