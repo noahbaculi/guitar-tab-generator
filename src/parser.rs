@@ -604,3 +604,13 @@ mod test_consecutive_slices {
         assert_eq!(consecutive_slices(&flat_nums), consecutive_nums);
     }
 }
+
+#[cfg(test)]
+mod test_get_tuning_names {
+    use super::*;
+
+    #[test]
+    fn returns_non_empty_set() {
+        assert!(!get_tuning_names().is_empty());
+    }
+}

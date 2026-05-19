@@ -393,9 +393,29 @@ mod test_boundary_types {
     }
 
     #[test]
+    fn arrangement_set_max_fret_span_rejects_out_of_bounds_index() {
+        let set = arrangement_set_fixture(1);
+        let err = set.max_fret_span(99).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn arrangement_set_difficulty_returns_value_for_in_bounds_index() {
         let set = arrangement_set_fixture(1);
         let _difficulty = set.difficulty(0).unwrap();
+    }
+
+    #[test]
+    fn arrangement_set_difficulty_rejects_out_of_bounds_index() {
+        let set = arrangement_set_fixture(1);
+        let err = set.difficulty(99).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
     }
 
     fn arrangement_set_fixture(num_arrangements: u8) -> ArrangementSet {
