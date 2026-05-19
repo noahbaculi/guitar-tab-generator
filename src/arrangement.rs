@@ -250,6 +250,13 @@ impl Arrangement {
     pub fn max_fret_span(&self) -> u8 {
         self.max_fret_span
     }
+
+    /// The difficulty score of this arrangement. Lower is easier. Equal to the sum of
+    /// transition difficulties along the chosen path through the fingering graph.
+    #[must_use]
+    pub fn difficulty(&self) -> i32 {
+        self.difficulty
+    }
 }
 #[cfg(test)]
 mod test_max_fret_span {

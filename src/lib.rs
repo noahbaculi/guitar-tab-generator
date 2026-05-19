@@ -82,6 +82,142 @@ pub enum NormalizedBeat {
     MeasureBreak,
 }
 
+/// Opaque handle holding the result of one `generate_arrangements` call.
+///
+/// Owns the arrangements, the guitar configuration, and the normalized input shared across
+/// arrangements. Per-arrangement metadata (`difficulty`, `max_fret_span`) and the rendered
+/// tab string are reached by index through methods on the handle.
+#[wasm_bindgen]
+pub struct ArrangementSet {
+    arrangements: Vec<arrangement::Arrangement>,
+    guitar: Guitar,
+    normalized_input: Vec<NormalizedBeat>,
+}
+
+#[wasm_bindgen]
+impl ArrangementSet {
+    /// Number of arrangements in the set. Equal to the requested `num_arrangements`, possibly
+    /// reduced by `max_fret_span_filter` when filtering would otherwise drop below the count.
+    #[wasm_bindgen(getter)]
+    pub fn len(&self) -> usize {
+        self.arrangements.len()
+    }
+
+    /// Returns true when `len() == 0`.
+    #[wasm_bindgen(getter, js_name = "isEmpty")]
+    pub fn is_empty(&self) -> bool {
+        self.arrangements.is_empty()
+    }
+
+    /// The per-beat input echoed back as a sequence of tagged `NormalizedBeat` variants.
+    /// Shared across all arrangements; lives once on the set.
+    #[wasm_bindgen(getter, js_name = "normalizedInput")]
+    pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
+        self.normalized_input.clone()
+    }
+
+    /// Largest non-zero fret span across any beat in the arrangement at `index`.
+    #[wasm_bindgen(js_name = "maxFretSpan")]
+    pub fn max_fret_span(&self, index: usize) -> Result<u8, TabError> {
+        self.arrangements
+            .get(index)
+            .map(|a| a.max_fret_span())
+            .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))
+    }
+
+    /// Difficulty score for the arrangement at `index`. Lower is easier.
+    pub fn difficulty(&self, index: usize) -> Result<i32, TabError> {
+        self.arrangements
+            .get(index)
+            .map(|a| a.difficulty())
+            .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))
+    }
+
+    /// Renders the arrangement at `index` at the supplied `width`, `padding`, and optional
+    /// `playback` beat indicator. Cheap to call repeatedly with different render parameters
+    /// -- pathfinding does not re-run.
+    pub fn render(
+        &self,
+        index: usize,
+        width: u16,
+        padding: u8,
+        playback: Option<u16>,
+    ) -> Result<String, TabError> {
+        let arrangement = self
+            .arrangements
+            .get(index)
+            .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))?;
+        Ok(renderer::render_tab(
+            &arrangement.lines,
+            &self.guitar,
+            width,
+            padding,
+            playback,
+        ))
+    }
+}
+
+fn out_of_bounds_error(index: usize, len: usize) -> TabError {
+    TabError::InvalidInput {
+        field: "index".to_owned(),
+        message: format!("index {index} is out of bounds for set of length {len}"),
+    }
+}
+
+/// Builds an `ArrangementSet` from a `TabInput`. The Rust-side entry; the WASM entry point
+/// added in the next task wraps this for the boundary.
+pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
+    if !(1..=20).contains(&tab_input.num_arrangements) {
+        return Err(TabError::InvalidInput {
+            field: "numArrangements".to_owned(),
+            message: format!(
+                "must be between 1 and 20 inclusive, got {}",
+                tab_input.num_arrangements
+            ),
+        });
+    }
+
+    let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
+        TabError::Parse {
+            errors: std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone()),
+        }
+    })?;
+
+    let first_playable_index = input_lines
+        .iter()
+        .position(|line| matches!(line, arrangement::Line::Playable(_)))
+        .unwrap_or(0);
+
+    let normalized_input: Vec<NormalizedBeat> = input_lines
+        .iter()
+        .skip(first_playable_index)
+        .map(|line| match line {
+            arrangement::Line::Playable(pitches) => NormalizedBeat::Playable {
+                pitches: pitches.iter().map(|p| p.plain_text().to_owned()).collect(),
+            },
+            arrangement::Line::Rest => NormalizedBeat::Rest,
+            arrangement::Line::MeasureBreak => NormalizedBeat::MeasureBreak,
+        })
+        .collect();
+
+    let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tab_input.tuning_name));
+    let guitar = Guitar::new(tuning, tab_input.guitar_num_frets, tab_input.guitar_capo)
+        .map_err(|e| TabError::Guitar { message: e.to_string() })?;
+
+    let arrangements = arrangement::create_arrangements(
+        guitar.clone(),
+        input_lines,
+        tab_input.num_arrangements,
+    )
+    .map_err(|e| TabError::Arrangement { message: e.to_string() })?;
+
+    Ok(ArrangementSet {
+        arrangements,
+        guitar,
+        normalized_input,
+    })
+}
+
 /// The fully-specified input for generating one set of compositions from a pitch string.
 ///
 /// Values map directly to the WASM boundary via serde; `pitches` is the raw newline-
@@ -275,6 +411,61 @@ mod test_wrapper_create_arrangements {
 #[cfg(test)]
 mod test_boundary_types {
     use super::*;
+
+    #[test]
+    fn arrangement_set_len_matches_num_arrangements() {
+        let set = arrangement_set_fixture(2);
+        assert_eq!(set.len(), 2);
+    }
+
+    #[test]
+    fn arrangement_set_normalized_input_is_tagged_variants() {
+        let set = arrangement_set_fixture(1);
+        let beats = set.normalized_input();
+        assert!(matches!(beats[0], NormalizedBeat::Playable { .. }));
+    }
+
+    #[test]
+    fn arrangement_set_render_returns_string_for_in_bounds_index() {
+        let set = arrangement_set_fixture(1);
+        let tab = set.render(0, 30, 2, None).unwrap();
+        assert!(!tab.is_empty());
+    }
+
+    #[test]
+    fn arrangement_set_render_rejects_out_of_bounds_index() {
+        let set = arrangement_set_fixture(1);
+        let err = set.render(99, 30, 2, None).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn arrangement_set_max_fret_span_returns_value_for_in_bounds_index() {
+        let set = arrangement_set_fixture(1);
+        let span = set.max_fret_span(0).unwrap();
+        assert!(span < 25);
+    }
+
+    #[test]
+    fn arrangement_set_difficulty_returns_value_for_in_bounds_index() {
+        let set = arrangement_set_fixture(1);
+        let _difficulty = set.difficulty(0).unwrap();
+    }
+
+    fn arrangement_set_fixture(num_arrangements: u8) -> ArrangementSet {
+        let tab_input = TabInput {
+            input: "E2\nA2\nD3".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements,
+            max_fret_span_filter: None,
+        };
+        build_arrangement_set(tab_input).unwrap()
+    }
 
     #[test]
     fn tab_input_deserializes_from_camelcase_json() {
