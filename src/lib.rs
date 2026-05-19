@@ -176,9 +176,12 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
     }
 
     let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
-        TabError::Parse {
-            errors: std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone()),
-        }
+        let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
+        debug_assert!(
+            !errors.is_empty(),
+            "parser must not return Err with empty error list"
+        );
+        TabError::Parse { errors }
     })?;
 
     let first_playable_index = input_lines

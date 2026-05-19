@@ -567,24 +567,23 @@ fn render_string_groups(
                     }
                     Some(string_item) => {
                         match playback_column_index {
-                            None => {}
-                            Some(idx) => {
+                            Some(idx)
                                 if num_render_columns - remaining_string_beat_columns.len() - 1
-                                    == idx
-                                {
-                                    // Offset the playback indicator by one
-                                    // character if the frets are two characters wide
-                                    let wide_fret_playback_offset = match string_item.len() {
-                                        2 => 1,
-                                        _ => 0,
-                                    };
+                                    == idx =>
+                            {
+                                // Offset the playback indicator by one
+                                // character if the frets are two characters wide
+                                let wide_fret_playback_offset = match string_item.len() {
+                                    2 => 1,
+                                    _ => 0,
+                                };
 
-                                    playback_indicator_position = Some(PlaybackIndicatorPosition {
-                                        row_group_index: string_rows.len(),
-                                        column_index: string_row.len() + wide_fret_playback_offset,
-                                    });
-                                }
+                                playback_indicator_position = Some(PlaybackIndicatorPosition {
+                                    row_group_index: string_rows.len(),
+                                    column_index: string_row.len() + wide_fret_playback_offset,
+                                });
                             }
+                            _ => {}
                         }
                         string_row.push_str(&string_item)
                     }

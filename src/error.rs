@@ -8,8 +8,6 @@ use tsify_next::Tsify;
 
 /// One unparseable substring in the input, with its 1-indexed line number.
 #[derive(Debug, Clone, Serialize, Tsify)]
-#[tsify(into_wasm_abi)]
-#[serde(rename_all = "camelCase")]
 pub struct ParseError {
     pub line: u32,
     pub text: String,
