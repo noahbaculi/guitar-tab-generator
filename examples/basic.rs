@@ -1,9 +1,11 @@
 extern crate guitar_tab_generator;
 
-/// Basic usage example using the wrapper creation function.
+use guitar_tab_generator::{build_arrangement_set, TabInput};
+
+/// Basic usage example using `build_arrangement_set` and `render`.
 fn main() {
-    let input = guitar_tab_generator::CompositionInput {
-        pitches: "E4
+    let tab_input = TabInput {
+        input: "E4
         Eb4
 
         E4
@@ -20,17 +22,14 @@ fn main() {
         E3
         A3"
         .to_owned(),
-
         tuning_name: "standard".to_owned(),
         guitar_num_frets: 18,
         guitar_capo: 0,
         num_arrangements: 1,
-        width: 55,
-        padding: 2,
-        playback_index: Some(12),
+        max_fret_span_filter: None,
     };
 
-    let compositions = guitar_tab_generator::wrapper_create_arrangements(input).unwrap();
-    // dbg!(&compositions);
-    println!("Tab:\n{}", compositions[0].tab);
+    let set = build_arrangement_set(tab_input).unwrap();
+    let tab = set.render(0, 55, 2, Some(12)).unwrap();
+    println!("Tab:\n{tab}");
 }

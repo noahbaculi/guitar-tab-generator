@@ -23,10 +23,7 @@
 //! println!("{tab}");
 //! ```
 
-use anyhow::{anyhow, Result};
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use std::rc::Rc;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
@@ -233,114 +230,7 @@ pub fn generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError
     build_arrangement_set(input)
 }
 
-/// The fully-specified input for generating one set of compositions from a pitch string.
-///
-/// Values map directly to the WASM boundary via serde; `pitches` is the raw newline-
-/// delimited input text, `tuning_name` is one of the `TuningName` variants or `"standard"`,
-/// and `num_arrangements` must be in `1..=20`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CompositionInput {
-    pub pitches: String,
-    pub tuning_name: String,
-    pub guitar_num_frets: u8,
-    pub guitar_capo: u8,
-    pub num_arrangements: u8,
-    pub width: u16,
-    pub padding: u8,
-    pub playback_index: Option<u16>,
-}
 
-/// A single rendered arrangement returned from `wrapper_create_arrangements`.
-///
-/// `tab` is the rendered ASCII tab, `normalized_input` is the per-beat input echoed back
-/// (pitch text for playable beats, the sentinels `"REST"` and `"MEASURE_BREAK"` otherwise;
-/// shared across the result set via `Rc`), and `max_fret_span` reports the widest
-/// non-zero fret span across any beat.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct RenderedTab {
-    pub tab: String,
-    pub normalized_input: Rc<Vec<BeatVec<String>>>,
-    pub max_fret_span: u8,
-}
-
-#[wasm_bindgen]
-#[cfg(not(tarpaulin_include))]
-pub fn wasm_create_guitar_compositions(input: JsValue) -> Result<JsValue, JsError> {
-    let composition_input: CompositionInput = serde_wasm_bindgen::from_value(input)?;
-
-    let rendered_tabs = match wrapper_create_arrangements(composition_input) {
-        Ok(rendered_tabs) => rendered_tabs,
-        Err(e) => return Err(JsError::new(&e.to_string())),
-    };
-
-    Ok(serde_wasm_bindgen::to_value(&rendered_tabs)?)
-}
-
-/// Parses, arranges, and renders a full set of `RenderedTab`s from a `CompositionInput`.
-///
-/// # Errors
-///
-/// Returns an error if any of the underlying steps fails: parsing (unparseable lines),
-/// guitar construction (invalid tuning, capo, or fret count), or arrangement (no valid
-/// fingering for a pitch).
-pub fn wrapper_create_arrangements(
-    composition_input: CompositionInput,
-) -> Result<Vec<RenderedTab>> {
-    let CompositionInput {
-        pitches: input_pitches,
-        tuning_name,
-        guitar_num_frets,
-        guitar_capo,
-        num_arrangements,
-        width,
-        padding,
-        playback_index,
-    } = composition_input;
-
-    let input_lines: Vec<arrangement::Line<Vec<Pitch>>> = parser::parse_lines(input_pitches)
-        .map_err(|errs| {
-            let joined = errs.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
-            anyhow!("{joined}")
-        })?;
-
-    let first_playable_index = input_lines
-        .iter()
-        .position(|line| matches!(line, arrangement::Line::Playable(_)))
-        .unwrap_or(0);
-
-    let normalized_input: Rc<Vec<BeatVec<String>>> = Rc::new(
-        input_lines
-            .iter()
-            .skip(first_playable_index)
-            .map(|line| match line {
-                arrangement::Line::Playable(pitches) => {
-                    pitches.iter().map(|p| p.plain_text().to_owned()).collect()
-                }
-                arrangement::Line::Rest => vec!["REST".to_owned()],
-                arrangement::Line::MeasureBreak => vec!["MEASURE_BREAK".to_owned()],
-            })
-            .collect_vec(),
-    );
-
-    let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tuning_name));
-
-    let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
-
-    let arrangements =
-        arrangement::create_arrangements(guitar.clone(), input_lines, num_arrangements, None)
-            .map_err(|e| anyhow!("{e}"))?;
-
-    let rendered_tabs = arrangements
-        .iter()
-        .map(|arrangement| RenderedTab {
-            tab: renderer::render_tab(&arrangement.lines, &guitar, width, padding, playback_index),
-            normalized_input: Rc::clone(&normalized_input),
-            max_fret_span: arrangement.max_fret_span(),
-        })
-        .collect_vec();
-
-    Ok(rendered_tabs)
-}
 #[cfg(test)]
 mod test_generate_arrangements_and_render {
     use super::*;
