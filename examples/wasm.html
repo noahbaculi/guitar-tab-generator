@@ -358,14 +358,12 @@ C4`,
             try {
                 set = generateArrangements(tabInput);
             } catch (err) {
-                // Task 5 implements full TabError dispatch. For now, surface as a string.
-                console.error("TabError:", err);
-                document.getElementById("tab").textContent = `Error: ${err?.kind ?? "unknown"} ${err?.message ?? ""}`;
-                document.getElementById("tab").classList.add("error");
+                renderTabError(err);
                 refreshNavButtons();
                 return;
             }
             state.currentSet = set;
+            clearErrorPanes();
             document.getElementById("tab").classList.remove("error");
             state.arrangementIndex = Math.min(state.arrangementIndex, Math.max(0, set.len - 1));
             rerender();
@@ -444,6 +442,74 @@ C4`,
             document.getElementById("next").disabled = !hasSet || state.arrangementIndex >= (set?.len ?? 0) - 1;
         }
 
+        function clearErrorPanes() {
+            document.getElementById("parse-errors").textContent = "";
+            document.getElementById("guitar-error").textContent = "";
+            document.getElementById("num-arrangements-error").textContent = "";
+            renderLineMarkers([], document.getElementById("input").value);
+        }
+
+        function renderLineMarkers(errors, inputText) {
+            const bad = new Set(errors.map((e) => e.line));
+            const ol = document.getElementById("line-markers");
+            ol.innerHTML = "";
+            const lineCount = inputText.split("\n").length;
+            for (let i = 1; i <= lineCount; i++) {
+                const li = document.createElement("li");
+                li.textContent = i;
+                if (bad.has(i)) li.className = "bad";
+                ol.appendChild(li);
+            }
+        }
+
+        function renderTabError(err) {
+            const tabEl = document.getElementById("tab");
+            const metaEl = document.getElementById("tab-meta");
+            switch (err?.kind) {
+                case "parse": {
+                    const lines = err.errors.map((e) => `line ${e.line}: "${e.text}"`).join("\n");
+                    document.getElementById("parse-errors").textContent = lines;
+                    renderLineMarkers(err.errors, document.getElementById("input").value);
+                    tabEl.textContent = "";
+                    tabEl.classList.remove("error");
+                    metaEl.textContent = "";
+                    return;
+                }
+                case "guitar": {
+                    document.getElementById("guitar-error").textContent = err.message;
+                    tabEl.textContent = "";
+                    tabEl.classList.remove("error");
+                    metaEl.textContent = "";
+                    return;
+                }
+                case "arrangement": {
+                    tabEl.textContent = `No playable arrangement: ${err.message}`;
+                    tabEl.classList.add("error");
+                    metaEl.textContent = "";
+                    return;
+                }
+                case "invalidInput": {
+                    const fieldErrEl = document.getElementById(`${err.field === "numArrangements" ? "num-arrangements" : err.field}-error`);
+                    if (fieldErrEl) {
+                        fieldErrEl.textContent = err.message;
+                    } else {
+                        // Fields without a dedicated error slot fall back to the tab pane.
+                        tabEl.textContent = `Invalid input (${err.field}): ${err.message}`;
+                        tabEl.classList.add("error");
+                    }
+                    metaEl.textContent = "";
+                    return;
+                }
+                default: {
+                    // Defensive: a future non-breaking 2.x release might add a TabError variant.
+                    console.error("Unknown TabError:", err);
+                    tabEl.textContent = `Error: ${JSON.stringify(err)}`;
+                    tabEl.classList.add("error");
+                    metaEl.textContent = "";
+                }
+            }
+        }
+
         document.getElementById("prev").addEventListener("click", () => {
             if (state.arrangementIndex > 0) {
                 state.arrangementIndex -= 1;
@@ -458,6 +524,9 @@ C4`,
             }
         });
 
+        // Initial gutter paint so the line numbers are visible before the first
+        // regenerate completes (the regenerate call will overwrite if needed).
+        renderLineMarkers([], document.getElementById("input").value);
         // Initial render with the default preset and defaults.
         regenerate();
     </script>
