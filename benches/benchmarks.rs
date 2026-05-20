@@ -4,14 +4,18 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use guitar_tab_generator::{
     build_arrangement_set, create_arrangements, create_string_tuning, parse_lines, render_tab,
     BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
-    STD_6_STRING_TUNING_OPEN_PITCHES,
 };
-// `__bench_internals` exposes the memoize escape hatches so criterion benches can
-// hit a cold cache; see the module docstring in src/lib.rs for the stability caveat.
+// `__bench_internals` exposes the memoize escape hatches plus the now-private
+// tuning offset helpers so criterion benches can still measure them; see the
+// module docstring in src/lib.rs for the stability caveat.
 use guitar_tab_generator::__bench_internals::{
-    memoized_original_create_arrangements,
-    memoized_original_parse_lines,
+    create_string_tuning_offset, memoized_original_create_arrangements,
+    memoized_original_parse_lines, parse_tuning,
 };
+
+fn std_tuning() -> [Pitch; 6] {
+    [Pitch::E4, Pitch::B3, Pitch::G3, Pitch::D3, Pitch::A2, Pitch::E2]
+}
 use itertools::Itertools;
 use std::{collections::BTreeMap, hint::black_box, time::Duration};
 
@@ -120,16 +124,12 @@ fn bench_parse_lines(c: &mut Criterion) {
 
 fn bench_create_string_tuning_offset(c: &mut Criterion) {
     c.bench_function("create_string_tuning_offset", |b| {
-        b.iter(|| {
-            guitar_tab_generator::create_string_tuning_offset(
-                guitar_tab_generator::parse_tuning(black_box("random")),
-            )
-        })
+        b.iter(|| create_string_tuning_offset(parse_tuning(black_box("random"))))
     });
 }
 
 fn guitar_creation(c: &mut Criterion) {
-    let six_string_tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+    let six_string_tuning = create_string_tuning(&std_tuning()).unwrap();
 
     let three_string_tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]).unwrap();
     let twelve_string_tuning = create_string_tuning(&[
@@ -180,7 +180,7 @@ fn guitar_creation(c: &mut Criterion) {
 }
 
 fn bench_arrangement_creation(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+    let tuning = create_string_tuning(&std_tuning()).unwrap();
 
     c.bench_function("fur_elise_1_arrangement", |b| {
         b.iter(|| {
@@ -215,7 +215,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
 }
 
 fn bench_arrangement_scaling(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+    let tuning = create_string_tuning(&std_tuning()).unwrap();
 
     let mut group = c.benchmark_group("bench_arrangement_scaling");
     // 1..=MAX: NumArrangements rejects 0 and >MAX at construction, so the validation-error

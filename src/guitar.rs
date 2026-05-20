@@ -41,7 +41,7 @@ mod test_pitch_fingering_debug {
 
 /// Open-string pitches for the standard 6-string guitar tuning, from string 1 (highest, E4)
 /// to string 6 (lowest, E2).
-pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
+pub(crate) const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
     Pitch::E4,
     Pitch::B3,
     Pitch::G3,

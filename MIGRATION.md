@@ -286,6 +286,12 @@ use guitar_tab_generator::memoized_original_create_arrangements;
 use guitar_tab_generator::__bench_internals::memoized_original_create_arrangements;
 ```
 
+### Tuning offset helpers are now private
+
+`parse_tuning`, `create_string_tuning_offset`, and `STD_6_STRING_TUNING_OPEN_PITCHES` are no longer re-exported from the crate root. They were the `[i8; 6]` offset machinery the table-driven preset path uses internally. Callers that need a non-preset tuning continue to build a `BTreeMap<StringNumber, Pitch>` directly and pass it to `Guitar::new`; the public `create_string_tuning(&[Pitch; N])` helper covers the common shape.
+
+`parse_tuning` and `create_string_tuning_offset` remain reachable from criterion benches via `__bench_internals`; this namespace is `#[doc(hidden)]` and not part of the stable 2.x API.
+
 ## See also
 
 - [`CHANGELOG.md`](CHANGELOG.md) -- flat list of every breaking change.

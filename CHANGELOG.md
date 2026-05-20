@@ -17,6 +17,7 @@
 - `create_arrangements` takes `NumArrangements` instead of `u8` for `num_arrangements`; construct via `NumArrangements::try_new(n)?`. Direct Rust callers no longer validate the range themselves.
 - `memoized_original_create_arrangements` and `memoized_original_parse_lines` moved from the crate root to the `__bench_internals` namespace; not part of the stable 2.x API and may be removed without a major version bump.
 - `Arrangement::lines` is now a getter returning `&[Line<BeatVec<PitchFingering>>]` instead of a `pub` field. Direct Rust consumers call `arrangement.lines()` instead of `&arrangement.lines`. `difficulty` and `max_fret_span` were already getters.
+- `parse_tuning`, `create_string_tuning_offset`, and `STD_6_STRING_TUNING_OPEN_PITCHES` are no longer re-exported from the crate root. They were leaked from a 1.x composition pattern that `generate_arrangements` and the `tuning_name` field on `TabInput` make redundant; non-preset tunings continue to flow through `create_string_tuning(&[Pitch; N])` plus `Guitar::new`. The two helpers remain reachable from criterion benches via `__bench_internals` and may be removed without a major version bump.
 
 ### Added
 
