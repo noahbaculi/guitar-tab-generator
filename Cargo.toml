@@ -7,6 +7,9 @@ description = "Generate fingerstyle guitar tabs based on the difficulty of diffe
 readme = "README.md"
 repository = "https://github.com/noahbaculi/guitar-tab-generator"
 license = "GPL-3.0-only"
+keywords = ["guitar", "tab", "music", "fingering", "wasm"]
+categories = ["multimedia::audio", "wasm"]
+documentation = "https://docs.rs/guitar-tab-generator"
 
 [lib]
 crate-type = ["cdylib", "rlib"]
