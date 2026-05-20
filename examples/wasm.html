@@ -336,15 +336,18 @@ C4`,
                 guitarCapo: Number(document.getElementById("capo").value),
                 guitarNumFrets: Number(document.getElementById("frets").value),
                 numArrangements: Number(document.getElementById("num-arrangements").value),
-                maxFretSpanFilter: null, // wired in Task 6
+                maxFretSpanFilter: document.getElementById("filter-on").checked
+                    ? Number(document.getElementById("filter-value").value)
+                    : null,
             };
         }
 
         function readRenderInputs() {
+            const playbackOn = document.getElementById("playback-on").checked;
             return {
                 width: Number(document.getElementById("width").value),
                 padding: Number(document.getElementById("padding").value),
-                playback: null, // wired in Task 6 alongside the playback checkbox
+                playback: playbackOn ? Number(document.getElementById("playback").value) : null,
             };
         }
 
@@ -366,6 +369,14 @@ C4`,
             clearErrorPanes();
             document.getElementById("tab").classList.remove("error");
             state.arrangementIndex = Math.min(state.arrangementIndex, Math.max(0, set.len - 1));
+            // Configure the playback slider to span the beat count (Playable + Rest only).
+            const beats = set.normalizedInput;
+            const playbackBeats = beats.filter((b) => b.kind !== "measureBreak").length;
+            const slider = document.getElementById("playback");
+            slider.max = Math.max(0, playbackBeats - 1);
+            if (Number(slider.value) > slider.max) slider.value = slider.max;
+            // Cache the normalized input on the regenerate closure for Task 7.
+            state.normalizedInput = beats;
             rerender();
         }
 
@@ -373,9 +384,17 @@ C4`,
             const set = state.currentSet;
             const tabEl = document.getElementById("tab");
             const metaEl = document.getElementById("tab-meta");
-            if (!set || set.isEmpty) {
+            if (!set) {
                 tabEl.textContent = "";
                 metaEl.textContent = "";
+                refreshNavButtons();
+                return;
+            }
+            if (set.isEmpty) {
+                tabEl.textContent = "No arrangements match the current filter.";
+                tabEl.classList.remove("error");
+                metaEl.textContent = "";
+                refreshNavButtons();
                 return;
             }
             const { width, padding, playback } = readRenderInputs();
@@ -522,6 +541,31 @@ C4`,
                 state.arrangementIndex += 1;
                 rerender();
             }
+        });
+
+        function updatePlaybackLabel() {
+            const on = document.getElementById("playback-on").checked;
+            const slider = document.getElementById("playback");
+            document.getElementById("playback-value").textContent = on ? slider.value : "off";
+            slider.disabled = !on;
+        }
+        document.getElementById("playback-on").addEventListener("change", () => {
+            updatePlaybackLabel();
+            rerender();
+        });
+        document.getElementById("playback").addEventListener("input", () => {
+            updatePlaybackLabel();
+            rerender();
+        });
+        updatePlaybackLabel();
+
+        // Filter wiring.
+        document.getElementById("filter-on").addEventListener("change", () => {
+            document.getElementById("filter-value").disabled = !document.getElementById("filter-on").checked;
+            regenerate();
+        });
+        document.getElementById("filter-value").addEventListener("change", () => {
+            if (document.getElementById("filter-on").checked) regenerate();
         });
 
         // Initial gutter paint so the line numbers are visible before the first
