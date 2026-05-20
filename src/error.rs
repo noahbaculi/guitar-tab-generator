@@ -13,6 +13,8 @@ use tsify_next::Tsify;
 
 /// One unparseable substring in the input, with its 1-indexed line number.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
+#[tsify(into_wasm_abi)]
+#[serde(rename_all = "camelCase")]
 pub struct ParseError {
     pub line: u32,
     pub text: String,
@@ -36,6 +38,9 @@ impl std::fmt::Display for ParseError {
 pub enum TabError {
     Parse { errors: Vec<ParseError> },
     Guitar { message: String },
+    // `message` is intentionally free-form prose from `arrangement::validate_fingerings`,
+    // not part of the typed contract. UIs display it verbatim, so copy changes are
+    // user-visible; treat it like UI strings, not like a stable wire field.
     Arrangement { message: String },
     InvalidInput { field: String, message: String },
 }

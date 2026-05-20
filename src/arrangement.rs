@@ -635,6 +635,8 @@ fn validate_fingerings(
         .collect();
 
     if !impossible_pitches.is_empty() {
+        // String surfaces verbatim in `TabError::Arrangement.message`, which the demo
+        // displays raw. Copy changes here are user-visible; see `src/error.rs`.
         let error_msg = impossible_pitches
             .iter()
             .map(|invalid_input| {

@@ -89,20 +89,37 @@ export class ArrangementSet {
      * Shared across all arrangements; lives once on the set.
      *
      * Returns a fresh `Vec` on each call; cache on the JS side if reading repeatedly.
+     * `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
+     * cache in the rerender path; that pattern is the intended consumer shape.
      */
     readonly normalizedInput: NormalizedBeat[];
 }
 
 /**
- * WASM-facing entry point. Generates an `ArrangementSet` from a `TabInput`.
+ * Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
+ * and the WASM boundary; JS sees this as `generateArrangements`.
  *
  * # Errors
  *
- * Returns `TabError::InvalidInput` when `num_arrangements` is outside `1..=20`, `TabError::Parse`
- * when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning or capo or
- * fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
+ * Returns `TabError::InvalidInput` when `tab_input.num_arrangements` is outside `1..=NumArrangements::MAX`,
+ * `TabError::Parse` when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning
+ * or capo or fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
+ *
+ * # Validation order
+ *
+ * Input-shape errors (currently `numArrangements` range) are reported before `parse_lines` runs.
+ * The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors depend on
+ * the full input. When both are present the shape error wins because the parser's output would be
+ * discarded anyway.
+ *
+ * # Performance
+ *
+ * `tab_input.input` is cloned once per call because `parse_lines` is `#[memoize]`d on owned
+ * `String`. Memoization makes a repeat call with the same input cheap, but the clone runs
+ * on every call (including cache hits). Hot loops over `generate_arrangements` should expect
+ * one `String::clone` per invocation in addition to the boundary deserialization cost.
  */
-export function generateArrangements(input: TabInput): ArrangementSet;
+export function generateArrangements(tab_input: TabInput): ArrangementSet;
 
 /**
  * Returns the supported `TuningName` variants, typed for JS consumption via tsify.

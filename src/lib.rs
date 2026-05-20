@@ -49,9 +49,18 @@ pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
 
-/// Bench-only escape hatches around the `memoize` cache plus the internal
-/// tuning-offset helpers. Not part of the stable 2.x API; may be removed
-/// without a major version bump.
+/// Bench-only escape hatches the crate exposes for criterion benchmarks.
+///
+/// Two unrelated concerns share this namespace:
+///
+/// 1. **`memoize` bypasses.** `memoized_original_*` variants of `create_arrangements`
+///    and `parse_lines` skip the memoize cache so benchmarks measure the underlying
+///    work, not cache lookup cost.
+/// 2. **Internal tuning-offset helpers.** `parse_tuning` and `create_string_tuning_offset`
+///    are the `[i8; 6]` offset machinery the preset-tuning path uses; benches reach for them
+///    to construct fixtures without going through the full WASM boundary.
+///
+/// Not part of the stable 2.x API. May be removed without a major version bump.
 #[doc(hidden)]
 pub mod __bench_internals {
     pub use crate::arrangement::memoized_original_create_arrangements;
@@ -171,6 +180,8 @@ impl ArrangementSet {
     /// Shared across all arrangements; lives once on the set.
     ///
     /// Returns a fresh `Vec` on each call; cache on the JS side if reading repeatedly.
+    /// `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
+    /// cache in the rerender path; that pattern is the intended consumer shape.
     #[wasm_bindgen(getter, js_name = "normalizedInput")]
     pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
         self.normalized_input.clone()
@@ -239,6 +250,13 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 /// The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors depend on
 /// the full input. When both are present the shape error wins because the parser's output would be
 /// discarded anyway.
+///
+/// # Performance
+///
+/// `tab_input.input` is cloned once per call because `parse_lines` is `#[memoize]`d on owned
+/// `String`. Memoization makes a repeat call with the same input cheap, but the clone runs
+/// on every call (including cache hits). Hot loops over `generate_arrangements` should expect
+/// one `String::clone` per invocation in addition to the boundary deserialization cost.
 #[wasm_bindgen(js_name = "generateArrangements")]
 pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;

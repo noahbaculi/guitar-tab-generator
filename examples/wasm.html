@@ -175,7 +175,10 @@
 
             <div class="control">
                 <label for="num-arrangements">Arrangements</label>
-                <input id="num-arrangements" type="number" min="1" max="20" value="1">
+                <!-- No min/max attributes: the WASM boundary owns the 1..=20 range and
+                     should be the only enforcement point. Step 9 of the smoke test below
+                     relies on a typed value of 21 reaching the boundary. -->
+                <input id="num-arrangements" type="number" value="1">
             </div>
             <div id="num-arrangements-error" class="field-error"></div>
 
@@ -245,7 +248,8 @@
         //  7. Enable `Playback`; move the slider; the rendered tab shows v / ^ indicators
         //     walking through beats.
         //  8. Open `Debug: normalizedInput`; JSON pretty-prints the current beat sequence.
-        //  9. Set `Arrangements` to 21; the field-error slot reads the boundary message.
+        //  9. Type `21` into `Arrangements` and Tab away; the field-error slot reads the
+        //     boundary `numArrangements must be between 1 and 20 inclusive` message.
         // 10. Reload the page; no console error about a leaked handle.
         //
         // The library uses tsify-next typed bindings; if you're editing in an editor with
@@ -337,7 +341,9 @@ C4`,
         });
 
         // Tuning select. "standard" is not part of the TuningName enum but is accepted
-        // case-insensitively by the parser; we prepend it as the default.
+        // case-insensitively by the parser; we prepend it as the default. Prepending
+        // intentionally widens the option value type from `TuningName` to `string`; a
+        // future TS-strict pass should keep this widening rather than narrow back.
         const tuningSelect = document.getElementById("tuning");
         for (const name of ["standard", ...getTuningNames()]) {
             const opt = document.createElement("option");

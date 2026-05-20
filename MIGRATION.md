@@ -6,18 +6,31 @@ For a flat list of changes, see [`CHANGELOG.md`](CHANGELOG.md). For the architec
 
 ## Quick reference
 
-### Renames
+### JS-facing renames
 
 | 1.x | 2.0 |
 |---|---|
-| `wasm_create_guitar_compositions(input)` | `generateArrangements(input)` (JS) / `generate_arrangements(input)` (Rust) |
+| `wasm_create_guitar_compositions(input)` | `generateArrangements(input)` |
 | `get_tuning_names()` | `getTuningNames()` |
-| `CompositionInput` (Rust) | `TabInput` |
 | `Composition[]` (output) | `ArrangementSet` handle; `set.render(i, ...)` returns the rendered string |
 | `pitches` (input field) | `input` |
-| `num_arrangements`, `tuning_name`, `guitar_num_frets`, `guitar_capo` | unchanged in Rust; JS sees camelCase (`numArrangements`, `tuningName`, `guitarNumFrets`, `guitarCapo`) |
+| `num_arrangements`, `tuning_name`, `guitar_num_frets`, `guitar_capo` | camelCase: `numArrangements`, `tuningName`, `guitarNumFrets`, `guitarCapo` |
 | `width`, `padding`, `playback` (on the input bundle) | moved to `ArrangementSet.render(i, width, padding, playback)` |
 | `"REST"` / `"MEASURE_BREAK"` (normalized_input sentinels) | `{ kind: "rest" }` / `{ kind: "measureBreak" }` |
+
+### Rust-facing renames
+
+| 1.x | 2.0 |
+|---|---|
+| `wrapper_create_arrangements(...)` | `generate_arrangements(TabInput { ... })?` |
+| `CompositionInput` | `TabInput` |
+| `Composition` / `RenderedTab` structs | dropped; rendered string comes from `set.render(i, ...)` |
+| `create_arrangements(..., num: u8, ...)` | `create_arrangements(..., NumArrangements, ...)`; see [Direct Rust callers](#direct-rust-callers) |
+| `&arrangement.lines` (field) | `arrangement.lines()` (getter) |
+| `parse_tuning`, `create_string_tuning_offset`, `STD_6_STRING_TUNING_OPEN_PITCHES` re-exports | removed from crate root; non-preset tunings build a `BTreeMap<StringNumber, Pitch>` directly, or use `create_string_tuning(&[Pitch; N])` |
+| `memoized_original_create_arrangements`, `memoized_original_parse_lines` re-exports | moved to `__bench_internals::*`, `#[doc(hidden)]`, not part of the stable 2.x API |
+
+Rust-only callers: see [Direct Rust callers](#direct-rust-callers) for migration snippets.
 
 ### What you have to do
 
@@ -84,8 +97,8 @@ Key shifts:
 Before (1.x):
 
 ```rust
-use guitar_tab_generator::create_guitar_compositions;
-let compositions = create_guitar_compositions(CompositionInput { /* ... */ })?;
+use guitar_tab_generator::wrapper_create_arrangements;
+let compositions = wrapper_create_arrangements(CompositionInput { /* ... */ })?;
 ```
 
 After (2.0):
