@@ -29,7 +29,10 @@ fn main() -> Result<()> {
     let lines: Vec<Line<Vec<Pitch>>> = match parse_lines(input) {
         Ok(input_lines) => input_lines,
         Err(errs) => {
-            let joined = errs.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
+            // Mirror the cache-hit-safe unwrap pattern from `build_arrangement_set`:
+            // a fresh `Arc` (cache miss) unwraps cleanly, a shared one (cache hit) clones.
+            let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
+            let joined = errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
             return Err(anyhow::anyhow!(joined));
         }
     };
@@ -52,7 +55,12 @@ fn main() -> Result<()> {
     let num_arrangements = NumArrangements::try_new(1)?;
     let arrangements = match create_arrangements(guitar.clone(), lines, num_arrangements, None) {
         Ok(arrangements) => arrangements,
-        Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
+        Err(e) => {
+            // Cache-hit-safe extraction of the underlying `anyhow::Error`. A fresh `Arc` (cache
+            // miss) unwraps; a shared one (cache hit) gets rewrapped from the `Display` form.
+            return Err(std::sync::Arc::try_unwrap(e)
+                .unwrap_or_else(|arc| anyhow::anyhow!(arc.to_string())));
+        }
     };
 
     // dbg!(&arrangements);
@@ -61,7 +69,7 @@ fn main() -> Result<()> {
     let padding = 1;
     let playback_index = Some(2);
     let tab = render_tab(
-        &arrangements[0].lines,
+        arrangements[0].lines(),
         &guitar,
         tab_width,
         padding,

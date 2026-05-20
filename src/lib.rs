@@ -158,12 +158,14 @@ impl ArrangementSet {
     /// Number of arrangements in the set. Equal to the requested `num_arrangements`, possibly
     /// reduced by `max_fret_span_filter` when filtering would otherwise drop below the count.
     #[wasm_bindgen(getter)]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.arrangements.len()
     }
 
     /// Returns true when `len == 0`.
     #[wasm_bindgen(getter, js_name = "isEmpty")]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.arrangements.is_empty()
     }
@@ -349,6 +351,17 @@ mod test_generate_arrangements_and_render {
         assert_eq!(set.len(), 2);
         assert_eq!(set.render(0, 30, 2, Some(3)).unwrap(), "");
         assert_eq!(set.render(1, 30, 2, Some(3)).unwrap(), "");
+
+        // Pins the current behaviour: when no `Playable` line exists, `first_playable_index`
+        // falls back to 0 and `normalized_input` echoes every input line (the trailing
+        // `MeasureBreak` from `---` and the leading blank rests). A future refactor of the
+        // fallback should reaffirm or update this assertion deliberately.
+        let beats = set.normalized_input();
+        assert!(beats.iter().all(|b| matches!(
+            b,
+            NormalizedBeat::Rest | NormalizedBeat::MeasureBreak
+        )));
+        assert!(beats.iter().any(|b| matches!(b, NormalizedBeat::MeasureBreak)));
     }
 
     #[test]

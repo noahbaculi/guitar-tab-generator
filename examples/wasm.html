@@ -71,11 +71,24 @@
             maxFretSpanFilter: null,
         };
 
+        // Hold the previous handle so we can free it before allocating the next one.
+        // In TS 5.2+ / runtimes with explicit-resource-management you can write
+        // `using set = generateArrangements(tabInput);` and skip the manual free.
+        let currentSet = null;
+
         document.getElementById("generateButton").addEventListener("click", () => {
             const outEl = document.getElementById("output");
             const errEl = document.getElementById("error");
             outEl.textContent = "";
             errEl.textContent = "";
+
+            // Release the previous handle before overwriting the reference. Without this,
+            // demo callers leak one ArrangementSet per click on runtimes whose
+            // FinalizationRegistry doesn't run promptly.
+            if (currentSet !== null) {
+                currentSet.free();
+                currentSet = null;
+            }
 
             const startTime = performance.now();
             let set;
@@ -85,6 +98,7 @@
                 renderError(err, errEl, input_string);
                 return;
             }
+            currentSet = set;
             const generateMs = (performance.now() - startTime).toFixed(1);
 
             const tabs = [];

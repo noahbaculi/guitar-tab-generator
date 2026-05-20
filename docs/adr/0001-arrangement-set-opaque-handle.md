@@ -12,4 +12,4 @@ In 2.0.0, generating tabs splits into two calls: `generate_arrangements(TabInput
 
 - The demo on noahbaculi.com must manage the `ArrangementSet` lifecycle. Modern wasm-bindgen wires it through `FinalizationRegistry`; an explicit `set.free()` is the fallback for older runtimes.
 - Adding a new piece of per-arrangement information (e.g. a fingering inspector) means adding a getter method on `ArrangementSet`, not a field on a serialized struct. This is the deliberate trade-off: cheaper hot path, slightly more API surface to grow.
-- The codebase otherwise uses `serde-wasm-bindgen` for boundary crossings. `ArrangementSet` is the documented exception; `TabInput`, `RenderedTab` (the rendered string), `NormalizedBeat`, and `TabError` keep the serde-via-tsify path.
+- The codebase otherwise uses `tsify-next` (with `serde-wasm-bindgen` pulled in transitively) for boundary crossings. `ArrangementSet` is the documented exception; `TabInput`, `RenderedTab` (the rendered string), `NormalizedBeat`, and `TabError` keep the serde-via-tsify path.

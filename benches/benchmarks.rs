@@ -258,7 +258,7 @@ fn bench_render_tab(c: &mut Criterion) {
             |b, &playback_index| {
                 b.iter(|| {
                     render_tab(
-                        black_box(&arrangements[0].lines),
+                        black_box(arrangements[0].lines()),
                         black_box(&Guitar::default()),
                         black_box(20),
                         black_box(2),

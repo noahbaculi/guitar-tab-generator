@@ -96,3 +96,7 @@ The entry points are:
 - `generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError>` -- WASM entry point (JS name: `generateArrangements`). Validates, builds the guitar, runs the pathfinder, returns the opaque handle.
 - `build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError>` -- pure-Rust constructor. Same work; used by tests and direct Rust callers.
 - `getTuningNames() -> TuningName[]` -- enumerates the supported tuning presets, typed for JS via tsify.
+
+## Lifecycle (JS only)
+
+`ArrangementSet` is a `#[wasm_bindgen]` opaque handle, not a serde-cloned value, so JS callers own the underlying allocation. Release it with `set.free()` when done, or use `using set = generateArrangements(input)` on TS 5.2+ runtimes that wire `[Symbol.dispose]` to `free()`. Relying on `FinalizationRegistry` alone leaks the handle on runtimes whose GC isn't prompt.

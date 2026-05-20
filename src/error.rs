@@ -2,6 +2,11 @@
 //!
 //! `ParseError` is used both internally by the parser and as a leaf of `TabError::Parse`.
 //! `TabError` is the tagged enum the WASM boundary throws on failure.
+//!
+//! `Display` and `Error` are hand-rolled rather than derived via `thiserror`. The wire
+//! format is owned by `tsify-next` (which JS code matches on by `kind`), so the Rust
+//! `Display` form is a developer-facing fallback only and doesn't justify an extra
+//! transitive dependency.
 
 use serde::Serialize;
 use tsify_next::Tsify;

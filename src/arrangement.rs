@@ -237,12 +237,18 @@ mod test_calc_avg_non_zero_fret {
 /// A single ranked guitar arrangement: one fingering choice per beat, ordered by line.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Arrangement {
-    /// The ordered lines of the arrangement, one `Line` per input line.
-    pub lines: Vec<Line<BeatVec<PitchFingering>>>,
+    pub(crate) lines: Vec<Line<BeatVec<PitchFingering>>>,
     difficulty: i32,
     max_fret_span: u8,
 }
 impl Arrangement {
+    /// The ordered lines of the arrangement, one `Line` per input line. Pass directly to
+    /// [`crate::render_tab`].
+    #[must_use]
+    pub fn lines(&self) -> &[Line<BeatVec<PitchFingering>>] {
+        &self.lines
+    }
+
     /// The maximum non-zero fret span reached on any beat in this arrangement.
     ///
     /// Useful as a coarse "playability" gauge: a smaller span means less hand stretch.

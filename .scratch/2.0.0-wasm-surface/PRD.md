@@ -238,7 +238,9 @@ Unchanged.
 
 Kept: `generate_arrangements`, `ArrangementSet`, `TabInput`, `TabError`, `ParseError`, `NormalizedBeat`, plus the low-level types `parse_lines`, `parse_tuning`, `create_string_tuning_offset`, `create_arrangements`, `render_tab`, `Guitar`, `Pitch`, `StringNumber`, `TuningName`, `Arrangement`, `Line`, `BeatVec`, `PitchFingering`.
 
-Dropped: `memoized_original_create_arrangements`, `memoized_original_parse_lines`, `CompositionInput`, `Composition`, `wrapper_create_arrangements`, `wasm_create_guitar_compositions`.
+Dropped: `CompositionInput`, `Composition`, `wrapper_create_arrangements`, `wasm_create_guitar_compositions`.
+
+- `memoized_original_create_arrangements` and `memoized_original_parse_lines`: removed from documented public API. The `__bench_internals` namespace retains them for criterion benches and may be removed without a major version bump.
 
 ## Implementation order
 

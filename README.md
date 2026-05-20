@@ -96,7 +96,10 @@ const set = generateArrangements({
 for (let i = 0; i < set.len; i++) {
     console.log(set.render(i, 30, 2, null));
 }
+set.free(); // or `using set = generateArrangements(...)` in TS 5.2+
 ```
+
+`ArrangementSet` is a wasm-bindgen opaque handle. Call `set.free()` when done (or use `using` in runtimes with explicit resource management). Without that, the underlying allocation only releases when `FinalizationRegistry` runs, which is not prompt on every runtime.
 
 See `CHANGELOG.md` for the 2.0.0 migration and `types.md` for the full typed surface.
 

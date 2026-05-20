@@ -16,6 +16,7 @@
 - Renamed `CompositionInput` to `TabInput` to align with the domain glossary; the old name was a 1.x holdover.
 - `create_arrangements` takes `NumArrangements` instead of `u8` for `num_arrangements`; construct via `NumArrangements::try_new(n)?`. Direct Rust callers no longer validate the range themselves.
 - `memoized_original_create_arrangements` and `memoized_original_parse_lines` moved from the crate root to the `__bench_internals` namespace; not part of the stable 2.x API and may be removed without a major version bump.
+- `Arrangement::lines` is now a getter returning `&[Line<BeatVec<PitchFingering>>]` instead of a `pub` field. Direct Rust consumers call `arrangement.lines()` instead of `&arrangement.lines`. `difficulty` and `max_fret_span` were already getters.
 
 ### Added
 
@@ -23,7 +24,7 @@
 
 ### Internal
 
-- Adopted `tsify-next` for typed TypeScript bindings.
+- Adopted `tsify-next` for typed TypeScript bindings. `serde-wasm-bindgen` is now a transitive dependency only; no consumer-visible change beyond `cargo tree` ordering.
 - Parser returns structured `Vec<ParseError>` internally; the wire format reuses the same struct via `crate::error::ParseError`.
 - Released `CONTEXT.md` (domain glossary) and `docs/adr/0001-arrangement-set-opaque-handle.md` (ADR for the opaque-handle pattern).
 - `TabError` now derives `PartialEq, Eq` and carries `#[non_exhaustive]` so future structured-error variants land non-breakingly.
