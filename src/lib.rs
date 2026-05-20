@@ -42,7 +42,9 @@ pub use error::{ParseError, TabError};
 pub use guitar::{
     create_string_tuning, Guitar, PitchFingering, STD_6_STRING_TUNING_OPEN_PITCHES,
 };
-pub use parser::{create_string_tuning_offset, parse_lines, parse_tuning};
+pub use parser::{
+    create_string_tuning_offset, get_tuning_names, parse_lines, parse_tuning, TuningName,
+};
 pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
@@ -435,7 +437,7 @@ mod test_boundary_types {
     fn arrangement_set_max_fret_span_returns_value_for_in_bounds_index() {
         let set = arrangement_set_fixture(1);
         let span = set.max_fret_span(0).unwrap();
-        assert!(span < 25);
+        assert_eq!(span, 0);
     }
 
     #[test]
