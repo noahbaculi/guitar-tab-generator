@@ -64,7 +64,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 Rust:
 
 ```rust
-use guitar_tab_generator::{build_arrangement_set, TabInput};
+use guitar_tab_generator::{generate_arrangements, TabInput};
 
 let input = TabInput {
     input: "E2\nA2\nD3".into(),
@@ -75,7 +75,7 @@ let input = TabInput {
     max_fret_span_filter: None,
 };
 
-let set = build_arrangement_set(input)?;
+let set = generate_arrangements(input)?;
 println!("{}", set.render(0, 30, 2, None)?);
 ```
 

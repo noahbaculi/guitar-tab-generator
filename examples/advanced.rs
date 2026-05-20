@@ -29,7 +29,7 @@ fn main() -> Result<()> {
     let lines: Vec<Line<Vec<Pitch>>> = match parse_lines(input) {
         Ok(input_lines) => input_lines,
         Err(errs) => {
-            // Mirror the cache-hit-safe unwrap pattern from `build_arrangement_set`:
+            // Mirror the cache-hit-safe unwrap pattern from `generate_arrangements`:
             // a fresh `Arc` (cache miss) unwraps cleanly, a shared one (cache hit) clones.
             let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
             let joined = errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");

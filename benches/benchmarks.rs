@@ -2,7 +2,7 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use guitar_tab_generator::{
-    build_arrangement_set, create_arrangements, create_string_tuning, parse_lines, render_tab,
+    create_arrangements, create_string_tuning, generate_arrangements, parse_lines, render_tab,
     BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
 };
 // `__bench_internals` exposes the memoize escape hatches plus the now-private
@@ -293,7 +293,7 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
             &input_lines_num,
             |b, _| {
                 b.iter(|| {
-                    let set = guitar_tab_generator::build_arrangement_set(black_box(input.clone()));
+                    let set = guitar_tab_generator::generate_arrangements(black_box(input.clone()));
                     if let Ok(set) = set {
                         let _ = set.render(0, 40, 2, Some(12));
                     }
@@ -324,7 +324,7 @@ fn bench_create_single_composition_large_scaling(c: &mut Criterion) {
             &fur_elise_repetitions,
             |b, _| {
                 b.iter(|| {
-                    let set = guitar_tab_generator::build_arrangement_set(black_box(input.clone()));
+                    let set = guitar_tab_generator::generate_arrangements(black_box(input.clone()));
                     if let Ok(set) = set {
                         let _ = set.render(0, 40, 2, Some(12));
                     }

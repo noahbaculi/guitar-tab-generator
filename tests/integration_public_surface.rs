@@ -5,7 +5,7 @@
 //! internal refactor accidentally tightens visibility.
 
 use guitar_tab_generator::{
-    build_arrangement_set, get_tuning_names, ParseError, TabError, TabInput, TuningName,
+    generate_arrangements, get_tuning_names, ParseError, TabError, TabInput, TuningName,
 };
 
 fn fixture(num: u8) -> TabInput {
@@ -20,8 +20,8 @@ fn fixture(num: u8) -> TabInput {
 }
 
 #[test]
-fn build_arrangement_set_happy_path() {
-    let set = build_arrangement_set(fixture(1)).expect("valid input must produce a set");
+fn generate_arrangements_happy_path() {
+    let set = generate_arrangements(fixture(1)).expect("valid input must produce a set");
     assert_eq!(set.len(), 1);
     assert_eq!(set.max_fret_span(0).unwrap(), 0);
     assert!(set.difficulty(0).is_ok());
@@ -29,7 +29,7 @@ fn build_arrangement_set_happy_path() {
 
 #[test]
 fn render_produces_non_empty_string_with_fret_markers() {
-    let set = build_arrangement_set(fixture(1)).unwrap();
+    let set = generate_arrangements(fixture(1)).unwrap();
     let rendered = set.render(0, 30, 2, None).unwrap();
     assert!(!rendered.is_empty(), "rendered tab must not be empty");
     // The fixture uses all open strings; each beat column contains at least one '0'.
@@ -98,16 +98,16 @@ fn arrangement_set_is_empty_when_filter_drops_every_candidate() {
         num_arrangements: 5,
         max_fret_span_filter: Some(0),
     };
-    let set = build_arrangement_set(input).expect("empty filter result is not an error");
+    let set = generate_arrangements(input).expect("empty filter result is not an error");
     assert!(set.is_empty(), "set must be empty when no candidate survives the filter");
     assert_eq!(set.len(), 0);
 }
 
 #[test]
 fn invalid_input_errors_are_equal_for_equal_inputs() {
-    let err_a = build_arrangement_set(fixture(0)).expect_err("0 must be rejected");
-    let err_b = build_arrangement_set(fixture(0)).expect_err("0 must be rejected");
+    let err_a = generate_arrangements(fixture(0)).expect_err("0 must be rejected");
+    let err_b = generate_arrangements(fixture(0)).expect_err("0 must be rejected");
     assert_eq!(err_a, err_b, "TabError::InvalidInput must derive structural equality");
-    let err_high = build_arrangement_set(fixture(99)).expect_err("99 must be rejected");
+    let err_high = generate_arrangements(fixture(99)).expect_err("99 must be rejected");
     assert_ne!(err_a, err_high, "different messages must not compare equal");
 }

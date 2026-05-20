@@ -91,9 +91,9 @@ let compositions = create_guitar_compositions(CompositionInput { /* ... */ })?;
 After (2.0):
 
 ```rust
-use guitar_tab_generator::{build_arrangement_set, TabInput};
+use guitar_tab_generator::{generate_arrangements, TabInput};
 
-let set = build_arrangement_set(TabInput {
+let set = generate_arrangements(TabInput {
     input: "E2\nA2\nD3".to_owned(),
     tuning_name: "standard".to_owned(),
     guitar_num_frets: 18,
@@ -273,6 +273,20 @@ create_arrangements(guitar, lines, n, None)?;
 ```
 
 See [ADR-0005](docs/adr/0005-num-arrangements-newtype.md).
+
+### `build_arrangement_set` is renamed to `generate_arrangements`
+
+The Rust function name now matches the JS function name. The signature and behaviour are unchanged.
+
+```rust
+// Before:
+use guitar_tab_generator::build_arrangement_set;
+let set = build_arrangement_set(TabInput { /* ... */ })?;
+
+// After:
+use guitar_tab_generator::generate_arrangements;
+let set = generate_arrangements(TabInput { /* ... */ })?;
+```
 
 ### Memoize escape hatches moved
 

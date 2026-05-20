@@ -76,7 +76,7 @@ NormalizedBeat                         <- ArrangementSet.normalized_input elemen
     kind: "rest" | "measureBreak" | "playable"
     pitches?: string[]                 (present when kind == "playable")
 
-TabError                               <- thrown by build_arrangement_set / generateArrangements
+TabError                               <- thrown by generate_arrangements (JS: generateArrangements)
     kind: "parse"        + errors:  ParseError[]
     kind: "guitar"       + message: string
     kind: "arrangement"  + message: string
@@ -93,8 +93,7 @@ TuningName                             <- enum returned by getTuningNames()
 
 The entry points are:
 
-- `generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError>` -- WASM entry point (JS name: `generateArrangements`). Validates, builds the guitar, runs the pathfinder, returns the opaque handle.
-- `build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError>` -- pure-Rust constructor. Same work; used by tests and direct Rust callers.
+- `generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError>` -- entry point for both Rust and WASM callers (JS name: `generateArrangements`). Validates, builds the guitar, runs the pathfinder, returns the opaque handle.
 - `getTuningNames() -> TuningName[]` -- enumerates the supported tuning presets, typed for JS via tsify.
 
 ## Lifecycle (JS only)

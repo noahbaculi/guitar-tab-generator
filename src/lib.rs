@@ -10,9 +10,9 @@
 //! # Quick start
 //!
 //! ```no_run
-//! use guitar_tab_generator::{build_arrangement_set, TabError, TabInput};
+//! use guitar_tab_generator::{generate_arrangements, TabError, TabInput};
 //!
-//! let set = build_arrangement_set(TabInput {
+//! let set = generate_arrangements(TabInput {
 //!     input: "E2\nA2\nD3".to_owned(),
 //!     tuning_name: "standard".to_owned(),
 //!     guitar_num_frets: 18,
@@ -79,7 +79,7 @@ pub struct TabInput {
 
 /// Validated count of arrangements to compute. Construction enforces `1..=NumArrangements::MAX`.
 ///
-/// Constructed at the boundary by `build_arrangement_set` from `TabInput::num_arrangements`.
+/// Constructed at the boundary by `generate_arrangements` from `TabInput::num_arrangements`.
 /// `create_arrangements` accepts this newtype rather than a raw `u8`, so the validation lives
 /// in exactly one place.
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
@@ -224,8 +224,8 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
     }
 }
 
-/// Builds an `ArrangementSet` from a `TabInput`. The Rust-side entry; the WASM entry point
-/// wraps this for the boundary.
+/// Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
+/// and the WASM boundary; JS sees this as `generateArrangements`.
 ///
 /// # Errors
 ///
@@ -239,7 +239,8 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 /// The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors depend on
 /// the full input. When both are present the shape error wins because the parser's output would be
 /// discarded anyway.
-pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
+#[wasm_bindgen(js_name = "generateArrangements")]
+pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
     let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
@@ -289,19 +290,6 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
     })
 }
 
-/// WASM-facing entry point. Generates an `ArrangementSet` from a `TabInput`.
-///
-/// # Errors
-///
-/// Returns `TabError::InvalidInput` when `num_arrangements` is outside `1..=20`, `TabError::Parse`
-/// when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning or capo or
-/// fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
-#[wasm_bindgen(js_name = "generateArrangements")]
-#[cfg(not(tarpaulin_include))]
-pub fn generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError> {
-    build_arrangement_set(input)
-}
-
 #[cfg(test)]
 mod test_generate_arrangements_and_render {
     use super::*;
@@ -316,7 +304,7 @@ mod test_generate_arrangements_and_render {
             num_arrangements: 1,
             max_fret_span_filter: None,
         };
-        let set = build_arrangement_set(tab_input).unwrap();
+        let set = generate_arrangements(tab_input).unwrap();
 
         assert_eq!(set.len(), 1);
         assert_eq!(set.max_fret_span(0).unwrap(), 0);
@@ -344,7 +332,7 @@ mod test_generate_arrangements_and_render {
             num_arrangements: 2,
             max_fret_span_filter: None,
         };
-        let set = build_arrangement_set(tab_input).unwrap();
+        let set = generate_arrangements(tab_input).unwrap();
         assert_eq!(set.len(), 2);
         assert_eq!(set.render(0, 30, 2, Some(3)).unwrap(), "");
         assert_eq!(set.render(1, 30, 2, Some(3)).unwrap(), "");
@@ -372,7 +360,7 @@ mod test_generate_arrangements_and_render {
             num_arrangements: 1,
             max_fret_span_filter: None,
         };
-        let err = build_arrangement_set(tab_input).unwrap_err();
+        let err = generate_arrangements(tab_input).unwrap_err();
         match err {
             TabError::Parse { errors } => {
                 assert_eq!(errors.len(), 1);
@@ -393,7 +381,7 @@ mod test_generate_arrangements_and_render {
             num_arrangements: 0,
             max_fret_span_filter: None,
         };
-        let err = build_arrangement_set(tab_input).unwrap_err();
+        let err = generate_arrangements(tab_input).unwrap_err();
         match err {
             TabError::InvalidInput { field, .. } => assert_eq!(field, "numArrangements"),
             other => panic!("expected InvalidInput, got {other:?}"),
@@ -410,7 +398,7 @@ mod test_generate_arrangements_and_render {
             num_arrangements: 21,
             max_fret_span_filter: None,
         };
-        let err = build_arrangement_set(tab_input).unwrap_err();
+        let err = generate_arrangements(tab_input).unwrap_err();
         match err {
             TabError::InvalidInput { field, .. } => assert_eq!(field, "numArrangements"),
             other => panic!("expected InvalidInput, got {other:?}"),
@@ -427,7 +415,7 @@ mod test_generate_arrangements_and_render {
             num_arrangements: 1,
             max_fret_span_filter: None,
         };
-        let set = build_arrangement_set(tab_input).unwrap();
+        let set = generate_arrangements(tab_input).unwrap();
         let narrow = set.render(0, 12, 1, None).unwrap();
         let wide = set.render(0, 100, 1, None).unwrap();
         assert_ne!(narrow, wide);
@@ -510,7 +498,7 @@ mod test_boundary_types {
             num_arrangements,
             max_fret_span_filter: None,
         };
-        build_arrangement_set(tab_input).unwrap()
+        generate_arrangements(tab_input).unwrap()
     }
 
     #[test]
