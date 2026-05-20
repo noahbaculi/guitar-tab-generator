@@ -37,6 +37,9 @@ pub(crate) mod pitch;
 pub(crate) mod renderer;
 pub(crate) mod string_number;
 
+/// `Arrangement` is re-exported for direct Rust consumers. The canonical 2.x access path
+/// for per-arrangement metadata is `ArrangementSet::difficulty(i)` and
+/// `ArrangementSet::max_fret_span(i)`; direct construction of `Arrangement` values is internal.
 pub use arrangement::{create_arrangements, Arrangement, BeatVec, Line};
 pub use error::{ParseError, TabError};
 pub use guitar::{
@@ -216,7 +219,20 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 }
 
 /// Builds an `ArrangementSet` from a `TabInput`. The Rust-side entry; the WASM entry point
-/// added in the next task wraps this for the boundary.
+/// wraps this for the boundary.
+///
+/// # Errors
+///
+/// Returns `TabError::InvalidInput` when `tab_input.num_arrangements` is outside `1..=NumArrangements::MAX`,
+/// `TabError::Parse` when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning
+/// or capo or fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
+///
+/// # Validation order
+///
+/// Input-shape errors (currently `numArrangements` range) are reported before `parse_lines` runs.
+/// The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors depend on
+/// the full input. When both are present the shape error wins because the parser's output would be
+/// discarded anyway.
 pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 

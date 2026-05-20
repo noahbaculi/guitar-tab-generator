@@ -7,7 +7,7 @@ use serde::Serialize;
 use tsify_next::Tsify;
 
 /// One unparseable substring in the input, with its 1-indexed line number.
-#[derive(Debug, Clone, Serialize, Tsify)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 pub struct ParseError {
     pub line: u32,
     pub text: String,
