@@ -377,6 +377,7 @@ C4`,
             if (Number(slider.value) > slider.max) slider.value = slider.max;
             // Cache the normalized input on the regenerate closure for Task 7.
             state.normalizedInput = beats;
+            refreshDebugPane();
             rerender();
         }
 
@@ -481,9 +482,20 @@ C4`,
             }
         }
 
+        function refreshDebugPane() {
+            const el = document.getElementById("debug-content");
+            if (!state.normalizedInput) {
+                el.textContent = "";
+                return;
+            }
+            el.textContent = JSON.stringify(state.normalizedInput, null, 2);
+        }
+
         function renderTabError(err) {
             const tabEl = document.getElementById("tab");
             const metaEl = document.getElementById("tab-meta");
+            state.normalizedInput = null;
+            refreshDebugPane();
             switch (err?.kind) {
                 case "parse": {
                     const lines = err.errors.map((e) => `line ${e.line}: "${e.text}"`).join("\n");
@@ -512,7 +524,6 @@ C4`,
                     if (fieldErrEl) {
                         fieldErrEl.textContent = err.message;
                     } else {
-                        // Fields without a dedicated error slot fall back to the tab pane.
                         tabEl.textContent = `Invalid input (${err.field}): ${err.message}`;
                         tabEl.classList.add("error");
                     }
@@ -520,7 +531,6 @@ C4`,
                     return;
                 }
                 default: {
-                    // Defensive: a future non-breaking 2.x release might add a TabError variant.
                     console.error("Unknown TabError:", err);
                     tabEl.textContent = `Error: ${JSON.stringify(err)}`;
                     tabEl.classList.add("error");
