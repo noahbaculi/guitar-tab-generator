@@ -17,6 +17,11 @@ jobs:
       - run: cargo build --examples --benches
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack build --target web --out-dir pkg/wasm_guitar_tab_generator && ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
+      - name: Verify wasm-pack .d.ts snapshot
+        shell: bash
+        run: |
+          diff -u tests/snapshots/wasm.d.ts pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts \
+            || { echo "::error::Generated .d.ts differs from tests/snapshots/wasm.d.ts. Regenerate locally with: cp pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts tests/snapshots/wasm.d.ts && git commit"; exit 1; }
       - run: cargo clippy --examples --benches -- -D warnings
 
   test:
