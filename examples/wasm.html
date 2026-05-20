@@ -1,135 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WASM Example</title>
+    <title>Guitar Tab Generator -- v2.0.0 example</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --panel: #ffffff;
+            --ink: #1a1a1a;
+            --muted: #666;
+            --border: #ddd;
+            --accent: #2c6fbb;
+            --err: #b00020;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        h1 {
+            margin: 0 0 16px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 720px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .panel > h2 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .control { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+        .control label { width: 110px; color: var(--muted); }
+        .control input[type="number"] { width: 60px; }
+        .control input[type="range"] { flex: 1; }
+        .control .value { width: 32px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .field-error { color: var(--err); font-size: 12px; margin-left: 118px; }
+        .input-row { display: grid; grid-template-columns: 28px 1fr; gap: 4px; }
+        .input-row ol {
+            list-style: none;
+            margin: 0;
+            padding: 6px 0;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+            text-align: right;
+            line-height: 1.5;
+        }
+        .input-row ol li.bad { color: var(--err); font-weight: bold; }
+        textarea#input {
+            width: 100%;
+            min-height: 240px;
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            resize: vertical;
+        }
+        #parse-errors {
+            color: var(--err);
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 8px;
+            min-height: 1.5em;
+        }
+        #tab-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        #tab-header strong { color: var(--ink); }
+        #tab-header button {
+            border: 1px solid var(--border);
+            background: var(--panel);
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        #tab-header button:disabled { opacity: 0.4; cursor: default; }
+        pre#tab {
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: pre;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            margin: 0;
+            min-height: 200px;
+            overflow-x: auto;
+        }
+        #tab.error { color: var(--err); }
+        details { margin-top: 12px; }
+        details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+        details pre {
+            font-family: var(--mono);
+            font-size: 11px;
+            background: #f4f4f4;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 8px;
+            max-height: 240px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 
 <body>
-    <button id="generateButton">Generate Arrangement</button>
-    <pre id="output" style="font-family: monospace; white-space: pre;"></pre>
-    <pre id="error" style="color: #b00; font-family: monospace; white-space: pre;"></pre>
+    <h1>Guitar Tab Generator -- v2.0.0 example</h1>
+
+    <div class="grid">
+        <section class="panel" aria-label="Input">
+            <h2>Input</h2>
+
+            <div class="control">
+                <label for="preset">Preset</label>
+                <select id="preset"></select>
+            </div>
+
+            <div class="input-row">
+                <ol id="line-markers" aria-hidden="true"></ol>
+                <textarea id="input" spellcheck="false" aria-label="Raw pitch input"></textarea>
+            </div>
+
+            <div id="parse-errors" role="alert"></div>
+
+            <h2 style="margin-top: 16px">Pathfinding controls</h2>
+
+            <div class="control">
+                <label for="tuning">Tuning</label>
+                <select id="tuning"></select>
+            </div>
+            <div id="guitar-error" class="field-error"></div>
+
+            <div class="control">
+                <label for="capo">Capo</label>
+                <input id="capo" type="number" min="0" max="24" value="0">
+            </div>
+
+            <div class="control">
+                <label for="frets">Frets</label>
+                <input id="frets" type="number" min="1" max="36" value="18">
+            </div>
+
+            <div class="control">
+                <label for="num-arrangements">Arrangements</label>
+                <input id="num-arrangements" type="number" min="1" max="20" value="1">
+            </div>
+            <div id="num-arrangements-error" class="field-error"></div>
+
+            <div class="control">
+                <label for="filter-on">Filter span</label>
+                <input id="filter-on" type="checkbox">
+                <input id="filter-value" type="number" min="0" max="24" value="4" disabled>
+            </div>
+        </section>
+
+        <section class="panel" aria-label="Output">
+            <h2>Tab</h2>
+
+            <div id="tab-header">
+                <button id="prev" type="button" aria-label="Previous arrangement" disabled>&lt;</button>
+                <button id="next" type="button" aria-label="Next arrangement" disabled>&gt;</button>
+                <span id="tab-meta"></span>
+            </div>
+
+            <pre id="tab"></pre>
+
+            <h2 style="margin-top: 16px">Render controls</h2>
+
+            <div class="control">
+                <label for="width">Width</label>
+                <input id="width" type="range" min="20" max="120" value="40">
+                <span class="value" id="width-value">40</span>
+            </div>
+
+            <div class="control">
+                <label for="padding">Padding</label>
+                <input id="padding" type="range" min="0" max="4" value="1">
+                <span class="value" id="padding-value">1</span>
+            </div>
+
+            <div class="control">
+                <label for="playback-on">Playback</label>
+                <input id="playback-on" type="checkbox">
+                <input id="playback" type="range" min="0" max="0" value="0" disabled>
+                <span class="value" id="playback-value">off</span>
+            </div>
+
+            <details id="debug">
+                <summary>Debug: normalizedInput</summary>
+                <pre id="debug-content"></pre>
+            </details>
+        </section>
+    </div>
 
     <script type="module">
         import init, { generateArrangements, getTuningNames } from "../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js";
-
         await init();
-
-        // Smoke check: confirm the typed tuning list reaches JS.
+        // Subsequent tasks wire this up. The module is loaded so the rest of the
+        // file can call `generateArrangements` and `getTuningNames` without re-init.
         console.log("Available tunings:", getTuningNames());
-
-        const input_string = `E4
-            Eb4
-            E4
-            Eb4
-            E4
-            B3
-            D4
-            C4
-
-            A2A3
-            E3
-            A3
-            C3
-            E3
-            A3
-
-            E3B3
-            E3
-            Ab3
-            E3
-            Ab3
-            B3
-
-            A2C4
-            E3
-            A3
-            E3
-
-            E4
-            Eb4
-            E4
-            Eb4
-            E4
-            B3
-            D4
-            C4
-
-            A2A3
-            E3
-            A3
-            C3`;
-
-        const tabInput = {
-            input: input_string,
-            tuningName: "standard",
-            guitarNumFrets: 18,
-            guitarCapo: 0,
-            numArrangements: 1,
-            maxFretSpanFilter: null,
-        };
-
-        // Hold the previous handle so we can free it before allocating the next one.
-        // In TS 5.2+ / runtimes with explicit-resource-management you can write
-        // `using set = generateArrangements(tabInput);` and skip the manual free.
-        let currentSet = null;
-
-        document.getElementById("generateButton").addEventListener("click", () => {
-            const outEl = document.getElementById("output");
-            const errEl = document.getElementById("error");
-            outEl.textContent = "";
-            errEl.textContent = "";
-
-            // Release the previous handle before overwriting the reference. Without this,
-            // demo callers leak one ArrangementSet per click on runtimes whose
-            // FinalizationRegistry doesn't run promptly.
-            if (currentSet !== null) {
-                currentSet.free();
-                currentSet = null;
-            }
-
-            const startTime = performance.now();
-            let set;
-            try {
-                set = generateArrangements(tabInput);
-            } catch (err) {
-                renderError(err, errEl, input_string);
-                return;
-            }
-            currentSet = set;
-            const generateMs = (performance.now() - startTime).toFixed(1);
-
-            const tabs = [];
-            for (let i = 0; i < set.len; i++) {
-                try {
-                    tabs.push(set.render(i, 40, 1, 3));
-                } catch (err) {
-                    renderError(err, errEl, input_string);
-                    return;
-                }
-            }
-            console.log(`Generated ${set.len} arrangement(s) in ${generateMs} ms`);
-            outEl.textContent = tabs.join("\n\n---\n\n");
-
-            // Note: set.normalizedInput clones the full beat array across the WASM boundary on every read; cache it into a local before iterating in a tight loop.
-            // TODO: render set.normalizedInput once the demo grows a debug pane.
-        });
-
-        function renderError(err, errEl, input_string) {
-            console.error("TabError:", err);
-            if (err && err.kind === "parse") {
-                const errored = new Set(err.errors.map((e) => e.line - 1));
-                const lines = input_string.split("\n");
-                errEl.textContent = lines
-                    .map((line, i) => (errored.has(i) ? `> ${line}` : `  ${line}`))
-                    .join("\n");
-                return;
-            }
-            errEl.textContent = `${err?.kind ?? "Error"}: ${err?.message ?? err}`;
-        }
     </script>
 </body>
-
 </html>
