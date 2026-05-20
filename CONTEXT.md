@@ -86,7 +86,7 @@ _Avoid_: Playhead, current position
 
 ## Flagged ambiguities
 
-_None currently._ The `CompositionInput` holdover from the 2.0.0 rename was resolved in the same release by renaming to [[TabInput]]; the `pitches` text field was renamed to `input` at the same time to free `pitches` from collision with the atomic `Pitch` type.
+_None currently._
 
 ## Example dialogue
 

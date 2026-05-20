@@ -59,6 +59,47 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 - Playback indicator for playback applications
 - Pathfinding algorithm leverage Dijkstra's algorithm to calculate the arrangement with the least difficulty.
 
+## Quick start (2.0.0)
+
+Rust:
+
+```rust
+use guitar_tab_generator::{build_arrangement_set, TabInput};
+
+let input = TabInput {
+    input: "E2\nA2\nD3".into(),
+    tuning_name: "standard".into(),
+    guitar_num_frets: 18,
+    guitar_capo: 0,
+    num_arrangements: 1,
+    max_fret_span_filter: None,
+};
+
+let set = build_arrangement_set(input)?;
+println!("{}", set.render(0, 30, 2, None)?);
+```
+
+TypeScript (after `wasm-pack build`):
+
+```ts
+import init, { generateArrangements } from "./pkg/wasm_guitar_tab_generator/guitar_tab_generator.js";
+
+await init();
+const set = generateArrangements({
+    input: "E2\nA2\nD3",
+    tuningName: "standard",
+    guitarNumFrets: 18,
+    guitarCapo: 0,
+    numArrangements: 1,
+    maxFretSpanFilter: null,
+});
+for (let i = 0; i < set.len; i++) {
+    console.log(set.render(i, 30, 2, null));
+}
+```
+
+See `CHANGELOG.md` for the 2.0.0 migration and `types.md` for the full typed surface.
+
 ## Previous versions
 
 This project has been attempted numerous times with varying levels of success. This attempt utilizes Rust and WASM to overcome the previously-encountered roadblocks regarding performance, distribution, and developer ergonomics.
@@ -304,7 +345,6 @@ ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
 - [ ] Borrowed types vs box vs RC
 - [ ] Parallelism with [Rayon](https://docs.rs/rayon/latest/rayon/#how-to-use-rayon)
 - [ ] Audit namespace of functions (object functions vs standalone) (public vs private)
-- [ ] Property testing with [Proptest](https://altsysrq.github.io/proptest-book/)
 
 [rust_site]: https://rust-lang.org/tools/install
 [wasm_site]: https://webassembly.org/
