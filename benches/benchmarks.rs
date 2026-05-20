@@ -3,7 +3,8 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use guitar_tab_generator::{
     build_arrangement_set, create_arrangements, create_string_tuning, parse_lines, render_tab,
-    BeatVec, Guitar, Line, Pitch, StringNumber, TabInput, STD_6_STRING_TUNING_OPEN_PITCHES,
+    BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
+    STD_6_STRING_TUNING_OPEN_PITCHES,
 };
 use guitar_tab_generator::__bench_internals::{
     memoized_original_create_arrangements,
@@ -184,7 +185,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
             memoized_original_create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
-                black_box(1),
+                black_box(NumArrangements::try_new(1).unwrap()),
                 black_box(None),
             )
         })
@@ -194,7 +195,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
             memoized_original_create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
-                black_box(3),
+                black_box(NumArrangements::try_new(3).unwrap()),
                 black_box(None),
             )
         })
@@ -204,7 +205,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
             memoized_original_create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
-                black_box(5),
+                black_box(NumArrangements::try_new(5).unwrap()),
                 black_box(None),
             )
         })
@@ -215,16 +216,17 @@ fn bench_arrangement_scaling(c: &mut Criterion) {
     let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 
     let mut group = c.benchmark_group("bench_arrangement_scaling");
-    for num in (0..=22) {
+    for num in 1u8..=NumArrangements::MAX {
         group
             .sample_size(15)
             .warm_up_time(Duration::from_secs_f32(2.0));
-        group.bench_with_input(BenchmarkId::from_parameter(num), &num, |b, &num| {
+        let num_arrangements = NumArrangements::try_new(num).unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(num), &num, |b, _| {
             b.iter(|| {
                 memoized_original_create_arrangements(
                     black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                     black_box(fur_elise_lines()),
-                    black_box(num),
+                    black_box(num_arrangements),
                     black_box(None),
                 )
             });
@@ -239,7 +241,7 @@ fn bench_render_tab(c: &mut Criterion) {
     let arrangements = create_arrangements(
         Guitar::default(),
         parse_lines(fur_elise_input().to_owned()).unwrap(),
-        1,
+        NumArrangements::try_new(1).unwrap(),
         None,
     )
     .unwrap();

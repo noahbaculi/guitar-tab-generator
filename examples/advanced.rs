@@ -1,6 +1,7 @@
 use anyhow::Result;
 use guitar_tab_generator::{
-    create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar, Line, Pitch,
+    create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar, Line,
+    NumArrangements, Pitch,
 };
 
 extern crate guitar_tab_generator;
@@ -48,7 +49,7 @@ fn main() -> Result<()> {
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
     // dbg!(&guitar);
 
-    let num_arrangements = 1;
+    let num_arrangements = NumArrangements::try_new(1)?;
     let arrangements = match create_arrangements(guitar.clone(), lines, num_arrangements, None) {
         Ok(arrangements) => arrangements,
         Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),

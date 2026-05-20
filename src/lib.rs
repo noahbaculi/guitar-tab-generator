@@ -12,18 +12,20 @@
 //! ```no_run
 //! use guitar_tab_generator::{
 //!     create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar,
-//!     STD_6_STRING_TUNING_OPEN_PITCHES,
+//!     NumArrangements, STD_6_STRING_TUNING_OPEN_PITCHES,
 //! };
 //!
 //! let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 //! let guitar = Guitar::new(tuning, 18, 0).unwrap();
 //! let input_lines = parse_lines("E2\nA2\nD3".to_owned()).unwrap();
-//! let arrangements = create_arrangements(guitar.clone(), input_lines, 1, None).unwrap();
+//! let n = NumArrangements::try_new(1).unwrap();
+//! let arrangements = create_arrangements(guitar.clone(), input_lines, n, None).unwrap();
 //! let tab = render_tab(&arrangements[0].lines, &guitar, 30, 2, None);
 //! println!("{tab}");
 //! ```
 
 use serde::{Deserialize, Serialize};
+use std::num::NonZeroU8;
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
@@ -70,6 +72,47 @@ pub struct TabInput {
     /// Upper bound on per-beat fret span. An aggressive value can drop the set to zero
     /// arrangements; callers receive `Ok(set)` with `set.len() == 0`, not `Err`.
     pub max_fret_span_filter: Option<u8>,
+}
+
+/// Validated count of arrangements to compute. Construction enforces `1..=NumArrangements::MAX`.
+///
+/// Constructed at the boundary by `build_arrangement_set` from `TabInput::num_arrangements`.
+/// `create_arrangements` accepts this newtype rather than a raw `u8`, so the validation lives
+/// in exactly one place.
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
+pub struct NumArrangements(NonZeroU8);
+
+impl NumArrangements {
+    /// Upper bound enforced by `try_new`.
+    pub const MAX: u8 = 20;
+
+    /// Validates `n` is in `1..=MAX` and returns a `NumArrangements`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TabError::InvalidInput` with `field == "numArrangements"` for `n == 0`
+    /// or `n > MAX`.
+    pub fn try_new(n: u8) -> Result<Self, TabError> {
+        let nz = NonZeroU8::new(n).ok_or_else(|| TabError::InvalidInput {
+            field: "numArrangements".to_owned(),
+            message: "No arrangements were requested.".to_owned(),
+        })?;
+        if nz.get() > Self::MAX {
+            return Err(TabError::InvalidInput {
+                field: "numArrangements".to_owned(),
+                message: format!(
+                    "Too many arrangements to calculate. The maximum is {}.",
+                    Self::MAX
+                ),
+            });
+        }
+        Ok(Self(nz))
+    }
+
+    /// Returns the underlying `u8` in `1..=MAX`.
+    pub fn get(self) -> u8 {
+        self.0.get()
+    }
 }
 
 /// One beat in the normalized input echoed back from `ArrangementSet::normalized_input`.
@@ -173,15 +216,7 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 /// Builds an `ArrangementSet` from a `TabInput`. The Rust-side entry; the WASM entry point
 /// added in the next task wraps this for the boundary.
 pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
-    if !(1..=20).contains(&tab_input.num_arrangements) {
-        return Err(TabError::InvalidInput {
-            field: "numArrangements".to_owned(),
-            message: format!(
-                "must be between 1 and 20 inclusive, got {}",
-                tab_input.num_arrangements
-            ),
-        });
-    }
+    let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
     let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
         let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
@@ -216,7 +251,7 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
     let arrangements = arrangement::create_arrangements(
         guitar.clone(),
         input_lines,
-        tab_input.num_arrangements,
+        num_arrangements,
         tab_input.max_fret_span_filter,
     )
     .map_err(|e| TabError::Arrangement { message: e.to_string() })?;
@@ -474,5 +509,50 @@ mod test_boundary_types {
         let mb = NormalizedBeat::MeasureBreak;
         let json = serde_json::to_string(&mb).unwrap();
         assert_eq!(json, r#"{"kind":"measureBreak"}"#);
+    }
+}
+
+#[cfg(test)]
+mod test_num_arrangements {
+    use super::*;
+
+    #[test]
+    fn try_new_accepts_one_through_max() {
+        for n in 1u8..=NumArrangements::MAX {
+            assert!(NumArrangements::try_new(n).is_ok(), "n={n} must be Ok");
+        }
+    }
+
+    #[test]
+    fn try_new_rejects_zero_with_no_arrangements_message() {
+        let err = NumArrangements::try_new(0).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, message } => {
+                assert_eq!(field, "numArrangements");
+                assert_eq!(message, "No arrangements were requested.");
+            }
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn try_new_rejects_above_max_with_too_many_message() {
+        let err = NumArrangements::try_new(NumArrangements::MAX + 1).unwrap_err();
+        match err {
+            TabError::InvalidInput { field, message } => {
+                assert_eq!(field, "numArrangements");
+                assert_eq!(
+                    message,
+                    "Too many arrangements to calculate. The maximum is 20."
+                );
+            }
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn get_returns_inner_value() {
+        let n = NumArrangements::try_new(7).unwrap();
+        assert_eq!(n.get(), 7);
     }
 }
