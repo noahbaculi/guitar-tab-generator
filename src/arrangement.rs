@@ -9,9 +9,9 @@ use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
 use std::{collections::HashSet, rc::Rc, sync::Arc};
 
-/// Records the location of an input value that could not be parsed into a pitch.
+/// Records the location of an input value that could not be played on the guitar.
 #[derive(Debug)]
-struct InvalidInput {
+struct UnplayablePitch {
     value: String,
     line_number: u16,
 }
@@ -387,8 +387,6 @@ pub fn create_arrangements(
         },
         num_arrangements as usize,
     );
-    // dbg!(&path_results);
-
     if path_results.is_empty() {
         return Err(Arc::new(anyhow!("No arrangements could be calculated.")));
     }
@@ -399,8 +397,6 @@ pub fn create_arrangements(
             process_path(path_result.0, path_result.1, &measure_break_indices)
         })
         .collect_vec();
-
-    // const WARNING_FRET_SPAN: u8 = 4;
 
     if let Some(max_span) = max_fret_span_filter {
         arrangements.retain(|a| a.max_fret_span() <= max_span);
@@ -603,7 +599,7 @@ fn validate_fingerings(
     guitar: &Guitar,
     input_pitches: &[Line<BeatVec<Pitch>>],
 ) -> Result<Vec<Line<BeatVec<PitchVec<PitchFingering>>>>> {
-    let mut impossible_pitches: Vec<InvalidInput> = vec![];
+    let mut impossible_pitches: Vec<UnplayablePitch> = vec![];
     let fingerings: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> = input_pitches
         .iter()
         .enumerate()
@@ -617,7 +613,7 @@ fn validate_fingerings(
                         let pitch_fingerings: PitchVec<PitchFingering> =
                             generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                         if pitch_fingerings.is_empty() {
-                            impossible_pitches.push(InvalidInput {
+                            impossible_pitches.push(UnplayablePitch {
                                 value: format!("{beat_pitch:?}"),
                                 line_number: (beat_index as u16) + 1,
                             })
