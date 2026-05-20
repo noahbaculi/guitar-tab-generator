@@ -228,9 +228,101 @@
     <script type="module">
         import init, { generateArrangements, getTuningNames } from "../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js";
         await init();
-        // Subsequent tasks wire this up. The module is loaded so the rest of the
-        // file can call `generateArrangements` and `getTuningNames` without re-init.
-        console.log("Available tunings:", getTuningNames());
+
+        const PRESETS = {
+            melody: `E4
+Eb4
+E4
+Eb4
+E4
+B3
+D4
+C4
+
+A2A3
+E3
+A3
+C3
+E3
+A3
+
+E3B3
+E3
+Ab3
+E3
+Ab3
+B3
+
+A2C4
+E3
+A3
+E3
+
+E4
+Eb4
+E4
+Eb4
+E4
+B3
+D4
+C4
+
+A2A3
+E3
+A3
+C3`,
+            chords: `C3E3G3C4
+-
+G2D3G3B3D4
+-
+A2E3A3C4E4
+-
+F2C3F3A3C4`,
+            fingerpicking: `E2
+B3
+G3
+D4
+G3
+B3
+E2
+B3
+A2
+C4
+E3
+A3
+E3
+C4
+A2
+C4`,
+        };
+
+        // Preset select
+        const presetSelect = document.getElementById("preset");
+        for (const [key, label] of [["melody", "Melody"], ["chords", "Chord progression"], ["fingerpicking", "Fingerpicking"]]) {
+            const opt = document.createElement("option");
+            opt.value = key;
+            opt.textContent = label;
+            presetSelect.appendChild(opt);
+        }
+        presetSelect.addEventListener("change", () => {
+            const text = PRESETS[presetSelect.value];
+            if (text !== undefined) {
+                document.getElementById("input").value = text;
+            }
+        });
+
+        // Tuning select. "standard" is not part of the TuningName enum but is accepted
+        // case-insensitively by the parser; we prepend it as the default.
+        const tuningSelect = document.getElementById("tuning");
+        for (const name of ["standard", ...getTuningNames()]) {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            tuningSelect.appendChild(opt);
+        }
+
+        // Apply the default preset on load.
+        document.getElementById("input").value = PRESETS.melody;
     </script>
 </body>
 </html>
