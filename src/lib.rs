@@ -75,7 +75,7 @@ pub struct TabInput {
     pub guitar_capo: u8,
     pub num_arrangements: u8,
     /// Upper bound on per-beat fret span. An aggressive value can drop the set to zero
-    /// arrangements; callers receive `Ok(set)` with `set.len() == 0`, not `Err`.
+    /// arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
     pub max_fret_span_filter: Option<u8>,
 }
 
@@ -155,7 +155,7 @@ impl ArrangementSet {
         self.arrangements.len()
     }
 
-    /// Returns true when `len() == 0`.
+    /// Returns true when `len == 0`.
     #[wasm_bindgen(getter, js_name = "isEmpty")]
     pub fn is_empty(&self) -> bool {
         self.arrangements.is_empty()

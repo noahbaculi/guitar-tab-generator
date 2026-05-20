@@ -216,6 +216,8 @@ fn bench_arrangement_scaling(c: &mut Criterion) {
     let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
 
     let mut group = c.benchmark_group("bench_arrangement_scaling");
+    // 1..=MAX: NumArrangements rejects 0 and >MAX at construction, so the validation-error
+    // timings the prior 0..=22 loop produced are unreachable.
     for num in 1u8..=NumArrangements::MAX {
         group
             .sample_size(15)

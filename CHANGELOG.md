@@ -14,6 +14,8 @@
 - Errors are typed: throws `TabError` with `kind` discriminator. `Parse` carries `errors[].line` and `errors[].text` for inline editor highlights.
 - `TuningName` wire serialization switched from PascalCase (`"OpenG"`) to camelCase (`"openG"`). Input parsing remains case-insensitive.
 - Renamed `CompositionInput` to `TabInput` to align with the domain glossary; the old name was a 1.x holdover.
+- `create_arrangements` takes `NumArrangements` instead of `u8` for `num_arrangements`; construct via `NumArrangements::try_new(n)?`. Direct Rust callers no longer validate the range themselves.
+- `memoized_original_create_arrangements` and `memoized_original_parse_lines` moved from the crate root to the `__bench_internals` namespace; not part of the stable 2.x API and may be removed without a major version bump.
 
 ### Added
 

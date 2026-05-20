@@ -15,7 +15,7 @@ export interface TabInput {
     numArrangements: number;
     /**
      * Upper bound on per-beat fret span. An aggressive value can drop the set to zero
-     * arrangements; callers receive `Ok(set)` with `set.len() == 0`, not `Err`.
+     * arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
      */
     maxFretSpanFilter: number | undefined;
 }
@@ -76,7 +76,7 @@ export class ArrangementSet {
      */
     render(index: number, width: number, padding: number, playback?: number | null): string;
     /**
-     * Returns true when `len() == 0`.
+     * Returns true when `len == 0`.
      */
     readonly isEmpty: boolean;
     /**
