@@ -315,6 +315,13 @@ cargo run --example basic
 cargo run --example advanced
 ```
 
+### Run WASM demo
+
+```shell
+wasm-pack build --target web --out-dir pkg/wasm_guitar_tab_generator
+python3 -m http.server  # then open http://localhost:8000/examples/wasm.html
+```
+
 ### Background code runner
 
 ```shell
@@ -345,9 +352,9 @@ ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
 
 ## Future Improvements
 
-- [ ] Borrowed types vs box vs RC
-- [ ] Parallelism with [Rayon](https://docs.rs/rayon/latest/rayon/#how-to-use-rayon)
-- [ ] Audit namespace of functions (object functions vs standalone) (public vs private)
+- [ ] Custom tuning support over the WASM boundary (today only the preset list crosses)
+- [ ] Per-arrangement fingering inspector (read access without re-pathfinding)
+- [ ] Arrangement export / import (serialize a set for offline replay)
 
 [rust_site]: https://rust-lang.org/tools/install
 [wasm_site]: https://webassembly.org/
