@@ -362,6 +362,7 @@ C4`,
                 console.error("TabError:", err);
                 document.getElementById("tab").textContent = `Error: ${err?.kind ?? "unknown"} ${err?.message ?? ""}`;
                 document.getElementById("tab").classList.add("error");
+                refreshNavButtons();
                 return;
             }
             state.currentSet = set;
@@ -393,6 +394,7 @@ C4`,
                 tabEl.textContent = `Error: ${err?.kind ?? "unknown"} ${err?.message ?? ""}`;
                 tabEl.classList.add("error");
             }
+            refreshNavButtons();
         }
 
         // Debounced regenerate for the textarea, so we don't hammer the WASM boundary on
@@ -434,6 +436,27 @@ C4`,
         // Render-tier inputs -> rerender (cheap; no re-pathfinding).
         document.getElementById("width").addEventListener("input", rerender);
         document.getElementById("padding").addEventListener("input", rerender);
+
+        function refreshNavButtons() {
+            const set = state.currentSet;
+            const hasSet = set !== null && !set.isEmpty;
+            document.getElementById("prev").disabled = !hasSet || state.arrangementIndex <= 0;
+            document.getElementById("next").disabled = !hasSet || state.arrangementIndex >= (set?.len ?? 0) - 1;
+        }
+
+        document.getElementById("prev").addEventListener("click", () => {
+            if (state.arrangementIndex > 0) {
+                state.arrangementIndex -= 1;
+                rerender();
+            }
+        });
+        document.getElementById("next").addEventListener("click", () => {
+            const set = state.currentSet;
+            if (set && state.arrangementIndex < set.len - 1) {
+                state.arrangementIndex += 1;
+                rerender();
+            }
+        });
 
         // Initial render with the default preset and defaults.
         regenerate();
