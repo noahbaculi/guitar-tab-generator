@@ -9,15 +9,18 @@
 
 <body>
     <button id="generateButton">Generate Arrangement</button>
+    <pre id="output" style="font-family: monospace; white-space: pre;"></pre>
+    <pre id="error" style="color: #b00; font-family: monospace; white-space: pre;"></pre>
 
     <script type="module">
-        import init, { wasm_create_guitar_compositions, get_tuning_names } from '../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js';
-        async function run() {
-            await init();
-        }
-        run();
+        import init, { generateArrangements, getTuningNames } from "../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js";
 
-        let input_string = `E4
+        await init();
+
+        // Smoke check: confirm the typed tuning list reaches JS.
+        console.log("Available tunings:", getTuningNames());
+
+        const input_string = `E4
             Eb4
             E4
             Eb4
@@ -57,76 +60,60 @@
             A2A3
             E3
             A3
-            C3
-            E3
-            A3
+            C3`;
 
-            E3B3
-            E3
-            Ab3
-            E3
-            C4
-            B3
-            A3
-
-            C4
-            C4
-            C4
-            C4
-            F4
-            E4
-            E4
-            D4
-
-            Bb4
-            A4
-            A4
-            G4
-            F4
-            E4
-            D4
-            C4
-
-            Bb3
-            Bb3
-            A3
-            G3
-            A3
-            Bb3
-            C4
-
-            D4
-            Eb4
-            Eb4
-            E4
-            F4
-            A3
-            C4
-
-            D4
-            B3
-            C4`;
-        let input = {
-            pitches: input_string,
-            tuning_name: "standard",
-            guitar_num_frets: 18,
-            guitar_capo: 0,
-            num_arrangements: 1,
-            width: 40,
-            padding: 1,
-            playback_index: 3
+        const tabInput = {
+            input: input_string,
+            tuningName: "standard",
+            guitarNumFrets: 18,
+            guitarCapo: 0,
+            numArrangements: 1,
+            maxFretSpanFilter: null,
         };
 
         document.getElementById("generateButton").addEventListener("click", () => {
-            let startTime = performance.now();
-            let compositions = wasm_create_guitar_compositions(input);
-            let endTime = performance.now();
-            let duration = (endTime - startTime).toFixed(1);
-            console.log(`Arrangement generated in ${duration} milliseconds:`, compositions[0]);
-            console.log(`Tab:\n${compositions[0].tab}`);
+            const outEl = document.getElementById("output");
+            const errEl = document.getElementById("error");
+            outEl.textContent = "";
+            errEl.textContent = "";
 
-            // console.log(get_tuning_names());
+            const startTime = performance.now();
+            let set;
+            try {
+                set = generateArrangements(tabInput);
+            } catch (err) {
+                renderError(err, errEl, input_string);
+                return;
+            }
+            const generateMs = (performance.now() - startTime).toFixed(1);
+
+            const tabs = [];
+            for (let i = 0; i < set.len; i++) {
+                try {
+                    tabs.push(set.render(i, 40, 1, 3));
+                } catch (err) {
+                    renderError(err, errEl, input_string);
+                    return;
+                }
+            }
+            console.log(`Generated ${set.len} arrangement(s) in ${generateMs} ms`);
+            outEl.textContent = tabs.join("\n\n---\n\n");
+
+            // TODO: render set.normalizedInput once the demo grows a debug pane.
         });
+
+        function renderError(err, errEl, input_string) {
+            console.error("TabError:", err);
+            if (err && err.kind === "parse") {
+                const errored = new Set(err.errors.map((e) => e.line - 1));
+                const lines = input_string.split("\n");
+                errEl.textContent = lines
+                    .map((line, i) => (errored.has(i) ? `> ${line}` : `  ${line}`))
+                    .join("\n");
+                return;
+            }
+            errEl.textContent = `${err?.kind ?? "Error"}: ${err?.message ?? err}`;
+        }
     </script>
 </body>
 
