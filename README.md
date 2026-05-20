@@ -91,7 +91,7 @@ const set = generateArrangements({
     guitarNumFrets: 18,
     guitarCapo: 0,
     numArrangements: 1,
-    maxFretSpanFilter: null,
+    maxFretSpanFilter: undefined,
 });
 for (let i = 0; i < set.len; i++) {
     console.log(set.render(i, 30, 2, null));

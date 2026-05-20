@@ -40,6 +40,23 @@ fn render_produces_non_empty_string_with_fret_markers() {
 #[test]
 fn tab_input_round_trips_from_camel_case_json() {
     let json = r#"{
+        "input": "E2\nA2",
+        "tuningName": "openG",
+        "guitarNumFrets": 22,
+        "guitarCapo": 3,
+        "numArrangements": 4,
+        "maxFretSpanFilter": 7
+    }"#;
+    let parsed: TabInput = serde_json::from_str(json).expect("camelCase deserialization");
+    assert_eq!(parsed.input, "E2\nA2");
+    assert_eq!(parsed.tuning_name, "openG");
+    assert_eq!(parsed.guitar_num_frets, 22);
+    assert_eq!(parsed.guitar_capo, 3);
+    assert_eq!(parsed.num_arrangements, 4);
+    assert_eq!(parsed.max_fret_span_filter, Some(7));
+
+    // Null on the wire deserializes to None for the Option<u8> filter field.
+    let json_null = r#"{
         "input": "E2",
         "tuningName": "standard",
         "guitarNumFrets": 18,
@@ -47,9 +64,9 @@ fn tab_input_round_trips_from_camel_case_json() {
         "numArrangements": 1,
         "maxFretSpanFilter": null
     }"#;
-    let parsed: TabInput = serde_json::from_str(json).expect("camelCase deserialization");
-    assert_eq!(parsed.num_arrangements, 1);
-    assert_eq!(parsed.guitar_num_frets, 18);
+    let parsed_null: TabInput =
+        serde_json::from_str(json_null).expect("null filter deserialization");
+    assert_eq!(parsed_null.max_fret_span_filter, None);
 }
 
 #[test]
@@ -66,6 +83,24 @@ fn parse_variant_serializes_with_kind_tag() {
     let json = serde_json::to_string(&err).unwrap();
     assert!(json.contains(r#""kind":"parse""#), "missing kind tag in {json}");
     assert!(json.contains(r#""line":1"#), "missing line field in {json}");
+}
+
+#[test]
+fn arrangement_set_is_empty_when_filter_drops_every_candidate() {
+    // C3E3 is an all-fretted chord in standard tuning; max_fret_span_filter=Some(0)
+    // drops every candidate, yielding a non-error empty set. This is the path the
+    // JS demo surfaces via `set.isEmpty` and the "No arrangements match" message.
+    let input = TabInput {
+        input: "C3E3".to_owned(),
+        tuning_name: "standard".to_owned(),
+        guitar_num_frets: 20,
+        guitar_capo: 0,
+        num_arrangements: 5,
+        max_fret_span_filter: Some(0),
+    };
+    let set = build_arrangement_set(input).expect("empty filter result is not an error");
+    assert!(set.is_empty(), "set must be empty when no candidate survives the filter");
+    assert_eq!(set.len(), 0);
 }
 
 #[test]

@@ -234,11 +234,13 @@ mod test_parse_lines {
         let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
 
         let errors = parse_lines(input).unwrap_err();
-        assert_eq!(errors.len(), 2);
-        assert_eq!(errors[0].line, 1);
-        assert_eq!(errors[0].text, "xyz");
-        assert_eq!(errors[1].line, 4);
-        assert_eq!(errors[1].text, "BB.2");
+        assert_eq!(
+            *errors,
+            vec![
+                crate::error::ParseError { line: 1, text: "xyz".to_owned() },
+                crate::error::ParseError { line: 4, text: "BB.2".to_owned() },
+            ],
+        );
     }
 }
 

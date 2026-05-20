@@ -242,8 +242,7 @@ pub struct Arrangement {
     max_fret_span: u8,
 }
 impl Arrangement {
-    /// The ordered lines of the arrangement, one `Line` per input line. Pass directly to
-    /// [`crate::render_tab`].
+    /// Pass directly to [`crate::render_tab`].
     #[must_use]
     pub fn lines(&self) -> &[Line<BeatVec<PitchFingering>>] {
         &self.lines
@@ -566,6 +565,29 @@ mod test_create_arrangements {
         .unwrap();
         assert!(filtered.iter().all(|a| a.max_fret_span() == 0));
         assert!(filtered.len() <= 5);
+    }
+    #[test]
+    fn max_fret_span_filter_can_produce_empty_set() {
+        let tuning = crate::guitar::create_string_tuning(
+            &crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES,
+        )
+        .unwrap();
+        let guitar = crate::guitar::Guitar::new(tuning, 20, 0).unwrap();
+        // C3E3 forces both notes onto fretted positions (neither is an open string in
+        // standard tuning), so every candidate arrangement has a non-zero fret span.
+        let lines = crate::parser::parse_lines("C3E3".to_owned()).unwrap();
+
+        let filtered = create_arrangements(
+            guitar,
+            lines,
+            NumArrangements::try_new(5).unwrap(),
+            Some(0),
+        )
+        .expect("filter dropping every candidate is not an error");
+        assert!(
+            filtered.is_empty(),
+            "max_fret_span_filter=Some(0) on an all-fretted chord must drop every candidate",
+        );
     }
 }
 

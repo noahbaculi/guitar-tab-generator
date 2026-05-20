@@ -333,6 +333,7 @@ C4`,
             if (text !== undefined) {
                 document.getElementById("input").value = text;
             }
+            regenerate();
         });
 
         // Tuning select. "standard" is not part of the TuningName enum but is accepted
@@ -360,9 +361,12 @@ C4`,
                 guitarCapo: Number(document.getElementById("capo").value),
                 guitarNumFrets: Number(document.getElementById("frets").value),
                 numArrangements: Number(document.getElementById("num-arrangements").value),
+                // Tsify generates `number | undefined` for `Option<u8>` fields.
+                // Pass `undefined` (not `null`) when the filter is off so strict TS
+                // consumers of the generated `.d.ts` see a matching type.
                 maxFretSpanFilter: document.getElementById("filter-on").checked
                     ? Number(document.getElementById("filter-value").value)
-                    : null,
+                    : undefined,
             };
         }
 
@@ -453,11 +457,13 @@ C4`,
         }
 
         // Slider value labels (updated on input even when the slider is for rendering).
-        function bindSliderValueLabel(sliderId, valueId, format) {
+        // The playback slider has its own label updater because its label has an "off"
+        // sentinel when the playback checkbox is unchecked.
+        function bindSliderValueLabel(sliderId, valueId) {
             const slider = document.getElementById(sliderId);
             const value = document.getElementById(valueId);
             const update = () => {
-                value.textContent = format ? format(slider.value) : slider.value;
+                value.textContent = slider.value;
             };
             slider.addEventListener("input", update);
             update();
@@ -473,7 +479,7 @@ C4`,
         document.getElementById("capo").addEventListener("change", regenerate);
         document.getElementById("frets").addEventListener("change", regenerate);
         document.getElementById("num-arrangements").addEventListener("change", regenerate);
-        presetSelect.addEventListener("change", regenerate); // fires after the preset listener above sets the textarea value
+        // Preset select is wired in one combined listener above (set textarea, then regenerate).
 
         // Render-tier inputs -> rerender (cheap; no re-pathfinding).
         document.getElementById("width").addEventListener("input", rerender);
@@ -490,6 +496,8 @@ C4`,
             document.getElementById("parse-errors").textContent = "";
             document.getElementById("guitar-error").textContent = "";
             document.getElementById("num-arrangements-error").textContent = "";
+            // Repaints the line-marker gutter to its all-grey baseline; the gutter is
+            // part of the layout regardless of error state.
             renderLineMarkers([], document.getElementById("input").value);
         }
 

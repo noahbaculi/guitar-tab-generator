@@ -6,6 +6,8 @@ use guitar_tab_generator::{
     BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
     STD_6_STRING_TUNING_OPEN_PITCHES,
 };
+// `__bench_internals` exposes the memoize escape hatches so criterion benches can
+// hit a cold cache; see the module docstring in src/lib.rs for the stability caveat.
 use guitar_tab_generator::__bench_internals::{
     memoized_original_create_arrangements,
     memoized_original_parse_lines,
