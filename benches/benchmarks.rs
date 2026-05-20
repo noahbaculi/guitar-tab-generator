@@ -2,9 +2,12 @@
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use guitar_tab_generator::{
-    build_arrangement_set, create_arrangements, create_string_tuning,
-    memoized_original_create_arrangements, memoized_original_parse_lines, parse_lines, render_tab,
+    build_arrangement_set, create_arrangements, create_string_tuning, parse_lines, render_tab,
     BeatVec, Guitar, Line, Pitch, StringNumber, TabInput, STD_6_STRING_TUNING_OPEN_PITCHES,
+};
+use guitar_tab_generator::__bench_internals::{
+    memoized_original_create_arrangements,
+    memoized_original_parse_lines,
 };
 use itertools::Itertools;
 use std::{collections::BTreeMap, hint::black_box, time::Duration};

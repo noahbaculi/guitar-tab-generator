@@ -35,19 +35,23 @@ pub(crate) mod pitch;
 pub(crate) mod renderer;
 pub(crate) mod string_number;
 
-pub use arrangement::{
-    create_arrangements, memoized_original_create_arrangements, Arrangement, BeatVec, Line,
-};
+pub use arrangement::{create_arrangements, Arrangement, BeatVec, Line};
 pub use error::{ParseError, TabError};
 pub use guitar::{
     create_string_tuning, Guitar, PitchFingering, STD_6_STRING_TUNING_OPEN_PITCHES,
 };
-pub use parser::{
-    create_string_tuning_offset, memoized_original_parse_lines, parse_lines, parse_tuning,
-};
+pub use parser::{create_string_tuning_offset, parse_lines, parse_tuning};
 pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
+
+/// Bench-only escape hatches around the `memoize` cache. Not part of the
+/// stable 2.x API; may be removed without a major version bump.
+#[doc(hidden)]
+pub mod __bench_internals {
+    pub use crate::arrangement::memoized_original_create_arrangements;
+    pub use crate::parser::memoized_original_parse_lines;
+}
 
 /// Configuration bundle for one tab-generation request.
 ///
