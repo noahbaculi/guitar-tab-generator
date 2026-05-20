@@ -354,8 +354,9 @@ mod test_generate_arrangements_and_render {
 
         // Pins the current behaviour: when no `Playable` line exists, `first_playable_index`
         // falls back to 0 and `normalized_input` echoes every input line (the trailing
-        // `MeasureBreak` from `---` and the leading blank rests). A future refactor of the
-        // fallback should reaffirm or update this assertion deliberately.
+        // `MeasureBreak` from `---` and the leading blank rests). Empty / all-rest input
+        // returns Ok(set) by design (see docs/adr/0006-empty-input-returns-empty-set.md);
+        // interactive UIs lean on this to avoid bouncing into an error pane during edits.
         let beats = set.normalized_input();
         assert!(beats.iter().all(|b| matches!(
             b,
