@@ -65,7 +65,7 @@ The number of physical frets on the instrument — what the caller supplies (`Ta
 _Avoid_: num_frets as a freestanding term (the bare name is currently overloaded with [[Playable fret count]])
 
 **Playable fret count**:
-The number of frets above the capo — what `Guitar.num_frets` holds after construction. Equal to [[Fret count]] minus capo position. The number that bounds fingering search.
+The number of frets above the capo — what `Guitar.playable_frets` holds after construction. Equal to [[Fret count]] minus capo position. The number that bounds fingering search.
 _Avoid_: Effective frets, available frets
 
 **Normalized input**:

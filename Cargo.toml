@@ -19,7 +19,7 @@ memoize = "0.6.0"
 ordered-float = "5.1.0"
 pathfinding = "4.14.0"
 regex = "1.12.2"
-serde = { version = "1.0.228", features = ["derive", "rc"] }
+serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.28.0"
 strum_macros = "0.28.0"
 tsify-next = { version = "0.5", features = ["js"] }

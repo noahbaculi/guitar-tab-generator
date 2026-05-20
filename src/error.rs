@@ -24,9 +24,10 @@ impl std::fmt::Display for ParseError {
 }
 
 /// Top-level error variant for the WASM boundary.
-#[derive(Debug, Clone, Serialize, Tsify)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 #[tsify(into_wasm_abi)]
 #[serde(tag = "kind", rename_all = "camelCase")]
+#[non_exhaustive]
 pub enum TabError {
     Parse { errors: Vec<ParseError> },
     Guitar { message: String },

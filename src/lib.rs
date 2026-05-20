@@ -10,18 +10,19 @@
 //! # Quick start
 //!
 //! ```no_run
-//! use guitar_tab_generator::{
-//!     create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar,
-//!     NumArrangements, STD_6_STRING_TUNING_OPEN_PITCHES,
-//! };
+//! use guitar_tab_generator::{build_arrangement_set, TabError, TabInput};
 //!
-//! let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
-//! let guitar = Guitar::new(tuning, 18, 0).unwrap();
-//! let input_lines = parse_lines("E2\nA2\nD3".to_owned()).unwrap();
-//! let n = NumArrangements::try_new(1).unwrap();
-//! let arrangements = create_arrangements(guitar.clone(), input_lines, n, None).unwrap();
-//! let tab = render_tab(&arrangements[0].lines, &guitar, 30, 2, None);
+//! let set = build_arrangement_set(TabInput {
+//!     input: "E2\nA2\nD3".to_owned(),
+//!     tuning_name: "standard".to_owned(),
+//!     guitar_num_frets: 18,
+//!     guitar_capo: 0,
+//!     num_arrangements: 1,
+//!     max_fret_span_filter: None,
+//! })?;
+//! let tab = set.render(0, 30, 2, None)?;
 //! println!("{tab}");
+//! # Ok::<(), TabError>(())
 //! ```
 
 use serde::{Deserialize, Serialize};
@@ -117,6 +118,12 @@ impl NumArrangements {
     /// Returns the underlying `u8` in `1..=MAX`.
     pub fn get(self) -> u8 {
         self.0.get()
+    }
+}
+
+impl From<NumArrangements> for u8 {
+    fn from(n: NumArrangements) -> Self {
+        n.get()
     }
 }
 
@@ -237,6 +244,8 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
     let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
+        // memoize cache miss returns a fresh Arc (strong_count=1, unwrap succeeds);
+        // a cache hit hands back a shared Arc and forces the clone fallback.
         let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
         debug_assert!(
             !errors.is_empty(),
@@ -293,7 +302,6 @@ pub fn build_arrangement_set(tab_input: TabInput) -> Result<ArrangementSet, TabE
 pub fn generate_arrangements(input: TabInput) -> Result<ArrangementSet, TabError> {
     build_arrangement_set(input)
 }
-
 
 #[cfg(test)]
 mod test_generate_arrangements_and_render {

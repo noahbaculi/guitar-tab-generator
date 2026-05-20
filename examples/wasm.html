@@ -99,6 +99,7 @@
             console.log(`Generated ${set.len} arrangement(s) in ${generateMs} ms`);
             outEl.textContent = tabs.join("\n\n---\n\n");
 
+            // Note: set.normalizedInput clones the full beat array across the WASM boundary on every read; cache it into a local before iterating in a tight loop.
             // TODO: render set.normalizedInput once the demo grows a debug pane.
         });
 

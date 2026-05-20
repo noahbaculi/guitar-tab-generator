@@ -67,3 +67,12 @@ fn parse_variant_serializes_with_kind_tag() {
     assert!(json.contains(r#""kind":"parse""#), "missing kind tag in {json}");
     assert!(json.contains(r#""line":1"#), "missing line field in {json}");
 }
+
+#[test]
+fn invalid_input_errors_are_equal_for_equal_inputs() {
+    let err_a = build_arrangement_set(fixture(0)).expect_err("0 must be rejected");
+    let err_b = build_arrangement_set(fixture(0)).expect_err("0 must be rejected");
+    assert_eq!(err_a, err_b, "TabError::InvalidInput must derive structural equality");
+    let err_high = build_arrangement_set(fixture(99)).expect_err("99 must be rejected");
+    assert_ne!(err_a, err_high, "different messages must not compare equal");
+}

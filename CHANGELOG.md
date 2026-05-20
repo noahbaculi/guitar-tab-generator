@@ -26,3 +26,5 @@
 - Adopted `tsify-next` for typed TypeScript bindings.
 - Parser returns structured `Vec<ParseError>` internally; the wire format reuses the same struct via `crate::error::ParseError`.
 - Released `CONTEXT.md` (domain glossary) and `docs/adr/0001-arrangement-set-opaque-handle.md` (ADR for the opaque-handle pattern).
+- `TabError` now derives `PartialEq, Eq` and carries `#[non_exhaustive]` so future structured-error variants land non-breakingly.
+- Dropped the unused `serde` `"rc"` feature.
