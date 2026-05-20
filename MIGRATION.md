@@ -251,12 +251,18 @@ for (const beat of set.normalizedInput) {
 
 ## Tuning names
 
-`getTuningNames()` returns a typed `TuningName[]`. The preset names are camelCase on the wire (`"openG"`, `"dropD"`, etc.) plus the special `"standard"` value.
+`getTuningNames()` returns a typed `TuningName[]`. The preset names are camelCase on the wire (`"openG"`, `"dropD"`, etc.).
 
 ```ts
 const names: TuningName[] = getTuningNames();
 // ["openG", "openD", "c6", "dsus4", "dropD", "dropC", "openC", "dropB", "openE"]
 ```
+
+`tuningName` accepts the empty string and the case-insensitive literal `"standard"` as standard tuning (all-zero offsets), or any variant returned by `getTuningNames()` (case-insensitive). `"standard"` is intentionally not in the typed `TuningName` union since it carries no semitone offsets; TS-strict consumers passing `"standard"` should widen the field type to `string | TuningName` or use the literal directly.
+
+### Behavior change
+
+In 1.x, an unrecognized `tuningName` silently fell back to standard tuning. In 2.0.0 it throws `TabError::InvalidInput { field: "tuningName", ... }`. Code that previously relied on the silent fallback (typos, dynamic strings) must explicitly pass `"standard"` or validate against `getTuningNames()` before calling `generateArrangements`.
 
 The Rust-side parser (`parse_tuning`) remains case-insensitive, so 1.x calls that passed `"DropD"` or `"OpenG"` still resolve. New code should use the camelCase typed values. See [ADR-0004](docs/adr/0004-tuning-name-camelcase-wire.md).
 

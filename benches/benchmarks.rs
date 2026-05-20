@@ -124,7 +124,7 @@ fn bench_parse_lines(c: &mut Criterion) {
 
 fn bench_create_string_tuning_offset(c: &mut Criterion) {
     c.bench_function("create_string_tuning_offset", |b| {
-        b.iter(|| create_string_tuning_offset(parse_tuning(black_box("random"))))
+        b.iter(|| create_string_tuning_offset(parse_tuning(black_box("openG")).expect("valid tuning name")))
     });
 }
 

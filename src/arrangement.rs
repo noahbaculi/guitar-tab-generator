@@ -5,6 +5,7 @@ use crate::{
 use anyhow::{anyhow, Result};
 use average::Mean;
 use itertools::Itertools;
+use memoize::memoize;
 use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
 use std::{collections::HashSet, rc::Rc, sync::Arc};
@@ -278,7 +279,6 @@ mod test_max_fret_span {
     }
 }
 
-use memoize::memoize;
 /// Computes the N best-scoring guitar arrangements for a parsed sequence of pitches,
 /// ranked by ascending difficulty.
 ///
@@ -1636,9 +1636,9 @@ mod proptest_invariants {
         #[test]
         fn invariant_input_pitches_represented(case in arb_case()) {
             let guitar = std_guitar();
-            let Ok(arrangements) = create_arrangements(
+            let arrangements = create_arrangements(
                 guitar.clone(), case.input_lines.clone(), case.num_arrangements, None,
-            ) else { return Ok(()); };
+            ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             // Map input line_index (skipping leading non-playable lines) to expected pitches.
             let first_playable = case.input_lines
@@ -1681,9 +1681,9 @@ mod proptest_invariants {
         #[test]
         fn invariant_no_duplicate_strings(case in arb_case()) {
             let guitar = std_guitar();
-            let Ok(arrangements) = create_arrangements(
+            let arrangements = create_arrangements(
                 guitar, case.input_lines, case.num_arrangements, None,
-            ) else { return Ok(()); };
+            ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             for arrangement in &arrangements {
                 for line in &arrangement.lines {
@@ -1705,9 +1705,9 @@ mod proptest_invariants {
         fn invariant_fret_bounds(case in arb_case()) {
             let guitar = std_guitar();
             let playable_frets = guitar.playable_frets;
-            let Ok(arrangements) = create_arrangements(
+            let arrangements = create_arrangements(
                 guitar, case.input_lines, case.num_arrangements, None,
-            ) else { return Ok(()); };
+            ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             for arrangement in &arrangements {
                 for line in &arrangement.lines {
@@ -1724,9 +1724,9 @@ mod proptest_invariants {
         #[test]
         fn invariant_sorted_by_difficulty(case in arb_case()) {
             let guitar = std_guitar();
-            let Ok(arrangements) = create_arrangements(
+            let arrangements = create_arrangements(
                 guitar, case.input_lines, case.num_arrangements, None,
-            ) else { return Ok(()); };
+            ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             for pair in arrangements.windows(2) {
                 prop_assert!(pair[0].difficulty <= pair[1].difficulty);
@@ -1737,9 +1737,9 @@ mod proptest_invariants {
         #[test]
         fn invariant_count_bounded(case in arb_case()) {
             let guitar = std_guitar();
-            let Ok(arrangements) = create_arrangements(
+            let arrangements = create_arrangements(
                 guitar, case.input_lines, case.num_arrangements, None,
-            ) else { return Ok(()); };
+            ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             prop_assert!(arrangements.len() <= case.num_arrangements.get() as usize);
         }

@@ -70,13 +70,17 @@ pub mod __bench_internals {
 /// Configuration bundle for one tab-generation request.
 ///
 /// Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
-/// alongside the `.wasm`. `num_arrangements` must be in `1..=20`; the value is validated
+/// alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
 /// at the boundary and a `TabError::InvalidInput` is thrown when out of range.
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct TabInput {
     pub input: String,
+    /// Name of the tuning preset. Accepts the empty string and the case-insensitive literal
+    /// `"standard"` for standard tuning, or any variant of `TuningName` (case-insensitive,
+    /// camelCase on the wire: `"openG"`, `"dropD"`, etc.). Other strings are rejected with
+    /// `TabError::InvalidInput { field: "tuningName", ... }`.
     pub tuning_name: String,
     pub guitar_num_frets: u8,
     pub guitar_capo: u8,
@@ -105,19 +109,13 @@ impl NumArrangements {
     /// Returns `TabError::InvalidInput` with `field == "numArrangements"` for `n == 0`
     /// or `n > MAX`.
     pub fn try_new(n: u8) -> Result<Self, TabError> {
-        let nz = NonZeroU8::new(n).ok_or_else(|| TabError::InvalidInput {
-            field: "numArrangements".to_owned(),
-            message: "No arrangements were requested.".to_owned(),
-        })?;
-        if nz.get() > Self::MAX {
+        if n == 0 || n > Self::MAX {
             return Err(TabError::InvalidInput {
                 field: "numArrangements".to_owned(),
-                message: format!(
-                    "Too many arrangements to calculate. The maximum is {}.",
-                    Self::MAX
-                ),
+                message: format!("must be between 1 and {} inclusive, got {n}", Self::MAX),
             });
         }
+        let nz = NonZeroU8::new(n).expect("BUG: n != 0 verified above");
         Ok(Self(nz))
     }
 
@@ -289,7 +287,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         })
         .collect();
 
-    let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tab_input.tuning_name));
+    let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tab_input.tuning_name)?);
     let guitar = Guitar::new(tuning, tab_input.guitar_num_frets, tab_input.guitar_capo)
         .map_err(|e| TabError::Guitar { message: e.to_string() })?;
 
@@ -567,27 +565,24 @@ mod test_num_arrangements {
     }
 
     #[test]
-    fn try_new_rejects_zero_with_no_arrangements_message() {
+    fn try_new_rejects_zero_with_unified_message() {
         let err = NumArrangements::try_new(0).unwrap_err();
         match err {
             TabError::InvalidInput { field, message } => {
                 assert_eq!(field, "numArrangements");
-                assert_eq!(message, "No arrangements were requested.");
+                assert_eq!(message, "must be between 1 and 20 inclusive, got 0");
             }
             other => panic!("expected InvalidInput, got {other:?}"),
         }
     }
 
     #[test]
-    fn try_new_rejects_above_max_with_too_many_message() {
+    fn try_new_rejects_above_max_with_unified_message() {
         let err = NumArrangements::try_new(NumArrangements::MAX + 1).unwrap_err();
         match err {
             TabError::InvalidInput { field, message } => {
                 assert_eq!(field, "numArrangements");
-                assert_eq!(
-                    message,
-                    "Too many arrangements to calculate. The maximum is 20."
-                );
+                assert_eq!(message, "must be between 1 and 20 inclusive, got 21");
             }
             other => panic!("expected InvalidInput, got {other:?}"),
         }

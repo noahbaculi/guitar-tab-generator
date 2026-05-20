@@ -222,8 +222,8 @@ fn pitch_fingering_is_publicly_named() {
             _ => None,
         })
         .expect("E2 in standard tuning has at least one fingering");
-    let _typecheck: PitchFingering = first_beat;
-    assert!(!format!("{_typecheck:?}").is_empty(), "Debug impl produces output");
+    let typecheck: PitchFingering = first_beat;
+    assert!(!format!("{typecheck:?}").is_empty(), "Debug impl produces output");
 }
 
 #[test]

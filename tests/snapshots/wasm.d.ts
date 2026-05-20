@@ -4,11 +4,17 @@
  * Configuration bundle for one tab-generation request.
  *
  * Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
- * alongside the `.wasm`. `num_arrangements` must be in `1..=20`; the value is validated
+ * alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
  * at the boundary and a `TabError::InvalidInput` is thrown when out of range.
  */
 export interface TabInput {
     input: string;
+    /**
+     * Name of the tuning preset. Accepts the empty string and the case-insensitive literal
+     * `\"standard\"` for standard tuning, or any variant of `TuningName` (case-insensitive,
+     * camelCase on the wire: `\"openG\"`, `\"dropD\"`, etc.). Other strings are rejected with
+     * `TabError::InvalidInput { field: \"tuningName\", ... }`.
+     */
     tuningName: string;
     guitarNumFrets: number;
     guitarCapo: number;

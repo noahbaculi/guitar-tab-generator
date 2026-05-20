@@ -4,8 +4,8 @@ use crate::{
     pitch::Pitch,
     string_number::StringNumber,
 };
-use anyhow::Result;
 use itertools::Itertools;
+use memoize::memoize;
 use regex::{Regex, RegexBuilder};
 use serde::Serialize;
 use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
@@ -61,47 +61,79 @@ pub fn get_tuning_names() -> Vec<TuningName> {
 /// Returns the 6-element semitone offsets for a named tuning, relative to standard 6-string
 /// tuning.
 ///
-/// Falls back to standard tuning (all zeroes) if `tuning_name` does not match any known
-/// tuning, including empty or unrecognized input.
-#[must_use]
-pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
+/// Accepts the empty string and the case-insensitive literal `"standard"` as standard tuning
+/// (all-zero offsets). Returns `TabError::InvalidInput { field: "tuningName", ... }` for any
+/// other string that does not match a `TuningName` variant.
+pub fn parse_tuning(tuning_name: &str) -> Result<[i8; 6], crate::error::TabError> {
     match TuningName::from_str(tuning_name) {
-        Ok(TuningName::OpenG) => [-2, 0, 0, 0, -2, -2],
-        Ok(TuningName::OpenD) => [-2, 0, 0, -1, -2, -2],
-        Ok(TuningName::C6) => [-4, 0, -2, 0, 1, 0],
-        Ok(TuningName::Dsus4) => [-2, 0, 0, 0, -2, -2],
-        Ok(TuningName::DropD) => [-2, 0, 0, 0, 0, 0],
-        Ok(TuningName::DropC) => [-4, -2, -2, -2, -2, -2],
-        Ok(TuningName::OpenC) => [-4, -2, -2, 0, 1, 0],
-        Ok(TuningName::DropB) => [-5, -3, -3, -3, -3, -3],
-        Ok(TuningName::OpenE) => [0, -2, -2, -2, 0, 0],
-        Err(_) => [0, 0, 0, 0, 0, 0],
+        Ok(TuningName::OpenG) => Ok([-2, 0, 0, 0, -2, -2]),
+        Ok(TuningName::OpenD) => Ok([-2, 0, 0, -1, -2, -2]),
+        Ok(TuningName::C6) => Ok([-4, 0, -2, 0, 1, 0]),
+        Ok(TuningName::Dsus4) => Ok([-2, 0, 0, 0, -2, -2]),
+        Ok(TuningName::DropD) => Ok([-2, 0, 0, 0, 0, 0]),
+        Ok(TuningName::DropC) => Ok([-4, -2, -2, -2, -2, -2]),
+        Ok(TuningName::OpenC) => Ok([-4, -2, -2, 0, 1, 0]),
+        Ok(TuningName::DropB) => Ok([-5, -3, -3, -3, -3, -3]),
+        Ok(TuningName::OpenE) => Ok([0, -2, -2, -2, 0, 0]),
+        Err(_) if tuning_name.is_empty() || tuning_name.eq_ignore_ascii_case("standard") => {
+            Ok([0; 6])
+        }
+        Err(_) => Err(crate::error::TabError::InvalidInput {
+            field: "tuningName".to_owned(),
+            message: format!(
+                "must be \"standard\" or one of the supported TuningName variants, got {tuning_name:?}"
+            ),
+        }),
     }
 }
 #[cfg(test)]
 mod test_parse_tuning {
     use super::*;
+    use crate::error::TabError;
 
     #[test]
-    fn standard_tuning() {
-        assert_eq!(parse_tuning("standard"), [0, 0, 0, 0, 0, 0]);
+    fn standard_tuning_returns_zero_offsets() {
+        assert_eq!(parse_tuning("standard").unwrap(), [0, 0, 0, 0, 0, 0]);
     }
+
+    #[test]
+    fn standard_is_case_insensitive() {
+        assert_eq!(parse_tuning("STANDARD").unwrap(), [0, 0, 0, 0, 0, 0]);
+        assert_eq!(parse_tuning("Standard").unwrap(), [0, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn empty_string_returns_standard() {
+        assert_eq!(parse_tuning("").unwrap(), [0, 0, 0, 0, 0, 0]);
+    }
+
     #[test]
     fn non_standard_tunings() {
-        assert_eq!(parse_tuning("openg"), [-2, 0, 0, 0, -2, -2]);
-        assert_eq!(parse_tuning("opend"), [-2, 0, 0, -1, -2, -2]);
-        assert_eq!(parse_tuning("c6"), [-4, 0, -2, 0, 1, 0]);
-        assert_eq!(parse_tuning("dadgad"), [-2, 0, 0, 0, -2, -2]);
-        assert_eq!(parse_tuning("dsus4"), [-2, 0, 0, 0, -2, -2]);
-        assert_eq!(parse_tuning("dropd"), [-2, 0, 0, 0, 0, 0]);
-        assert_eq!(parse_tuning("dropc"), [-4, -2, -2, -2, -2, -2]);
-        assert_eq!(parse_tuning("openc"), [-4, -2, -2, 0, 1, 0]);
-        assert_eq!(parse_tuning("dropb"), [-5, -3, -3, -3, -3, -3]);
-        assert_eq!(parse_tuning("opene"), [0, -2, -2, -2, 0, 0]);
+        assert_eq!(parse_tuning("openg").unwrap(), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("opend").unwrap(), [-2, 0, 0, -1, -2, -2]);
+        assert_eq!(parse_tuning("c6").unwrap(), [-4, 0, -2, 0, 1, 0]);
+        assert_eq!(parse_tuning("dadgad").unwrap(), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("dsus4").unwrap(), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("dropd").unwrap(), [-2, 0, 0, 0, 0, 0]);
+        assert_eq!(parse_tuning("dropc").unwrap(), [-4, -2, -2, -2, -2, -2]);
+        assert_eq!(parse_tuning("openc").unwrap(), [-4, -2, -2, 0, 1, 0]);
+        assert_eq!(parse_tuning("dropb").unwrap(), [-5, -3, -3, -3, -3, -3]);
+        assert_eq!(parse_tuning("opene").unwrap(), [0, -2, -2, -2, 0, 0]);
     }
+
     #[test]
-    fn unknown_tuning() {
-        assert_eq!(parse_tuning("unknown_tuning"), [0, 0, 0, 0, 0, 0]);
+    fn unrecognized_name_returns_invalid_input_error() {
+        let err = parse_tuning("opan G").unwrap_err();
+        match err {
+            TabError::InvalidInput { field, message } => {
+                assert_eq!(field, "tuningName");
+                assert!(
+                    message.contains("opan G"),
+                    "message should echo the bad value, got: {message}"
+                );
+            }
+            other => panic!("expected InvalidInput, got {other:?}"),
+        }
     }
 }
 
@@ -176,7 +208,6 @@ mod test_create_string_tuning_offset {
     }
 }
 
-use memoize::memoize;
 /// Parses a newline-delimited input string into a sequence of `Line` values.
 ///
 /// Each input line is classified as `Playable` (one or more pitches, e.g. `"A3"` or
