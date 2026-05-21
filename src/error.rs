@@ -253,8 +253,11 @@ mod test_new_variant_display {
         };
         assert_eq!(
             err.to_string(),
-            "Pitch A1 on line 1 cannot be played on any strings of the configured guitar.\n\
-             Pitch B1 on line 4 cannot be played on any strings of the configured guitar."
+            concat!(
+                "Pitch A1 on line 1 cannot be played on any strings of the configured guitar.",
+                "\n",
+                "Pitch B1 on line 4 cannot be played on any strings of the configured guitar.",
+            )
         );
     }
 

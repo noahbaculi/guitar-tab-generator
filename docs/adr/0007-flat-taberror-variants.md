@@ -77,3 +77,10 @@ state with valid-looking random input, so it is not a panic-worthy BUG.
 - `Pitch::plus_offset` returns `Option<Pitch>` rather than `Result<_, TabError>`
   because the math has no context to populate `OpenPitchOutOfRange`. The
   caller has the string number and offset, the function does not.
+- No `From` impls are defined on the variants. Each error is constructed
+  at its throw site with the full structured payload the variant carries
+  (`StringNumber`, `Pitch`, `u8` bounds, etc.). A `From<X>` impl would
+  obscure origin and tempt callers to drop the structured payload in
+  favour of an opaque conversion. The cost is a few extra characters at
+  the throw site; the benefit is that every `TabError` constructor carries
+  the call-site context a downstream UI needs.
