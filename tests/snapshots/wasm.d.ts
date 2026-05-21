@@ -23,7 +23,7 @@ export interface TabInput {
      * Upper bound on per-beat fret span. An aggressive value can drop the set to zero
      * arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
      */
-    maxFretSpanFilter: number | undefined;
+    maxFretSpanFilter?: number;
 }
 
 /**

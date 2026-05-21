@@ -50,7 +50,6 @@ pub enum TuningName {
 
 /// Returns the supported `TuningName` variants, typed for JS consumption via tsify.
 #[wasm_bindgen(js_name = "getTuningNames")]
-#[cfg(not(tarpaulin_include))]
 pub fn get_tuning_names() -> Vec<TuningName> {
     TuningName::VARIANTS
         .iter()

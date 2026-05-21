@@ -22,7 +22,7 @@
 
 ### Added
 
-- `TabInput.maxFretSpanFilter: Option<u8>` filters arrangements by maximum non-zero fret span.
+- `TabInput.maxFretSpanFilter: Option<u8>` filters arrangements by maximum non-zero fret span. Emitted as `maxFretSpanFilter?: number` in the TypeScript surface, so TS-strict callers may omit the key.
 
 ### Internal
 

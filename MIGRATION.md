@@ -32,6 +32,10 @@ For a flat list of changes, see [`CHANGELOG.md`](CHANGELOG.md). For the architec
 
 Rust-only callers: see [Direct Rust callers](#direct-rust-callers) for migration snippets.
 
+### Optional fields
+
+`TabInput.maxFretSpanFilter` is optional in the generated TypeScript declaration (`maxFretSpanFilter?: number`). Callers under TypeScript strict mode may omit the key; passing `undefined` continues to work. The Rust-side type is `Option<u8>` and accepts `None`.
+
 ### What you have to do
 
 1. Replace the single `wasm_create_guitar_compositions` call with `generateArrangements` plus a loop over `set.render(i, ...)`.

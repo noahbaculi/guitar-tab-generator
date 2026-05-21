@@ -47,10 +47,21 @@ pub type PitchVec<T> = Vec<T>;
 /// One beat's worth of items (usually `Pitch` or `PitchFingering`).
 pub type BeatVec<T> = Vec<T>;
 
+/// Index of the first `Playable` line in `lines`, or `0` if the sequence has none.
+///
+/// Both `generate_arrangements` and `create_arrangements` skip leading rests before
+/// shipping the input downstream, so the predicate lives in one place.
+pub(crate) fn first_playable_index<T>(lines: &[Line<T>]) -> usize {
+    lines
+        .iter()
+        .position(|line| matches!(line, Playable(_)))
+        .unwrap_or(0)
+}
+
 /// A single playable assignment of fingerings for one beat, with precomputed difficulty
 /// inputs (average non-zero fret, non-zero fret span).
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
-pub struct ScoredBeatFingering {
+pub(crate) struct ScoredBeatFingering {
     fingering_combo: BeatVec<PitchFingering>,
     avg_non_zero_fret: Option<OrderedFloat<f32>>,
     non_zero_fret_span: u8,
@@ -58,7 +69,7 @@ pub struct ScoredBeatFingering {
 impl ScoredBeatFingering {
     /// Builds a `ScoredBeatFingering` from a per-beat `PitchFingering` list, precomputing
     /// the stats used by the pathfinding cost function.
-    pub fn new(beat_fingering_candidate: BeatVec<PitchFingering>) -> Self {
+    pub(crate) fn new(beat_fingering_candidate: BeatVec<PitchFingering>) -> Self {
         let avg_non_zero_fret = calc_avg_non_zero_fret(&beat_fingering_candidate);
         let non_zero_fret_span = calc_fret_span(&beat_fingering_candidate).unwrap_or(0);
 
@@ -316,10 +327,7 @@ pub fn create_arrangements(
         return Ok(empty_compositions);
     }
 
-    let first_playable_index = input_lines
-        .iter()
-        .position(|line| matches!(line, Line::Playable(_)))
-        .unwrap_or(0);
+    let first_playable_index = first_playable_index(&input_lines);
 
     let lines = input_lines
         .into_iter()

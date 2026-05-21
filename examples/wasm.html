@@ -161,6 +161,7 @@
                 <label for="tuning">Tuning</label>
                 <select id="tuning"></select>
             </div>
+            <div id="tuningName-error" class="field-error"></div>
             <div id="guitar-error" class="field-error"></div>
 
             <div class="control">
@@ -197,6 +198,8 @@
                 <button id="next" type="button" aria-label="Next arrangement" disabled>&gt;</button>
                 <span id="tab-meta"></span>
             </div>
+
+            <div id="field-error-default" class="field-error" role="alert"></div>
 
             <pre id="tab"></pre>
 
@@ -503,6 +506,8 @@ C4`,
             document.getElementById("parse-errors").textContent = "";
             document.getElementById("guitar-error").textContent = "";
             document.getElementById("num-arrangements-error").textContent = "";
+            document.getElementById("tuningName-error").textContent = "";
+            document.getElementById("field-error-default").textContent = "";
             // Repaints the line-marker gutter to its all-grey baseline; the gutter is
             // part of the layout regardless of error state.
             renderLineMarkers([], document.getElementById("input").value);
@@ -559,13 +564,20 @@ C4`,
                     return;
                 }
                 case "invalidInput": {
-                    const fieldErrEl = document.getElementById(`${err.field === "numArrangements" ? "num-arrangements" : err.field}-error`);
+                    // Most fields map to `<field>-error`; numArrangements is the historical
+                    // kebab-case outlier. Unmapped fields (e.g. `index`, a programmer-side
+                    // bounds error - see ArrangementSet doc on the Rust side) fall through to
+                    // the shared default region so downstream copies of this dispatch don't
+                    // silently mis-route them into the tab pane.
+                    const slotId = err.field === "numArrangements" ? "num-arrangements-error" : `${err.field}-error`;
+                    const fieldErrEl = document.getElementById(slotId);
                     if (fieldErrEl) {
                         fieldErrEl.textContent = err.message;
                     } else {
-                        tabEl.textContent = `Invalid input (${err.field}): ${err.message}`;
-                        tabEl.classList.add("error");
+                        document.getElementById("field-error-default").textContent = `Invalid input (${err.field}): ${err.message}`;
                     }
+                    tabEl.textContent = "";
+                    tabEl.classList.remove("error");
                     metaEl.textContent = "";
                     return;
                 }

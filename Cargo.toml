@@ -45,6 +45,3 @@ serde_json = "1"
 [[bench]]
 name = "benchmarks"
 harness = false
-
-[lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(tarpaulin_include)"] }

@@ -53,7 +53,7 @@ All the valid [[Pitch fingering]]s for a single pitch on a given guitar — one 
 _Avoid_: Pitch fingering options, pitch fingering group
 
 **Beat fingering**:
-The chosen [[Pitch fingering]]s for one [[Beat]] — one per pitch in the beat, with no two pitches landing on the same string. The cartesian product of [[Pitch fingering candidates]] across the beat's pitches, filtered for string collisions. When decorated with [[Difficulty features]], it is held as `BeatFingeringCombo`.
+The chosen [[Pitch fingering]]s for one [[Beat]] — one per pitch in the beat, with no two pitches landing on the same string. The cartesian product of [[Pitch fingering candidates]] across the beat's pitches, filtered for string collisions. When decorated with [[Difficulty features]], it is held as `ScoredBeatFingering`.
 _Avoid_: Beat fingering combo (the type name is current shorthand; "combo" suggests "one of many" but the chosen one is just *the* beat fingering), fingering combination
 
 **Tuning**:

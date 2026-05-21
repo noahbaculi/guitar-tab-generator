@@ -87,6 +87,7 @@ pub struct TabInput {
     pub num_arrangements: u8,
     /// Upper bound on per-beat fret span. An aggressive value can drop the set to zero
     /// arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
+    #[tsify(optional)]
     pub max_fret_span_filter: Option<u8>,
 }
 
@@ -157,6 +158,10 @@ pub struct ArrangementSet {
     normalized_input: Vec<NormalizedBeat>,
 }
 
+/// `ArrangementSet` indexed accessors return `TabError::InvalidInput { field: "index", ... }`
+/// when `index >= self.len`. This is a programmer-side bounds error (the demo clamps before
+/// calling); downstream callers can branch on `field == "index"` to surface it differently
+/// from user-facing field names like `"tuningName"` or `"numArrangements"`.
 #[wasm_bindgen]
 impl ArrangementSet {
     /// Number of arrangements in the set. Equal to the requested `num_arrangements`, possibly
@@ -270,10 +275,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         TabError::Parse { errors }
     })?;
 
-    let first_playable_index = input_lines
-        .iter()
-        .position(|line| matches!(line, arrangement::Line::Playable(_)))
-        .unwrap_or(0);
+    let first_playable_index = arrangement::first_playable_index(&input_lines);
 
     let normalized_input: Vec<NormalizedBeat> = input_lines
         .iter()
