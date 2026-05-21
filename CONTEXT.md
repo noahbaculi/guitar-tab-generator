@@ -40,6 +40,10 @@ _Avoid_: Cost, weight, score
 The per-[[Beat]] stats fed to difficulty scoring, currently `avg_non_zero_fret` and `non_zero_fret_span`. Properties of one beat's chosen fingering, not of a transition.
 _Avoid_: Difficulty inputs, stats, metrics
 
+**UnplayablePitch**:
+A pitch that could not be placed on any string of the configured [[Guitar]], carrying its plain-text value (e.g. `"A1"`) and the 1-indexed `line` number from the input. Returned in `TabError::UnplayablePitches`. The structured replacement for the 1.x and pre-final-2.0.0 prose error string "Pitch X on line N cannot be played on any strings of the configured guitar."
+_Avoid_: Invalid pitch (ambiguous with "unparseable text"), unreachable pitch (current shorthand; `unplayable` is the canonical word at the error layer).
+
 **Transition difficulty**:
 The [[Difficulty]] of moving from one [[Beat]]'s fingering to the next adjacent [[Beat]]'s fingering. The value on a pathfinding edge.
 _Avoid_: Edge cost, edge weight, step cost
