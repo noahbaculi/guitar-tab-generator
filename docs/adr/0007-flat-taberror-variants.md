@@ -38,6 +38,16 @@ and the public Rust API:
 - `TuningNameUnknown { value }`
 - `IndexOutOfBounds { index, len }`
 
+The variant count grew by one (`NoArrangementsFound`) during implementation.
+The original plan called for a `panic!` on the empty-`path_results` path in
+`arrangement::create_arrangements`. Internal proptests (`proptest-regressions/arrangement.txt`)
+shrink to duplicate-pitch beats such as `Playable([E2, E2])`, which the
+`no_duplicate_strings` constraint filters to zero candidate fingerings even
+though every individual pitch is playable. That is valid public input, not
+a BUG, so the path returns a structured error instead. The boundary test
+`integration_public_surface::boundary_variant_smoke::no_arrangements_found`
+pins this guarantee.
+
 The enum stays `#[non_exhaustive]`, so new variants can be added in 2.x
 without a major bump. The grouped alternative (Guitar/Arrangement
 sub-enums) was rejected because it preserved the umbrella indirection

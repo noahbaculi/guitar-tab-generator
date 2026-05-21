@@ -357,4 +357,21 @@ mod boundary_variant_smoke {
             "got {err:?}"
         );
     }
+
+    /// Duplicate pitches in a single beat are individually playable but produce no
+    /// valid arrangement because the `no_duplicate_strings` constraint filters every
+    /// candidate fingering combination. This is the failure mode the proptest seeds
+    /// in `proptest-regressions/arrangement.txt` shrink to (e.g. `Playable([E2, E2])`).
+    ///
+    /// Pinning the variant at the public boundary keeps the ADR-0007 justification
+    /// for `NoArrangementsFound` honest: the variant is reachable from valid public
+    /// input, so it earns its place in the flat `TabError` union.
+    #[test]
+    fn no_arrangements_found() {
+        let err = generate_arrangements(input(18, 0, 1, "standard", "E2E2")).unwrap_err();
+        assert!(
+            matches!(err, TabError::NoArrangementsFound),
+            "got {err:?}"
+        );
+    }
 }
