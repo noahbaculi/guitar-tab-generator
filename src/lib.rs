@@ -71,16 +71,16 @@ pub mod __bench_internals {
 ///
 /// Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
 /// alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
-/// at the boundary and a `TabError::InvalidInput` is thrown when out of range.
+/// at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct TabInput {
     pub input: String,
-    /// Name of the tuning preset. Accepts the empty string and the case-insensitive literal
-    /// `"standard"` for standard tuning, or any variant of `TuningName` (case-insensitive,
-    /// camelCase on the wire: `"openG"`, `"dropD"`, etc.). Other strings are rejected with
-    /// `TabError::InvalidInput { field: "tuningName", ... }`.
+    /// Name of the tuning preset. Accepts the case-insensitive literal `"standard"` for
+    /// standard tuning, or any variant of `TuningName` (case-insensitive, camelCase on the
+    /// wire: `"openG"`, `"dropD"`, etc.). Other strings (including the empty string) are
+    /// rejected with [`TabError::TuningNameUnknown`].
     pub tuning_name: String,
     pub guitar_num_frets: u8,
     pub guitar_capo: u8,
@@ -157,10 +157,11 @@ pub struct ArrangementSet {
     normalized_input: Vec<NormalizedBeat>,
 }
 
-/// `ArrangementSet` indexed accessors return `TabError::InvalidInput { field: "index", ... }`
-/// when `index >= self.len`. This is a programmer-side bounds error (the demo clamps before
-/// calling); downstream callers can branch on `field == "index"` to surface it differently
-/// from user-facing field names like `"tuningName"` or `"numArrangements"`.
+/// `ArrangementSet` indexed accessors return [`TabError::IndexOutOfBounds`] when
+/// `index >= self.len`. This is a programmer-side bounds error (the demo clamps before
+/// calling); downstream callers can branch on the typed variant to surface it differently
+/// from user-facing errors like [`TabError::TuningNameUnknown`] or
+/// [`TabError::NumArrangementsOutOfRange`].
 #[wasm_bindgen]
 impl ArrangementSet {
     /// Number of arrangements in the set. Equal to the requested `num_arrangements`, possibly
@@ -239,9 +240,11 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 ///
 /// # Errors
 ///
-/// Returns `TabError::InvalidInput` when `tab_input.num_arrangements` is outside `1..=NumArrangements::MAX`,
-/// `TabError::Parse` when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning
-/// or capo or fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
+/// Returns the typed [`TabError`] variant for each failure mode: validation variants like
+/// [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
+/// [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], or [`TabError::CapoExceedsFrets`];
+/// [`TabError::Parse`] for unparseable input; and [`TabError::UnplayablePitches`] when no
+/// fingering exists for an input pitch.
 ///
 /// # Validation order
 ///

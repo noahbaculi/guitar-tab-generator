@@ -71,12 +71,6 @@ pub enum TabError {
     NumArrangementsOutOfRange { value: u8, max: u8 },
     TuningNameUnknown { value: String },
     IndexOutOfBounds { index: usize, len: usize },
-    Guitar { message: String },
-    // `message` is intentionally free-form prose from `arrangement::validate_fingerings`,
-    // not part of the typed contract. UIs display it verbatim, so copy changes are
-    // user-visible; treat it like UI strings, not like a stable wire field.
-    Arrangement { message: String },
-    InvalidInput { field: String, message: String },
 }
 
 impl std::fmt::Display for TabError {
@@ -139,11 +133,6 @@ impl std::fmt::Display for TabError {
             TabError::IndexOutOfBounds { index, len } => {
                 write!(f, "index {index} is out of bounds for set of length {len}")
             }
-            TabError::Guitar { message } => write!(f, "{message}"),
-            TabError::Arrangement { message } => write!(f, "{message}"),
-            TabError::InvalidInput { field, message } => {
-                write!(f, "invalid input for `{field}`: {message}")
-            }
         }
     }
 }
@@ -185,17 +174,6 @@ mod test_tab_error_display {
         );
     }
 
-    #[test]
-    fn invalid_input_includes_field_name() {
-        let err = TabError::InvalidInput {
-            field: "numArrangements".to_owned(),
-            message: "must be between 1 and 20 inclusive, got 0".to_owned(),
-        };
-        assert_eq!(
-            err.to_string(),
-            "invalid input for `numArrangements`: must be between 1 and 20 inclusive, got 0"
-        );
-    }
 }
 
 #[cfg(test)]

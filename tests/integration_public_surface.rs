@@ -115,7 +115,7 @@ fn arrangement_set_is_empty_when_filter_drops_every_candidate() {
 fn invalid_input_errors_are_equal_for_equal_inputs() {
     let err_a = generate_arrangements(fixture(0)).expect_err("0 must be rejected");
     let err_b = generate_arrangements(fixture(0)).expect_err("0 must be rejected");
-    assert_eq!(err_a, err_b, "TabError::InvalidInput must derive structural equality");
+    assert_eq!(err_a, err_b, "TabError must derive structural equality");
     let err_high = generate_arrangements(fixture(99)).expect_err("99 must be rejected");
     assert_ne!(err_a, err_high, "different messages must not compare equal");
 }
@@ -155,13 +155,13 @@ fn num_arrangements_newtype_round_trips() {
         .expect_err("values above MAX must be rejected");
     assert!(matches!(
         too_high,
-        TabError::InvalidInput { ref field, .. } if field == "numArrangements"
+        TabError::NumArrangementsOutOfRange { value: 21, max: 20 }
     ));
 
     let zero = NumArrangements::try_new(0).expect_err("0 must be rejected");
     assert!(matches!(
         zero,
-        TabError::InvalidInput { ref field, .. } if field == "numArrangements"
+        TabError::NumArrangementsOutOfRange { value: 0, max: 20 }
     ));
 }
 
