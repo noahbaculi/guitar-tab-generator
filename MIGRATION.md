@@ -198,15 +198,25 @@ try {
         showLineMarker(line, text);
       }
       break;
-    case "guitar":
-      showGuitarError(err.message);
+    case "numFretsTooHigh":
+    case "capoTooHigh":
+    case "capoExceedsFrets":
+    case "stringNumberOutOfRange":
+    case "openPitchOutOfRange":
+    case "fretRangeExceedsPitchRange":
+    case "noArrangementsFound":
+    case "numArrangementsOutOfRange":
+    case "tuningNameUnknown":
+    case "indexOutOfBounds":
+      // Each variant has its own structured payload; see the "Flat TabError variants"
+      // section below for the field-level switch.
+      showRawError(err);
       break;
-    case "arrangement":
-      showArrangementError(err.message);
-      break;
-    case "invalidInput":
-      // err.field: string, err.message: string
-      showFieldError(err.field, err.message);
+    case "unplayablePitches":
+      // err.pitches: { value: string, line: number }[]
+      for (const { value, line } of err.pitches) {
+        showLineMarker(line, value);
+      }
       break;
     default:
       // Defensive: a future non-breaking 2.x release may add a variant.
@@ -262,11 +272,11 @@ const names: TuningName[] = getTuningNames();
 // ["openG", "openD", "c6", "dsus4", "dropD", "dropC", "openC", "dropB", "openE"]
 ```
 
-`tuningName` accepts the empty string and the case-insensitive literal `"standard"` as standard tuning (all-zero offsets), or any variant returned by `getTuningNames()` (case-insensitive). `"standard"` is intentionally not in the typed `TuningName` union since it carries no semitone offsets; TS-strict consumers passing `"standard"` should widen the field type to `string | TuningName` or use the literal directly.
+`tuningName` accepts the case-insensitive literal `"standard"` as standard tuning (all-zero offsets), or any variant returned by `getTuningNames()` (case-insensitive). `"standard"` is intentionally not in the typed `TuningName` union since it carries no semitone offsets; TS-strict consumers passing `"standard"` should widen the field type to `string | TuningName` or use the literal directly.
 
 ### Behavior change
 
-In 1.x, an unrecognized `tuningName` silently fell back to standard tuning. In 2.0.0 it throws `TabError::InvalidInput { field: "tuningName", ... }`. Code that previously relied on the silent fallback (typos, dynamic strings) must explicitly pass `"standard"` or validate against `getTuningNames()` before calling `generateArrangements`.
+In 1.x, an unrecognized or empty `tuningName` silently fell back to standard tuning. In 2.0.0 it throws `TabError::TuningNameUnknown { value }` (and the empty string is no longer accepted as a synonym for `"standard"`). Code that previously relied on the silent fallback (typos, dynamic strings, empty input) must explicitly pass `"standard"` or validate against `getTuningNames()` before calling `generateArrangements`.
 
 The Rust-side parser (`parse_tuning`) remains case-insensitive, so 1.x calls that passed `"DropD"` or `"OpenG"` still resolve. New code should use the camelCase typed values. See [ADR-0004](docs/adr/0004-tuning-name-camelcase-wire.md).
 
