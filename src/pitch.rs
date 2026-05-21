@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use std::fmt;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 
@@ -456,16 +455,15 @@ impl Pitch {
         }
     }
 
-    pub fn plus_offset(&self, offset: i16) -> Result<Pitch> {
+    /// Returns the pitch `offset` semitones above (or below, for negative `offset`) this pitch,
+    /// or `None` if the result would fall outside the supported `Pitch` range.
+    #[must_use]
+    pub fn plus_offset(&self, offset: i16) -> Option<Pitch> {
         let new_index = self.index() as i16 + offset;
         if new_index < 0 {
-            return Err(anyhow!(
-                "Pitch {self} offset by {offset} pitches results in a pitch out of range."
-            ));
+            return None;
         }
-        Pitch::from_repr(new_index as usize).ok_or_else(|| {
-            anyhow!("Pitch {self} offset by {offset} pitches results in a pitch out of range.")
-        })
+        Pitch::from_repr(new_index as usize)
     }
 }
 #[cfg(test)]
@@ -487,23 +485,29 @@ mod test_pitch_plus_offset {
 
     #[test]
     fn valid_positive() {
-        assert_eq!(Pitch::FSharpGFlat3.plus_offset(3).unwrap(), Pitch::A3);
+        assert_eq!(Pitch::FSharpGFlat3.plus_offset(3), Some(Pitch::A3));
     }
     #[test]
     fn valid_negative() {
         assert_eq!(
-            Pitch::FSharpGFlat3.plus_offset(-3).unwrap(),
-            Pitch::DSharpEFlat3
+            Pitch::FSharpGFlat3.plus_offset(-3),
+            Some(Pitch::DSharpEFlat3)
         );
     }
     #[test]
-    fn test_plus_offset_exceeds_range() {
-        let error = Pitch::ASharpBFlat9.plus_offset(2).unwrap_err();
-        let error_msg = format!("{error}");
+    fn within_range_returns_some() {
+        assert_eq!(Pitch::C0.plus_offset(2), Some(Pitch::D0));
+        assert_eq!(Pitch::E4.plus_offset(0), Some(Pitch::E4));
+    }
 
-        assert_eq!(
-            error_msg,
-            "Pitch A♯B♭9 offset by 2 pitches results in a pitch out of range."
-        );
+    #[test]
+    fn negative_overflow_returns_none() {
+        assert_eq!(Pitch::C0.plus_offset(-1), None);
+    }
+
+    #[test]
+    fn positive_overflow_returns_none() {
+        assert_eq!(Pitch::B9.plus_offset(1), None);
+        assert_eq!(Pitch::ASharpBFlat9.plus_offset(2), None);
     }
 }

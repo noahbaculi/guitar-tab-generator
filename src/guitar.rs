@@ -128,9 +128,9 @@ impl Guitar {
         let adjusted_tuning = tuning
             .into_iter()
             .map(|(string_num, pitch)| -> Result<_> {
-                let adjusted = pitch
-                    .plus_offset(capo as i16)
-                    .context("capo adjustment pushed pitch out of range")?;
+                let adjusted = pitch.plus_offset(capo as i16).ok_or_else(|| {
+                    anyhow!("capo adjustment pushed pitch out of range")
+                })?;
                 Ok((string_num, adjusted))
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
