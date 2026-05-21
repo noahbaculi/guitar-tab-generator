@@ -1,21 +1,14 @@
 use crate::{
+    error::{TabError, UnplayablePitch},
     guitar::{generate_pitch_fingerings, Guitar, PitchFingering},
     pitch::Pitch,
 };
-use anyhow::{anyhow, Result};
 use average::Mean;
 use itertools::Itertools;
 use memoize::memoize;
 use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
 use std::{collections::HashSet, rc::Rc, sync::Arc};
-
-/// Records the location of an input value that could not be played on the guitar.
-#[derive(Debug)]
-struct UnplayablePitch {
-    value: String,
-    line_number: u16,
-}
 
 /// One logical line of a parsed or arranged composition.
 ///
@@ -310,7 +303,7 @@ pub fn create_arrangements(
     input_lines: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: crate::NumArrangements,
     max_fret_span_filter: Option<u8>,
-) -> Result<Vec<Arrangement>, Arc<anyhow::Error>> {
+) -> Result<Vec<Arrangement>, Arc<TabError>> {
     let input_playable_lines = input_lines
         .iter()
         .filter(|line| matches!(line, Line::Playable(_)))
@@ -335,7 +328,7 @@ pub fn create_arrangements(
         .collect_vec();
 
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
-        validate_fingerings(&guitar, &lines)?;
+        validate_fingerings(&guitar, &lines).map_err(Arc::new)?;
 
     let measure_break_indices: Vec<usize> = pitch_fingering_candidates
         .iter()
@@ -348,28 +341,24 @@ pub fn create_arrangements(
         .into_iter()
         .filter(|line_candidate| !matches!(line_candidate, MeasureBreak))
         .enumerate()
-        .map(
-            |(line_index, line_candidate)| -> Result<BeatVec<Node>, Arc<anyhow::Error>> {
-                match line_candidate {
-                    MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
-                    Rest => Ok(vec![Node::Rest {
+        .map(|(line_index, line_candidate)| match line_candidate {
+            MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
+            Rest => vec![Node::Rest {
+                line_index: line_index as u16,
+            }],
+            Playable(beat_fingerings_per_pitch) => {
+                generate_fingering_combos(&beat_fingerings_per_pitch)
+                    .into_iter()
+                    .map(|pitch_fingering_group| Node::Playable {
                         line_index: line_index as u16,
-                    }]),
-                    Playable(beat_fingerings_per_pitch) => {
-                        Ok(generate_fingering_combos(&beat_fingerings_per_pitch)?
-                            .into_iter()
-                            .map(|pitch_fingering_group| Node::Playable {
-                                line_index: line_index as u16,
-                                scored_beat_fingering: Rc::new(ScoredBeatFingering::new(
-                                    pitch_fingering_group,
-                                )),
-                            })
-                            .collect())
-                    }
-                }
-            },
-        )
-        .collect::<Result<Vec<_>, _>>()?;
+                        scored_beat_fingering: Rc::new(ScoredBeatFingering::new(
+                            pitch_fingering_group,
+                        )),
+                    })
+                    .collect()
+            }
+        })
+        .collect::<Vec<_>>();
 
     let num_path_node_groups = path_node_groups.len();
 
@@ -388,7 +377,7 @@ pub fn create_arrangements(
         num_arrangements.get() as usize,
     );
     if path_results.is_empty() {
-        return Err(Arc::new(anyhow!("No arrangements could be calculated.")));
+        return Err(Arc::new(TabError::NoArrangementsFound));
     }
 
     let mut arrangements = path_results
@@ -407,8 +396,25 @@ pub fn create_arrangements(
 #[cfg(test)]
 mod test_create_arrangements {
     use super::*;
+    use crate::parser::parse_lines;
     use crate::string_number::StringNumber;
     use crate::NumArrangements;
+
+    #[test]
+    fn unreachable_pitch_returns_unplayable_pitches_variant() {
+        let lines = parse_lines("A1".to_owned()).unwrap();
+        let n = NumArrangements::try_new(1).unwrap();
+        let err = create_arrangements(Guitar::default(), lines, n, None).unwrap_err();
+        let inner = std::sync::Arc::try_unwrap(err).unwrap_or_else(|arc| (*arc).clone());
+        match inner {
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 1);
+                assert_eq!(pitches[0].value, "A1");
+                assert_eq!(pitches[0].line, 1);
+            }
+            other => panic!("expected UnplayablePitches, got {other:?}"),
+        }
+    }
 
     #[test]
     fn single_line_single_pitch() {
@@ -615,7 +621,7 @@ mod test_create_arrangements {
 fn validate_fingerings(
     guitar: &Guitar,
     input_pitches: &[Line<BeatVec<Pitch>>],
-) -> Result<Vec<Line<BeatVec<PitchVec<PitchFingering>>>>> {
+) -> Result<Vec<Line<BeatVec<PitchVec<PitchFingering>>>>, TabError> {
     let mut impossible_pitches: Vec<UnplayablePitch> = vec![];
     let fingerings: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> = input_pitches
         .iter()
@@ -632,7 +638,7 @@ fn validate_fingerings(
                         if pitch_fingerings.is_empty() {
                             impossible_pitches.push(UnplayablePitch {
                                 value: format!("{beat_pitch:?}"),
-                                line_number: (beat_index as u16) + 1,
+                                line: (beat_index as u32) + 1,
                             })
                         }
                         pitch_fingerings
@@ -643,20 +649,9 @@ fn validate_fingerings(
         .collect();
 
     if !impossible_pitches.is_empty() {
-        // String surfaces verbatim in `TabError::Arrangement.message`, which the demo
-        // displays raw. Copy changes here are user-visible; see `src/error.rs`.
-        let error_msg = impossible_pitches
-            .iter()
-            .map(|invalid_input| {
-                format!(
-                    "Pitch {} on line {} cannot be played on any strings of the configured guitar.",
-                    invalid_input.value, invalid_input.line_number
-                )
-            })
-            .collect::<Vec<String>>()
-            .join("\n");
-
-        return Err(anyhow!(error_msg));
+        return Err(TabError::UnplayablePitches {
+            pitches: impossible_pitches,
+        });
     }
 
     Ok(fingerings)
@@ -716,11 +711,15 @@ mod test_validate_fingerings {
         let guitar = Guitar::default();
         let input_pitches = vec![Playable(vec![Pitch::B9])];
 
-        let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
-        let error_msg = format!("{error}");
-        let expected_error_msg =
-            "Pitch B9 on line 1 cannot be played on any strings of the configured guitar.";
-        assert_eq!(error_msg, expected_error_msg);
+        let err = validate_fingerings(&guitar, &input_pitches).unwrap_err();
+        match err {
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 1);
+                assert_eq!(pitches[0].value, "B9");
+                assert_eq!(pitches[0].line, 1);
+            }
+            other => panic!("expected UnplayablePitches, got {other:?}"),
+        }
     }
     #[test]
     fn invalid_complex() {
@@ -734,33 +733,39 @@ mod test_validate_fingerings {
             Playable(vec![Pitch::D4, Pitch::G4]),
         ];
 
-        let error = validate_fingerings(&guitar, &input_pitches).unwrap_err();
-        let error_msg = format!("{error}");
-        let expected_error_msg =
-            "Pitch A1 on line 1 cannot be played on any strings of the configured guitar.\n\
-            Pitch A1 on line 4 cannot be played on any strings of the configured guitar.\n\
-            Pitch B1 on line 4 cannot be played on any strings of the configured guitar.\n\
-            Pitch D2 on line 5 cannot be played on any strings of the configured guitar.";
-        assert_eq!(error_msg, expected_error_msg);
+        let err = validate_fingerings(&guitar, &input_pitches).unwrap_err();
+        match err {
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 4);
+                assert_eq!(pitches[0].value, "A1");
+                assert_eq!(pitches[0].line, 1);
+                assert_eq!(pitches[1].value, "A1");
+                assert_eq!(pitches[1].line, 4);
+                assert_eq!(pitches[2].value, "B1");
+                assert_eq!(pitches[2].line, 4);
+                assert_eq!(pitches[3].value, "D2");
+                assert_eq!(pitches[3].line, 5);
+            }
+            other => panic!("expected UnplayablePitches, got {other:?}"),
+        }
     }
 }
 
 /// Generates all playable combinations of fingerings for all the pitches in a beat.
 fn generate_fingering_combos(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
-) -> Result<Vec<BeatVec<PitchFingering>>, Arc<anyhow::Error>> {
-    if beat_fingerings_per_pitch.is_empty() {
-        return Err(Arc::new(anyhow!(
-            "generate_fingering_combos called with empty input"
-        )));
-    }
+) -> Vec<BeatVec<PitchFingering>> {
+    assert!(
+        !beat_fingerings_per_pitch.is_empty(),
+        "BUG: generate_fingering_combos called with empty input"
+    );
 
-    Ok(beat_fingerings_per_pitch
+    beat_fingerings_per_pitch
         .iter()
         .multi_cartesian_product()
         .map(|combo| combo.into_iter().copied().collect::<Vec<PitchFingering>>())
         .filter(|x| no_duplicate_strings(x))
-        .collect())
+        .collect()
 }
 #[cfg(test)]
 mod test_generate_fingering_combos {
@@ -778,7 +783,7 @@ mod test_generate_fingering_combos {
         let beat_fingerings_per_pitch = &[vec![pitch_fingering]];
 
         assert_eq!(
-            generate_fingering_combos(beat_fingerings_per_pitch).unwrap(),
+            generate_fingering_combos(beat_fingerings_per_pitch),
             beat_fingerings_per_pitch
         );
     }
@@ -826,17 +831,15 @@ mod test_generate_fingering_combos {
         ];
 
         assert_eq!(
-            generate_fingering_combos(&beat_fingerings_per_pitch).unwrap(),
+            generate_fingering_combos(&beat_fingerings_per_pitch),
             expected_fingering_combos
         );
     }
 
     #[test]
-    fn empty_input() {
-        let result = generate_fingering_combos(&[]);
-        assert!(result.is_err());
-        let error_msg = format!("{}", result.unwrap_err());
-        assert!(error_msg.contains("generate_fingering_combos called with empty input"));
+    #[should_panic(expected = "BUG: generate_fingering_combos called with empty input")]
+    fn empty_input_panics() {
+        let _ = generate_fingering_combos(&[]);
     }
 }
 

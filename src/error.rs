@@ -67,6 +67,7 @@ pub enum TabError {
     OpenPitchOutOfRange { string: u8, semitones: i16 },
     FretRangeExceedsPitchRange { open_pitch: String, playable_frets: u8 },
     UnplayablePitches { pitches: Vec<UnplayablePitch> },
+    NoArrangementsFound,
     NumArrangementsOutOfRange { value: u8, max: u8 },
     TuningNameUnknown { value: String },
     IndexOutOfBounds { index: usize, len: usize },
@@ -122,6 +123,9 @@ impl std::fmt::Display for TabError {
             TabError::UnplayablePitches { pitches } => {
                 let joined = pitches.iter().map(|p| p.to_string()).collect::<Vec<_>>().join("\n");
                 write!(f, "{joined}")
+            }
+            TabError::NoArrangementsFound => {
+                write!(f, "No arrangements could be calculated.")
             }
             TabError::NumArrangementsOutOfRange { value, max } => {
                 write!(f, "must be between 1 and {max} inclusive, got {value}")
@@ -271,6 +275,12 @@ mod test_new_variant_display {
             "Pitch A1 on line 1 cannot be played on any strings of the configured guitar.\n\
              Pitch B1 on line 4 cannot be played on any strings of the configured guitar."
         );
+    }
+
+    #[test]
+    fn no_arrangements_found() {
+        let err = TabError::NoArrangementsFound;
+        assert_eq!(err.to_string(), "No arrangements could be calculated.");
     }
 
     #[test]
