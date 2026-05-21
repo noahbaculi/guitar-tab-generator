@@ -1,19 +1,31 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+ * A pitch that could not be played on the configured guitar, with its 1-indexed line number.
+ *
+ * Public payload of [`TabError::UnplayablePitches`]. Replaces the prose
+ * \"Pitch X on line N cannot be played on any strings of the configured guitar.\
+ * string that 1.x and the pre-final 2.0.0 surface returned.
+ */
+export interface UnplayablePitch {
+    value: string;
+    line: number;
+}
+
+/**
  * Configuration bundle for one tab-generation request.
  *
  * Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
  * alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
- * at the boundary and a `TabError::InvalidInput` is thrown when out of range.
+ * at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
  */
 export interface TabInput {
     input: string;
     /**
-     * Name of the tuning preset. Accepts the empty string and the case-insensitive literal
-     * `\"standard\"` for standard tuning, or any variant of `TuningName` (case-insensitive,
-     * camelCase on the wire: `\"openG\"`, `\"dropD\"`, etc.). Other strings are rejected with
-     * `TabError::InvalidInput { field: \"tuningName\", ... }`.
+     * Name of the tuning preset. Accepts the case-insensitive literal `\"standard\"` for
+     * standard tuning, or any variant of `TuningName` (case-insensitive, camelCase on the
+     * wire: `\"openG\"`, `\"dropD\"`, etc.). Other strings (including the empty string) are
+     * rejected with [`TabError::TuningNameUnknown`].
      */
     tuningName: string;
     guitarNumFrets: number;
@@ -53,7 +65,7 @@ export interface ParseError {
 /**
  * Top-level error variant for the WASM boundary.
  */
-export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "guitar"; message: string } | { kind: "arrangement"; message: string } | { kind: "invalidInput"; field: string; message: string };
+export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "numFretsTooHigh"; numFrets: number; max: number } | { kind: "capoTooHigh"; capo: number; max: number } | { kind: "capoExceedsFrets"; capo: number; numFrets: number } | { kind: "stringNumberOutOfRange"; value: number; max: number } | { kind: "openPitchOutOfRange"; string: number; semitones: number } | { kind: "fretRangeExceedsPitchRange"; openPitch: string; playableFrets: number } | { kind: "unplayablePitches"; pitches: UnplayablePitch[] } | { kind: "noArrangementsFound" } | { kind: "numArrangementsOutOfRange"; value: number; max: number } | { kind: "tuningNameUnknown"; value: string } | { kind: "indexOutOfBounds"; index: number; len: number };
 
 
 /**
@@ -107,9 +119,11 @@ export class ArrangementSet {
  *
  * # Errors
  *
- * Returns `TabError::InvalidInput` when `tab_input.num_arrangements` is outside `1..=NumArrangements::MAX`,
- * `TabError::Parse` when the input contains unparseable substrings, `TabError::Guitar` on invalid tuning
- * or capo or fret count, and `TabError::Arrangement` when no valid fingering exists for a pitch.
+ * Returns the typed [`TabError`] variant for each failure mode: validation variants like
+ * [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
+ * [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], or [`TabError::CapoExceedsFrets`];
+ * [`TabError::Parse`] for unparseable input; and [`TabError::UnplayablePitches`] when no
+ * fingering exists for an input pitch.
  *
  * # Validation order
  *
