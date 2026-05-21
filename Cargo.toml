@@ -15,7 +15,6 @@ documentation = "https://docs.rs/guitar-tab-generator"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-anyhow = "1.0.100"
 average = { version = "0.16.0", features = ["rayon"] }
 itertools = "0.14.0"
 memoize = "0.6.0"
