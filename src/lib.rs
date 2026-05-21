@@ -107,13 +107,12 @@ impl NumArrangements {
     ///
     /// # Errors
     ///
-    /// Returns `TabError::InvalidInput` with `field == "numArrangements"` for `n == 0`
-    /// or `n > MAX`.
+    /// Returns [`TabError::NumArrangementsOutOfRange`] for `n == 0` or `n > MAX`.
     pub fn try_new(n: u8) -> Result<Self, TabError> {
         if n == 0 || n > Self::MAX {
-            return Err(TabError::InvalidInput {
-                field: "numArrangements".to_owned(),
-                message: format!("must be between 1 and {} inclusive, got {n}", Self::MAX),
+            return Err(TabError::NumArrangementsOutOfRange {
+                value: n,
+                max: Self::MAX,
             });
         }
         let nz = NonZeroU8::new(n).expect("BUG: n != 0 verified above");
@@ -232,10 +231,7 @@ impl ArrangementSet {
 }
 
 fn out_of_bounds_error(index: usize, len: usize) -> TabError {
-    TabError::InvalidInput {
-        field: "index".to_owned(),
-        message: format!("index {index} is out of bounds for set of length {len}"),
-    }
+    TabError::IndexOutOfBounds { index, len }
 }
 
 /// Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
@@ -290,8 +286,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         .collect();
 
     let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tab_input.tuning_name)?);
-    let guitar = Guitar::new(tuning, tab_input.guitar_num_frets, tab_input.guitar_capo)
-        .map_err(|e| TabError::Guitar { message: e.to_string() })?;
+    let guitar = Guitar::new(tuning, tab_input.guitar_num_frets, tab_input.guitar_capo)?;
 
     let arrangements = arrangement::create_arrangements(
         guitar.clone(),
@@ -299,7 +294,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         num_arrangements,
         tab_input.max_fret_span_filter,
     )
-    .map_err(|e| TabError::Arrangement { message: e.to_string() })?;
+    .map_err(|arc| std::sync::Arc::try_unwrap(arc).unwrap_or_else(|a| (*a).clone()))?;
 
     Ok(ArrangementSet {
         arrangements,
@@ -401,8 +396,11 @@ mod test_generate_arrangements_and_render {
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
-            TabError::InvalidInput { field, .. } => assert_eq!(field, "numArrangements"),
-            other => panic!("expected InvalidInput, got {other:?}"),
+            TabError::NumArrangementsOutOfRange { value, max } => {
+                assert_eq!(value, 0);
+                assert_eq!(max, 20);
+            }
+            other => panic!("expected NumArrangementsOutOfRange, got {other:?}"),
         }
     }
 
@@ -418,35 +416,36 @@ mod test_generate_arrangements_and_render {
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
-            TabError::InvalidInput { field, .. } => assert_eq!(field, "numArrangements"),
-            other => panic!("expected InvalidInput, got {other:?}"),
+            TabError::NumArrangementsOutOfRange { value, max } => {
+                assert_eq!(value, 21);
+                assert_eq!(max, 20);
+            }
+            other => panic!("expected NumArrangementsOutOfRange, got {other:?}"),
         }
     }
 
     #[test]
-    fn invalid_guitar_config_returns_guitar_error() {
+    fn invalid_guitar_config_returns_num_frets_too_high() {
         let tab_input = TabInput {
             input: "E2".to_owned(),
             tuning_name: "standard".to_owned(),
-            guitar_num_frets: 31, // exceeds MAX_NUM_FRETS = 30 in src/guitar.rs:526
+            guitar_num_frets: 31, // exceeds Guitar::MAX_NUM_FRETS = 30
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
-            TabError::Guitar { message } => {
-                assert!(
-                    message.contains("Too many frets"),
-                    "expected fret-count message, got: {message}"
-                );
+            TabError::NumFretsTooHigh { num_frets, max } => {
+                assert_eq!(num_frets, 31);
+                assert_eq!(max, 30);
             }
-            other => panic!("expected Guitar, got {other:?}"),
+            other => panic!("expected NumFretsTooHigh, got {other:?}"),
         }
     }
 
     #[test]
-    fn unreachable_pitch_returns_arrangement_error() {
+    fn unreachable_pitch_returns_unplayable_pitches() {
         let tab_input = TabInput {
             input: "A1".to_owned(), // below standard tuning's low E2; unplayable on any string
             tuning_name: "standard".to_owned(),
@@ -457,13 +456,12 @@ mod test_generate_arrangements_and_render {
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
-            TabError::Arrangement { message } => {
-                assert!(
-                    message.contains("A1") && message.contains("cannot be played"),
-                    "expected unreachable-pitch message, got: {message}"
-                );
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 1);
+                assert_eq!(pitches[0].value, "A1");
+                assert_eq!(pitches[0].line, 1);
             }
-            other => panic!("expected Arrangement, got {other:?}"),
+            other => panic!("expected UnplayablePitches, got {other:?}"),
         }
     }
 
@@ -513,8 +511,8 @@ mod test_boundary_types {
         let set = arrangement_set_fixture(1);
         let err = set.render(99, 30, 2, None).unwrap_err();
         match err {
-            TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
-            other => panic!("expected InvalidInput, got {other:?}"),
+            TabError::IndexOutOfBounds { .. } => {}
+            other => panic!("expected IndexOutOfBounds, got {other:?}"),
         }
     }
 
@@ -530,8 +528,8 @@ mod test_boundary_types {
         let set = arrangement_set_fixture(1);
         let err = set.max_fret_span(99).unwrap_err();
         match err {
-            TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
-            other => panic!("expected InvalidInput, got {other:?}"),
+            TabError::IndexOutOfBounds { .. } => {}
+            other => panic!("expected IndexOutOfBounds, got {other:?}"),
         }
     }
 
@@ -546,8 +544,8 @@ mod test_boundary_types {
         let set = arrangement_set_fixture(1);
         let err = set.difficulty(99).unwrap_err();
         match err {
-            TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
-            other => panic!("expected InvalidInput, got {other:?}"),
+            TabError::IndexOutOfBounds { .. } => {}
+            other => panic!("expected IndexOutOfBounds, got {other:?}"),
         }
     }
 
@@ -637,26 +635,26 @@ mod test_num_arrangements {
     }
 
     #[test]
-    fn try_new_rejects_zero_with_unified_message() {
+    fn try_new_rejects_zero_with_typed_variant() {
         let err = NumArrangements::try_new(0).unwrap_err();
         match err {
-            TabError::InvalidInput { field, message } => {
-                assert_eq!(field, "numArrangements");
-                assert_eq!(message, "must be between 1 and 20 inclusive, got 0");
+            TabError::NumArrangementsOutOfRange { value, max } => {
+                assert_eq!(value, 0);
+                assert_eq!(max, 20);
             }
-            other => panic!("expected InvalidInput, got {other:?}"),
+            other => panic!("expected NumArrangementsOutOfRange, got {other:?}"),
         }
     }
 
     #[test]
-    fn try_new_rejects_above_max_with_unified_message() {
+    fn try_new_rejects_above_max_with_typed_variant() {
         let err = NumArrangements::try_new(NumArrangements::MAX + 1).unwrap_err();
         match err {
-            TabError::InvalidInput { field, message } => {
-                assert_eq!(field, "numArrangements");
-                assert_eq!(message, "must be between 1 and 20 inclusive, got 21");
+            TabError::NumArrangementsOutOfRange { value, max } => {
+                assert_eq!(value, 21);
+                assert_eq!(max, 20);
             }
-            other => panic!("expected InvalidInput, got {other:?}"),
+            other => panic!("expected NumArrangementsOutOfRange, got {other:?}"),
         }
     }
 
