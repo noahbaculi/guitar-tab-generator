@@ -82,7 +82,11 @@ pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> Result<BTreeMap<St
     open_string_pitches
         .iter()
         .enumerate()
-        .map(|(i, p)| StringNumber::new((i + 1) as u8).map(|sn| (sn, *p)))
+        .map(|(i, p)| {
+            StringNumber::new((i + 1) as u8)
+                .map(|sn| (sn, *p))
+                .map_err(anyhow::Error::from)
+        })
         .collect()
 }
 

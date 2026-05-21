@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use crate::error::TabError;
 use std::fmt;
 
 /// A validated guitar string number in the range `1..=12`.
@@ -8,19 +8,20 @@ use std::fmt;
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct StringNumber(u8);
 impl StringNumber {
-    /// Constructs a `StringNumber` after validating that `string_number` is in `1..=12`.
+    /// Upper bound enforced by [`StringNumber::new`].
+    pub const MAX: u8 = 12;
+
+    /// Constructs a `StringNumber` after validating that `string_number` is in `1..=MAX`.
     ///
     /// # Errors
     ///
-    /// Returns an error if `string_number` is `0` or exceeds the maximum supported
-    /// string count of 12.
-    pub fn new(string_number: u8) -> Result<Self> {
-        const MAX_NUM_STRINGS: u8 = 12;
+    /// Returns [`TabError::StringNumberOutOfRange`] if `string_number` is `0` or exceeds
+    /// [`StringNumber::MAX`].
+    pub fn new(string_number: u8) -> Result<Self, TabError> {
         match string_number {
-            0 => Err(anyhow!("A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1).")),
-            1..=MAX_NUM_STRINGS => Ok(StringNumber(string_number)),
-            _ => Err(anyhow!("The string number ({string_number}) is too high. The maximum is {MAX_NUM_STRINGS}."))
-
+            0 => Err(TabError::StringNumberOutOfRange { value: 0, max: Self::MAX }),
+            1..=Self::MAX => Ok(StringNumber(string_number)),
+            _ => Err(TabError::StringNumberOutOfRange { value: string_number, max: Self::MAX }),
         }
     }
     /// Returns the underlying `u8`.
@@ -37,17 +38,36 @@ mod test_create_string_number {
     fn valid_simple() {
         assert!(StringNumber::new(1).is_ok());
     }
+
     #[test]
-    fn invalid_zero() {
-        let expected_error_msg = "A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1).";
-        let error = StringNumber::new(0).unwrap_err();
-        assert_eq!(format!("{error}"), expected_error_msg);
+    fn invalid() {
+        for n in [0u8, 13, 100, 255] {
+            assert!(StringNumber::new(n).is_err(), "n={n} must be Err");
+        }
     }
+
     #[test]
-    fn invalid_too_high() {
-        let expected_error_msg = "The string number (15) is too high. The maximum is 12.";
-        let error = StringNumber::new(15).unwrap_err();
-        assert_eq!(format!("{error}"), expected_error_msg);
+    fn returns_typed_error_for_zero() {
+        let err = StringNumber::new(0).unwrap_err();
+        match err {
+            crate::error::TabError::StringNumberOutOfRange { value, max } => {
+                assert_eq!(value, 0);
+                assert_eq!(max, 12);
+            }
+            other => panic!("expected StringNumberOutOfRange, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn returns_typed_error_for_above_max() {
+        let err = StringNumber::new(13).unwrap_err();
+        match err {
+            crate::error::TabError::StringNumberOutOfRange { value, max } => {
+                assert_eq!(value, 13);
+                assert_eq!(max, 12);
+            }
+            other => panic!("expected StringNumberOutOfRange, got {other:?}"),
+        }
     }
 }
 
