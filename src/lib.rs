@@ -240,11 +240,16 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 ///
 /// # Errors
 ///
-/// Returns the typed [`TabError`] variant for each failure mode: validation variants like
-/// [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
-/// [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], or [`TabError::CapoExceedsFrets`];
-/// [`TabError::Parse`] for unparseable input; and [`TabError::UnplayablePitches`] when no
-/// fingering exists for an input pitch.
+/// Returns the typed [`TabError`] variant for each failure mode:
+///
+/// - Input-shape validation: [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
+///   [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], [`TabError::CapoExceedsFrets`].
+/// - Tuning-derived: [`TabError::OpenPitchOutOfRange`] (capo offset pushes an open-string pitch above `B9`),
+///   [`TabError::FretRangeExceedsPitchRange`] (one string's playable range would exceed the highest pitch).
+/// - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring).
+/// - Pathfinding: [`TabError::UnplayablePitches`] (one or more pitches reach no string),
+///   [`TabError::NoArrangementsFound`] (every pitch reaches the guitar but no valid combination exists,
+///   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).
 ///
 /// # Validation order
 ///
