@@ -1768,7 +1768,7 @@ mod proptest_invariants {
             );
             match (first, second) {
                 (Ok(a), Ok(b)) => prop_assert_eq!(a, b),
-                (Err(_), Err(_)) => {},
+                (Err(a), Err(b)) => prop_assert_eq!(a, b),
                 _ => prop_assert!(false, "determinism violated: outcomes differ"),
             }
         }
