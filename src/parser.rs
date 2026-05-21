@@ -60,9 +60,9 @@ pub fn get_tuning_names() -> Vec<TuningName> {
 /// Returns the 6-element semitone offsets for a named tuning, relative to standard 6-string
 /// tuning.
 ///
-/// Accepts the empty string and the case-insensitive literal `"standard"` as standard tuning
-/// (all-zero offsets). Returns `TabError::InvalidInput { field: "tuningName", ... }` for any
-/// other string that does not match a `TuningName` variant.
+/// Accepts the case-insensitive literal `"standard"` as standard tuning (all-zero offsets).
+/// Returns `TabError::TuningNameUnknown { value }` for any string that does not match a
+/// `TuningName` variant or `"standard"`.
 pub fn parse_tuning(tuning_name: &str) -> Result<[i8; 6], crate::error::TabError> {
     match TuningName::from_str(tuning_name) {
         Ok(TuningName::OpenG) => Ok([-2, 0, 0, 0, -2, -2]),
@@ -74,14 +74,9 @@ pub fn parse_tuning(tuning_name: &str) -> Result<[i8; 6], crate::error::TabError
         Ok(TuningName::OpenC) => Ok([-4, -2, -2, 0, 1, 0]),
         Ok(TuningName::DropB) => Ok([-5, -3, -3, -3, -3, -3]),
         Ok(TuningName::OpenE) => Ok([0, -2, -2, -2, 0, 0]),
-        Err(_) if tuning_name.is_empty() || tuning_name.eq_ignore_ascii_case("standard") => {
-            Ok([0; 6])
-        }
-        Err(_) => Err(crate::error::TabError::InvalidInput {
-            field: "tuningName".to_owned(),
-            message: format!(
-                "must be \"standard\" or one of the supported TuningName variants, got {tuning_name:?}"
-            ),
+        Err(_) if tuning_name.eq_ignore_ascii_case("standard") => Ok([0; 6]),
+        Err(_) => Err(crate::error::TabError::TuningNameUnknown {
+            value: tuning_name.to_owned(),
         }),
     }
 }
@@ -102,8 +97,12 @@ mod test_parse_tuning {
     }
 
     #[test]
-    fn empty_string_returns_standard() {
-        assert_eq!(parse_tuning("").unwrap(), [0, 0, 0, 0, 0, 0]);
+    fn empty_string_returns_tuning_name_unknown() {
+        let err = parse_tuning("").unwrap_err();
+        match err {
+            TabError::TuningNameUnknown { value } => assert_eq!(value, ""),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
+        }
     }
 
     #[test]
@@ -121,17 +120,11 @@ mod test_parse_tuning {
     }
 
     #[test]
-    fn unrecognized_name_returns_invalid_input_error() {
+    fn unrecognized_name_returns_tuning_name_unknown() {
         let err = parse_tuning("opan G").unwrap_err();
         match err {
-            TabError::InvalidInput { field, message } => {
-                assert_eq!(field, "tuningName");
-                assert!(
-                    message.contains("opan G"),
-                    "message should echo the bad value, got: {message}"
-                );
-            }
-            other => panic!("expected InvalidInput, got {other:?}"),
+            TabError::TuningNameUnknown { value } => assert_eq!(value, "opan G"),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
         }
     }
 }
