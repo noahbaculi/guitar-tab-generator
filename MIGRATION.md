@@ -329,6 +329,60 @@ use guitar_tab_generator::__bench_internals::memoized_original_create_arrangemen
 
 `parse_tuning` and `create_string_tuning_offset` remain reachable from criterion benches via `__bench_internals`; this namespace is `#[doc(hidden)]` and not part of the stable 2.x API.
 
+## 2.0.0 final-pass error and validation changes
+
+The 2.0.0 release that shipped from the `v2.0.0` branch carries an additional pass of breaking changes on top of the WASM surface redesign above:
+
+### Flat TabError variants
+
+The umbrella variants `Guitar`, `Arrangement`, and `InvalidInput` are removed. Each concrete failure mode is now its own variant. JS callers extend their `switch (err.kind)` blocks:
+
+```ts
+// Before:
+switch (err.kind) {
+  case "parse": ...; break;
+  case "guitar": showMessage(err.message); break;
+  case "arrangement": showMessage(err.message); break;
+  case "invalidInput": showField(err.field, err.message); break;
+}
+
+// After:
+switch (err.kind) {
+  case "parse": ...; break;
+  case "numFretsTooHigh": showFretLimit(err.numFrets, err.max); break;
+  case "capoTooHigh": showCapoLimit(err.capo, err.max); break;
+  case "capoExceedsFrets": showCapoVsFrets(err.capo, err.numFrets); break;
+  case "stringNumberOutOfRange": ...; break;
+  case "openPitchOutOfRange": ...; break;
+  case "fretRangeExceedsPitchRange": ...; break;
+  case "unplayablePitches": showPitches(err.pitches); break;
+  case "noArrangementsFound": showNoArrangements(); break;
+  case "numArrangementsOutOfRange": showRangeError(err.value, err.max); break;
+  case "tuningNameUnknown": showUnknownTuning(err.value); break;
+  case "indexOutOfBounds": showRangeError(err.index, err.len); break;
+}
+```
+
+`TabError` remains `#[non_exhaustive]`; future 2.x releases may add variants. Defensive default arms remain a good idea.
+
+### `UnplayablePitch` is now a public type
+
+`TabError::UnplayablePitches { pitches }` carries `Vec<UnplayablePitch>` with `{ value: string, line: number }` per pitch. Replaces the prose "Pitch X on line N cannot be played..." string the umbrella `Arrangement` variant used to carry.
+
+### Anyhow removed from public Rust signatures
+
+`StringNumber::new`, `Guitar::new`, and `create_string_tuning` now return `Result<_, TabError>` instead of `anyhow::Result`. Direct Rust callers replace `.context(...)` with pattern-matching on `TabError`.
+
+`Pitch::plus_offset` returns `Option<Pitch>` instead of `anyhow::Result<Pitch>`. Callers replace `?` with `.ok_or_else(...)` and construct a typed error themselves.
+
+### Capo cannot exceed `num_frets`
+
+`Guitar::new(tuning, num_frets, capo)` with `capo > num_frets` now returns `TabError::CapoExceedsFrets { capo, num_frets }`. Previously this combination underflowed `let playable_frets = num_frets - capo;` and either panicked in debug or wrapped around to a large `playable_frets` in release. Callers that supplied a capo position above the fret count must clamp before calling.
+
+### Empty string no longer means standard tuning
+
+`tuningName: ""` previously fell back to standard tuning. It now returns `TabError::TuningNameUnknown { value: "" }`. Callers wanting standard tuning must pass `"standard"` (case-insensitive) explicitly. The case-insensitive `"standard"` literal continues to work.
+
 ## See also
 
 - [`CHANGELOG.md`](CHANGELOG.md) -- flat list of every breaking change.
