@@ -246,3 +246,115 @@ fn tuning_name_variant_is_publicly_constructible() {
     let names = get_tuning_names();
     assert!(names.iter().any(|n| matches!(n, TuningName::OpenG)));
 }
+
+#[cfg(test)]
+mod boundary_variant_smoke {
+    use guitar_tab_generator::{generate_arrangements, TabError, TabInput};
+
+    fn input(
+        num_frets: u8,
+        capo: u8,
+        num_arrangements: u8,
+        tuning: &str,
+        input: &str,
+    ) -> TabInput {
+        TabInput {
+            input: input.to_owned(),
+            tuning_name: tuning.to_owned(),
+            guitar_num_frets: num_frets,
+            guitar_capo: capo,
+            num_arrangements,
+            max_fret_span_filter: None,
+        }
+    }
+
+    #[test]
+    fn num_frets_too_high() {
+        let err = generate_arrangements(input(31, 0, 1, "standard", "E2")).unwrap_err();
+        assert!(
+            matches!(err, TabError::NumFretsTooHigh { num_frets: 31, max: 30 }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn capo_too_high() {
+        let err = generate_arrangements(input(18, 9, 1, "standard", "E2")).unwrap_err();
+        assert!(
+            matches!(err, TabError::CapoTooHigh { capo: 9, max: 8 }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn capo_exceeds_frets() {
+        let err = generate_arrangements(input(2, 4, 1, "standard", "E2")).unwrap_err();
+        assert!(
+            matches!(err, TabError::CapoExceedsFrets { capo: 4, num_frets: 2 }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn num_arrangements_out_of_range() {
+        let err = generate_arrangements(input(18, 0, 0, "standard", "E2")).unwrap_err();
+        assert!(
+            matches!(err, TabError::NumArrangementsOutOfRange { value: 0, max: 20 }),
+            "got {err:?}"
+        );
+    }
+
+    #[test]
+    fn tuning_name_unknown_empty_string() {
+        let err = generate_arrangements(input(18, 0, 1, "", "E2")).unwrap_err();
+        match err {
+            TabError::TuningNameUnknown { value } => assert_eq!(value, ""),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn tuning_name_unknown_garbage() {
+        let err = generate_arrangements(input(18, 0, 1, "openZ", "E2")).unwrap_err();
+        match err {
+            TabError::TuningNameUnknown { value } => assert_eq!(value, "openZ"),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn parse_error() {
+        let err = generate_arrangements(input(18, 0, 1, "standard", "E2\n???")).unwrap_err();
+        match err {
+            TabError::Parse { errors } => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0].line, 2);
+                assert_eq!(errors[0].text, "???");
+            }
+            other => panic!("expected Parse, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unplayable_pitches() {
+        let err = generate_arrangements(input(18, 0, 1, "standard", "A1")).unwrap_err();
+        match err {
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 1);
+                assert_eq!(pitches[0].value, "A1");
+                assert_eq!(pitches[0].line, 1);
+            }
+            other => panic!("expected UnplayablePitches, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn index_out_of_bounds() {
+        let set = generate_arrangements(input(18, 0, 1, "standard", "E2")).unwrap();
+        let err = set.render(99, 30, 1, None).unwrap_err();
+        assert!(
+            matches!(err, TabError::IndexOutOfBounds { index: 99, len: 1 }),
+            "got {err:?}"
+        );
+    }
+}
