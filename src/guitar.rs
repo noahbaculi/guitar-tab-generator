@@ -15,6 +15,28 @@ pub struct PitchFingering {
     pub(crate) fret: u8,
     pub(crate) pitch: Pitch,
 }
+impl PitchFingering {
+    /// The guitar string the pitch is fretted on.
+    #[inline]
+    #[must_use]
+    pub fn string_number(&self) -> StringNumber {
+        self.string_number
+    }
+
+    /// The fret position, `0` for an open string.
+    #[inline]
+    #[must_use]
+    pub fn fret(&self) -> u8 {
+        self.fret
+    }
+
+    /// The sounding pitch.
+    #[inline]
+    #[must_use]
+    pub fn pitch(&self) -> Pitch {
+        self.pitch
+    }
+}
 impl fmt::Debug for PitchFingering {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(

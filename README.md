@@ -353,7 +353,7 @@ ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
 ## Future Improvements
 
 - [ ] Custom tuning support over the WASM boundary (today only the preset list crosses)
-- [ ] Per-arrangement fingering inspector (read access without re-pathfinding)
+- [x] Per-arrangement fingering inspector (read access without re-pathfinding) -- `PitchFingering::{string_number, fret, pitch}` getters
 - [ ] Arrangement export / import (serialize a set for offline replay)
 
 [rust_site]: https://rust-lang.org/tools/install

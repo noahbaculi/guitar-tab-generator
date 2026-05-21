@@ -207,9 +207,11 @@ fn string_number_constructor_is_publicly_callable() {
 #[test]
 fn pitch_fingering_is_publicly_named() {
     // `PitchFingering` is `pub` because it leaks via `Arrangement::lines()`. Its fields
-    // are crate-internal by design; consumers read via `Debug`. This test pins the
-    // type name and the `Debug` impl as reachable from outside the crate.
-    let open_pitches: [Pitch; 6] = [Pitch::E2, Pitch::A2, Pitch::D3, Pitch::G3, Pitch::B3, Pitch::E4];
+    // are crate-internal, but the three getters (`string_number`, `fret`, `pitch`) give
+    // structured read access for downstream callers building per-arrangement fingering
+    // inspectors without re-running pathfinding.
+    // String 1 is the highest pitch (E4); string 6 is the lowest (E2). See CONTEXT.md.
+    let open_pitches: [Pitch; 6] = [Pitch::E4, Pitch::B3, Pitch::G3, Pitch::D3, Pitch::A2, Pitch::E2];
     let guitar = Guitar::new(create_string_tuning(&open_pitches).unwrap(), 18, 0).unwrap();
     let lines = parse_lines("E2".to_owned()).unwrap();
     let n = NumArrangements::try_new(1).unwrap();
@@ -223,6 +225,15 @@ fn pitch_fingering_is_publicly_named() {
         })
         .expect("E2 in standard tuning has at least one fingering");
     let typecheck: PitchFingering = first_beat;
+
+    // E2 in standard tuning is the open low-E string (string 6, fret 0).
+    let s: StringNumber = typecheck.string_number();
+    assert_eq!(s.get(), 6, "E2 in standard tuning sits on string 6");
+    assert_eq!(typecheck.fret(), 0, "E2 in standard tuning is the open string");
+    let p: Pitch = typecheck.pitch();
+    assert_eq!(p, Pitch::E2);
+
+    // Debug impl remains reachable for ad-hoc inspection.
     assert!(!format!("{typecheck:?}").is_empty(), "Debug impl produces output");
 }
 
