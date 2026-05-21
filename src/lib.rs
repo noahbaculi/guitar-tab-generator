@@ -422,6 +422,50 @@ mod test_generate_arrangements_and_render {
     }
 
     #[test]
+    fn invalid_guitar_config_returns_guitar_error() {
+        let tab_input = TabInput {
+            input: "E2".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 31, // exceeds MAX_NUM_FRETS = 30 in src/guitar.rs:526
+            guitar_capo: 0,
+            num_arrangements: 1,
+            max_fret_span_filter: None,
+        };
+        let err = generate_arrangements(tab_input).unwrap_err();
+        match err {
+            TabError::Guitar { message } => {
+                assert!(
+                    message.contains("Too many frets"),
+                    "expected fret-count message, got: {message}"
+                );
+            }
+            other => panic!("expected Guitar, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn unreachable_pitch_returns_arrangement_error() {
+        let tab_input = TabInput {
+            input: "A1".to_owned(), // below standard tuning's low E2; unplayable on any string
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            max_fret_span_filter: None,
+        };
+        let err = generate_arrangements(tab_input).unwrap_err();
+        match err {
+            TabError::Arrangement { message } => {
+                assert!(
+                    message.contains("A1") && message.contains("cannot be played"),
+                    "expected unreachable-pitch message, got: {message}"
+                );
+            }
+            other => panic!("expected Arrangement, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn render_at_two_widths_produces_different_outputs() {
         let tab_input = TabInput {
             input: "E2\nA2\nD3".to_owned(),
@@ -503,6 +547,32 @@ mod test_boundary_types {
             TabError::InvalidInput { field, .. } => assert_eq!(field, "index"),
             other => panic!("expected InvalidInput, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn arrangement_set_is_empty_returns_false_for_non_empty_set() {
+        let set = arrangement_set_fixture(1);
+        assert!(!set.is_empty());
+        assert_eq!(set.len(), 1);
+    }
+
+    #[test]
+    fn arrangement_set_is_empty_returns_true_when_filter_drops_every_candidate() {
+        // C3E3 forces both notes onto fretted positions in standard tuning, so every
+        // candidate arrangement has a non-zero fret span. max_fret_span_filter = Some(0)
+        // drops all of them. See src/arrangement.rs::max_fret_span_filter_can_produce_empty_set
+        // for the analogous test at the internal layer.
+        let tab_input = TabInput {
+            input: "C3E3".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 5,
+            max_fret_span_filter: Some(0),
+        };
+        let set = generate_arrangements(tab_input).unwrap();
+        assert!(set.is_empty());
+        assert_eq!(set.len(), 0);
     }
 
     fn arrangement_set_fixture(num_arrangements: u8) -> ArrangementSet {
