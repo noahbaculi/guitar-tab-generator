@@ -64,6 +64,9 @@ pub enum TabError {
     CapoTooHigh { capo: u8, max: u8 },
     CapoExceedsFrets { capo: u8, num_frets: u8 },
     StringNumberOutOfRange { value: u8, max: u8 },
+    /// `semitones` is `i16` (not `u8`) to mirror the offset arithmetic in [`crate::pitch::Pitch::plus_offset`]
+    /// and to leave room for negative tuning offsets without a future breaking change. The
+    /// 2.x emit site populates `0..=Guitar::MAX_CAPO` only.
     OpenPitchOutOfRange { string: u8, semitones: i16 },
     FretRangeExceedsPitchRange { open_pitch: String, playable_frets: u8 },
     UnplayablePitches { pitches: Vec<UnplayablePitch> },
