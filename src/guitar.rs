@@ -746,7 +746,7 @@ mod test_create_string_range {
 ///
 /// An empty vector indicates the pitch cannot be played on any string of this guitar.
 #[must_use]
-pub fn generate_pitch_fingerings(
+pub(crate) fn generate_pitch_fingerings(
     string_ranges: &BTreeMap<StringNumber, Box<[Pitch]>>,
     pitch: &Pitch,
 ) -> PitchVec<PitchFingering> {

@@ -36,7 +36,7 @@ enum Node {
 }
 
 /// One pitch's set of candidate `PitchFingering`s across the guitar's strings.
-pub type PitchVec<T> = Vec<T>;
+pub(crate) type PitchVec<T> = Vec<T>;
 /// One beat's worth of items (usually `Pitch` or `PitchFingering`).
 pub type BeatVec<T> = Vec<T>;
 
