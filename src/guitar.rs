@@ -569,6 +569,21 @@ mod test_create_guitar {
             other => panic!("expected CapoExceedsFrets, got {other:?}"),
         }
     }
+
+    #[test]
+    fn open_pitch_out_of_range_returns_typed_error() {
+        // A single string tuned to the top of the pitch range (B9); any capo offset pushes
+        // the open pitch past B9, which `plus_offset` reports as `None`.
+        let tuning = create_string_tuning(&[Pitch::B9]).unwrap();
+        let err = Guitar::new(tuning, 8, 8).unwrap_err();
+        match err {
+            TabError::OpenPitchOutOfRange { string, semitones } => {
+                assert_eq!(string, 1);
+                assert_eq!(semitones, 8);
+            }
+            other => panic!("expected OpenPitchOutOfRange, got {other:?}"),
+        }
+    }
 }
 
 /// Validates that `num_frets` does not exceed [`Guitar::MAX_NUM_FRETS`].

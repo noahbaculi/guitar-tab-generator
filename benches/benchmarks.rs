@@ -262,9 +262,6 @@ fn bench_render_tab(c: &mut Criterion) {
     .unwrap();
 
     for playback_index in (0..=30).step_by(10) {
-        // group
-        //     .sample_size(20)
-        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(playback_index),
             &playback_index,
@@ -295,9 +292,6 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
             1,
         );
 
-        // group
-        //     .sample_size(20)
-        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(input_lines_num),
             &input_lines_num,
@@ -325,9 +319,6 @@ fn bench_create_single_composition_large_scaling(c: &mut Criterion) {
             1,
         );
 
-        // group
-        //     .sample_size(20)
-        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(fur_elise_repetitions),
             &fur_elise_repetitions,

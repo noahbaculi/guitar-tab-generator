@@ -119,16 +119,20 @@ export class ArrangementSet {
  *
  * # Errors
  *
- * Returns the typed [`TabError`] variant for each failure mode:
+ * Returns the typed [`TabError`] variant for each failure mode reachable from this entry point:
  *
  * - Input-shape validation: [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
  *   [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], [`TabError::CapoExceedsFrets`].
- * - Tuning-derived: [`TabError::OpenPitchOutOfRange`] (capo offset pushes an open-string pitch above `B9`),
- *   [`TabError::FretRangeExceedsPitchRange`] (one string's playable range would exceed the highest pitch).
  * - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring).
  * - Pathfinding: [`TabError::UnplayablePitches`] (one or more pitches reach no string),
  *   [`TabError::NoArrangementsFound`] (every pitch reaches the guitar but no valid combination exists,
  *   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).
+ *
+ * [`TabError::OpenPitchOutOfRange`], [`TabError::StringNumberOutOfRange`], and
+ * [`TabError::FretRangeExceedsPitchRange`] are members of the enum but are not reachable through this
+ * entry point: the preset tunings and fixed 1..=6 string numbering keep every open-string pitch and
+ * fret range well inside the supported `Pitch` range. They surface only on the lower-level Rust API
+ * ([`Guitar::new`], [`create_string_tuning`]).
  *
  * # Validation order
  *

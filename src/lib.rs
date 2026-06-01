@@ -249,16 +249,20 @@ fn out_of_bounds_error(index: usize, len: usize) -> TabError {
 ///
 /// # Errors
 ///
-/// Returns the typed [`TabError`] variant for each failure mode:
+/// Returns the typed [`TabError`] variant for each failure mode reachable from this entry point:
 ///
 /// - Input-shape validation: [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
 ///   [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], [`TabError::CapoExceedsFrets`].
-/// - Tuning-derived: [`TabError::OpenPitchOutOfRange`] (capo offset pushes an open-string pitch above `B9`),
-///   [`TabError::FretRangeExceedsPitchRange`] (one string's playable range would exceed the highest pitch).
 /// - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring).
 /// - Pathfinding: [`TabError::UnplayablePitches`] (one or more pitches reach no string),
 ///   [`TabError::NoArrangementsFound`] (every pitch reaches the guitar but no valid combination exists,
 ///   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).
+///
+/// [`TabError::OpenPitchOutOfRange`], [`TabError::StringNumberOutOfRange`], and
+/// [`TabError::FretRangeExceedsPitchRange`] are members of the enum but are not reachable through this
+/// entry point: the preset tunings and fixed 1..=6 string numbering keep every open-string pitch and
+/// fret range well inside the supported `Pitch` range. They surface only on the lower-level Rust API
+/// ([`Guitar::new`], [`create_string_tuning`]).
 ///
 /// # Validation order
 ///
@@ -278,9 +282,9 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
     let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
-        // memoize cache miss returns a fresh Arc (strong_count=1, unwrap succeeds);
-        // a cache hit hands back a shared Arc and forces the clone fallback.
-        let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
+        // `parse_lines` is `#[memoize]`d: the cache retains a strong reference, so the returned
+        // Arc is always shared. Clone the inner Vec out (this is the cold parse-failure path).
+        let errors = (*errs).clone();
         debug_assert!(
             !errors.is_empty(),
             "parser must not return Err with empty error list"
@@ -311,7 +315,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         num_arrangements,
         tab_input.max_fret_span_filter,
     )
-    .map_err(|arc| std::sync::Arc::try_unwrap(arc).unwrap_or_else(|a| (*a).clone()))?;
+    .map_err(|arc| (*arc).clone())?;
 
     Ok(ArrangementSet {
         arrangements,
