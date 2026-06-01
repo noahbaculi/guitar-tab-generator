@@ -28,11 +28,14 @@
 - `tuningName: ""` no longer means standard tuning. Pass `"standard"` (case-insensitive) explicitly.
 - `Guitar::MAX_NUM_FRETS` and `Guitar::MAX_CAPO` are now `pub const` on `Guitar`, alongside the existing `NumArrangements::MAX`. (Additive.)
 - `StringNumber::MAX` is now `pub const` on `StringNumber`. (Additive.)
+- `TabInput` is now `#[non_exhaustive]`. Construct it with `TabInput::new(input, tuningName, guitarNumFrets, guitarCapo, numArrangements)` and set the optional filter via `.with_max_fret_span_filter(n)`. JS callers are unaffected; the deserialized wire shape is unchanged. See [ADR-0008](docs/adr/0008-tab-input-sealed-constructor.md).
+- Crate edition upgraded to 2024; minimum supported Rust version is now 1.85, declared via `rust-version` in `Cargo.toml`.
 
 ### Added
 
 - `TabInput.maxFretSpanFilter: Option<u8>` filters arrangements by maximum non-zero fret span. Emitted as `maxFretSpanFilter?: number` in the TypeScript surface, so TS-strict callers may omit the key.
 - `PitchFingering::string_number()`, `::fret()`, and `::pitch()` getters give Rust callers structured read access to the fingerings returned by `Arrangement::lines()`, replacing the previous `Debug`-only path. The fields stay `pub(crate)`; the getters are the stable surface.
+- `UnplayablePitch` is re-exported from the crate root, so direct Rust callers can name the type in signatures. It was previously reachable only as a `TabError::UnplayablePitches` field value.
 
 ### Internal
 

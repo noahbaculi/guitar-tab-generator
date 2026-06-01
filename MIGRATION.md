@@ -44,6 +44,12 @@ Rust-only callers: see [Direct Rust callers](#direct-rust-callers) for migration
 4. Call `set.free()` (or `using` on TS 5.2+) when you are done with the handle.
 5. If you read `normalized_input`, switch from `["REST"]` / `["MEASURE_BREAK"]` string checks to `.kind`-based discrimination.
 
+## Toolchain
+
+2.0.0 builds on Rust edition 2024 and requires Rust 1.85 or newer
+(`rust-version = "1.85"` in `Cargo.toml`). Run `rustup update` if your
+toolchain is below 1.85.
+
 ## Generating arrangements
 
 ### TypeScript
@@ -284,6 +290,33 @@ The Rust-side parser (`parse_tuning`) remains case-insensitive, so 1.x calls tha
 
 A handful of changes affect Rust callers that consume the crate directly (rather than through the WASM bindings):
 
+### `TabInput` is `#[non_exhaustive]`; use the constructor
+
+`TabInput` can no longer be built with a struct literal from outside the crate.
+Build it with `TabInput::new`, which defaults `max_fret_span_filter` to `None`,
+and set the optional filter with `with_max_fret_span_filter`:
+
+```rust
+// Before
+let input = TabInput {
+    input: "E2\nA2".to_owned(),
+    tuning_name: "standard".to_owned(),
+    guitar_num_frets: 18,
+    guitar_capo: 0,
+    num_arrangements: 1,
+    max_fret_span_filter: None,
+};
+
+// After
+let input = TabInput::new("E2\nA2", "standard", 18, 0, 1);
+
+// With the optional filter
+let input = TabInput::new("E2\nA2", "standard", 18, 0, 1).with_max_fret_span_filter(7);
+```
+
+Reading fields is unchanged. JS callers are unaffected; the deserialized wire
+shape is identical.
+
 ### `Arrangement::lines` is now a getter
 
 ```rust
@@ -378,6 +411,8 @@ switch (err.kind) {
 ### `UnplayablePitch` is now a public type
 
 `TabError::UnplayablePitches { pitches }` carries `Vec<UnplayablePitch>` with `{ value: string, line: number }` per pitch. Replaces the prose "Pitch X on line N cannot be played..." string the umbrella `Arrangement` variant used to carry.
+
+As of the additional 2.0.0 changes it is also re-exported from the crate root, so it can be named directly (`guitar_tab_generator::UnplayablePitch`) in downstream signatures, not just reached as a `TabError::UnplayablePitches` field value.
 
 ### Anyhow removed from public Rust signatures
 
