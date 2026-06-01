@@ -322,13 +322,15 @@ pub fn create_arrangements(
 
     let first_playable_index = first_playable_index(&input_lines);
 
-    let lines = input_lines
-        .into_iter()
-        .skip(first_playable_index)
-        .collect_vec();
-
+    // Validate against the full input so `UnplayablePitch.line` carries the original 1-indexed
+    // input line, then drop the leading rests for pathfinding. Skipping before validation would
+    // report the line relative to the post-skip beat sequence (off by the leading-rest count).
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
-        validate_fingerings(&guitar, &lines).map_err(Arc::new)?;
+        validate_fingerings(&guitar, &input_lines)
+            .map_err(Arc::new)?
+            .into_iter()
+            .skip(first_playable_index)
+            .collect_vec();
 
     let measure_break_indices: Vec<usize> = pitch_fingering_candidates
         .iter()

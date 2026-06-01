@@ -494,6 +494,30 @@ mod test_generate_arrangements_and_render {
     }
 
     #[test]
+    fn unplayable_pitch_line_accounts_for_leading_rests() {
+        // Two leading blank lines (rests) precede an unplayable pitch on input line 3.
+        // The reported line must be the 1-indexed input line (3), not the position within
+        // the post-leading-rest beat sequence (which would be 1).
+        let tab_input = TabInput {
+            input: "\n\nA1".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 1,
+            max_fret_span_filter: None,
+        };
+        let err = generate_arrangements(tab_input).unwrap_err();
+        match err {
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 1);
+                assert_eq!(pitches[0].value, "A1");
+                assert_eq!(pitches[0].line, 3);
+            }
+            other => panic!("expected UnplayablePitches, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn render_at_two_widths_produces_different_outputs() {
         let tab_input = TabInput {
             input: "E2\nA2\nD3".to_owned(),
