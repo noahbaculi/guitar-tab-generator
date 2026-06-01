@@ -17,14 +17,7 @@ use guitar_tab_generator::{
 };
 
 fn fixture(num: u8) -> TabInput {
-    TabInput {
-        input: "E2\nA2\nD3".to_owned(),
-        tuning_name: "standard".to_owned(),
-        guitar_num_frets: 18,
-        guitar_capo: 0,
-        num_arrangements: num,
-        max_fret_span_filter: None,
-    }
+    TabInput::new("E2\nA2\nD3", "standard", 18, 0, num)
 }
 
 #[test]
@@ -98,14 +91,7 @@ fn arrangement_set_is_empty_when_filter_drops_every_candidate() {
     // C3E3 is an all-fretted chord in standard tuning; max_fret_span_filter=Some(0)
     // drops every candidate, yielding a non-error empty set. This is the path the
     // JS demo surfaces via `set.isEmpty` and the "No arrangements match" message.
-    let input = TabInput {
-        input: "C3E3".to_owned(),
-        tuning_name: "standard".to_owned(),
-        guitar_num_frets: 20,
-        guitar_capo: 0,
-        num_arrangements: 5,
-        max_fret_span_filter: Some(0),
-    };
+    let input = TabInput::new("C3E3", "standard", 20, 0, 5).with_max_fret_span_filter(0);
     let set = generate_arrangements(input).expect("empty filter result is not an error");
     assert!(set.is_empty(), "set must be empty when no candidate survives the filter");
     assert_eq!(set.len(), 0);
@@ -258,14 +244,7 @@ mod boundary_variant_smoke {
         tuning: &str,
         input: &str,
     ) -> TabInput {
-        TabInput {
-            input: input.to_owned(),
-            tuning_name: tuning.to_owned(),
-            guitar_num_frets: num_frets,
-            guitar_capo: capo,
-            num_arrangements,
-            max_fret_span_filter: None,
-        }
+        TabInput::new(input, tuning, num_frets, capo, num_arrangements)
     }
 
     #[test]

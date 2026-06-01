@@ -12,14 +12,7 @@
 //! ```no_run
 //! use guitar_tab_generator::{generate_arrangements, TabError, TabInput};
 //!
-//! let set = generate_arrangements(TabInput {
-//!     input: "E2\nA2\nD3".to_owned(),
-//!     tuning_name: "standard".to_owned(),
-//!     guitar_num_frets: 18,
-//!     guitar_capo: 0,
-//!     num_arrangements: 1,
-//!     max_fret_span_filter: None,
-//! })?;
+//! let set = generate_arrangements(TabInput::new("E2\nA2\nD3", "standard", 18, 0, 1))?;
 //! let tab = set.render(0, 30, 2, None)?;
 //! println!("{tab}");
 //! # Ok::<(), TabError>(())
@@ -75,6 +68,7 @@ pub mod __bench_internals {
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct TabInput {
     pub input: String,
     /// Name of the tuning preset. Accepts the case-insensitive literal `"standard"` for

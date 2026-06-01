@@ -276,14 +276,13 @@ fn bench_render_tab(c: &mut Criterion) {
 fn bench_create_single_composition_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_create_single_composition_scaling");
     for input_lines_num in (5..=85).step_by(10) {
-        let input = guitar_tab_generator::TabInput {
-            input: fur_elise_input().lines().take(input_lines_num).join("\n"),
-            tuning_name: "standard".to_owned(),
-            guitar_num_frets: 18,
-            guitar_capo: 0,
-            num_arrangements: 1,
-            max_fret_span_filter: None,
-        };
+        let input = guitar_tab_generator::TabInput::new(
+            fur_elise_input().lines().take(input_lines_num).join("\n"),
+            "standard",
+            18,
+            0,
+            1,
+        );
 
         // group
         //     .sample_size(20)
@@ -307,14 +306,13 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
 fn bench_create_single_composition_large_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_create_single_composition_large_scaling");
     for fur_elise_repetitions in (1..=10).step_by(1) {
-        let input = guitar_tab_generator::TabInput {
-            input: fur_elise_input().repeat(fur_elise_repetitions),
-            tuning_name: "standard".to_owned(),
-            guitar_num_frets: 18,
-            guitar_capo: 0,
-            num_arrangements: 1,
-            max_fret_span_filter: None,
-        };
+        let input = guitar_tab_generator::TabInput::new(
+            fur_elise_input().repeat(fur_elise_repetitions),
+            "standard",
+            18,
+            0,
+            1,
+        );
 
         // group
         //     .sample_size(20)
