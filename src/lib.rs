@@ -34,10 +34,10 @@ pub(crate) mod string_number;
 /// `Arrangement` is re-exported for direct Rust consumers. The canonical 2.x access path
 /// for per-arrangement metadata is `ArrangementSet::difficulty(i)` and
 /// `ArrangementSet::max_fret_span(i)`; direct construction of `Arrangement` values is internal.
-pub use arrangement::{create_arrangements, Arrangement, BeatVec, Line};
+pub use arrangement::{Arrangement, BeatVec, Line, create_arrangements};
 pub use error::{ParseError, TabError, UnplayablePitch};
-pub use guitar::{create_string_tuning, Guitar, PitchFingering};
-pub use parser::{get_tuning_names, parse_lines, TuningName};
+pub use guitar::{Guitar, PitchFingering, create_string_tuning};
+pub use parser::{TuningName, get_tuning_names, parse_lines};
 pub use pitch::Pitch;
 pub use renderer::render_tab;
 pub use string_number::StringNumber;
@@ -57,7 +57,9 @@ pub use string_number::StringNumber;
 #[doc(hidden)]
 pub mod __bench_internals {
     pub use crate::arrangement::memoized_original_create_arrangements;
-    pub use crate::parser::{create_string_tuning_offset, memoized_original_parse_lines, parse_tuning};
+    pub use crate::parser::{
+        create_string_tuning_offset, memoized_original_parse_lines, parse_tuning,
+    };
 }
 
 /// Configuration bundle for one tab-generation request.
@@ -362,7 +364,9 @@ mod test_generate_arrangements_and_render {
 
         let beats = set.normalized_input();
         assert_eq!(beats.len(), 8);
-        assert!(matches!(beats[0], NormalizedBeat::Playable { ref pitches } if pitches == &["E2".to_owned()]));
+        assert!(
+            matches!(beats[0], NormalizedBeat::Playable { ref pitches } if pitches == &["E2".to_owned()])
+        );
         assert!(matches!(beats[3], NormalizedBeat::Rest));
         assert!(matches!(beats[6], NormalizedBeat::MeasureBreak));
     }
@@ -388,11 +392,16 @@ mod test_generate_arrangements_and_render {
         // returns Ok(set) by design (see docs/adr/0006-empty-input-returns-empty-set.md);
         // interactive UIs lean on this to avoid bouncing into an error pane during edits.
         let beats = set.normalized_input();
-        assert!(beats.iter().all(|b| matches!(
-            b,
-            NormalizedBeat::Rest | NormalizedBeat::MeasureBreak
-        )));
-        assert!(beats.iter().any(|b| matches!(b, NormalizedBeat::MeasureBreak)));
+        assert!(
+            beats
+                .iter()
+                .all(|b| matches!(b, NormalizedBeat::Rest | NormalizedBeat::MeasureBreak))
+        );
+        assert!(
+            beats
+                .iter()
+                .any(|b| matches!(b, NormalizedBeat::MeasureBreak))
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use crate::{
     error::{TabError, UnplayablePitch},
-    guitar::{generate_pitch_fingerings, Guitar, PitchFingering},
+    guitar::{Guitar, PitchFingering, generate_pitch_fingerings},
     pitch::Pitch,
 };
 use average::Mean;
@@ -382,9 +382,7 @@ pub fn create_arrangements(
 
     let mut arrangements = path_results
         .into_iter()
-        .map(|path_result| {
-            process_path(path_result.0, path_result.1, &measure_break_indices)
-        })
+        .map(|path_result| process_path(path_result.0, path_result.1, &measure_break_indices))
         .collect_vec();
 
     if let Some(max_span) = max_fret_span_filter {
@@ -396,9 +394,9 @@ pub fn create_arrangements(
 #[cfg(test)]
 mod test_create_arrangements {
     use super::*;
+    use crate::NumArrangements;
     use crate::parser::parse_lines;
     use crate::string_number::StringNumber;
-    use crate::NumArrangements;
 
     #[test]
     fn unreachable_pitch_returns_unplayable_pitches_variant() {
@@ -429,7 +427,13 @@ mod test_create_arrangements {
             max_fret_span: 0,
         }];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, NumArrangements::try_new(1).unwrap(), None).unwrap();
+        let arrangements = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(1).unwrap(),
+            None,
+        )
+        .unwrap();
 
         assert_eq!(arrangements, expected_arrangements);
     }
@@ -475,7 +479,13 @@ mod test_create_arrangements {
             },
         ];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, NumArrangements::try_new(10).unwrap(), None).unwrap();
+        let arrangements = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(10).unwrap(),
+            None,
+        )
+        .unwrap();
 
         assert_eq!(arrangements, expected_arrangements);
     }
@@ -500,7 +510,13 @@ mod test_create_arrangements {
             max_fret_span: 0,
         }];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, NumArrangements::try_new(1).unwrap(), None).unwrap();
+        let arrangements = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(1).unwrap(),
+            None,
+        )
+        .unwrap();
 
         assert_eq!(arrangements, expected_arrangements);
     }
@@ -508,7 +524,13 @@ mod test_create_arrangements {
     fn empty_input() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, NumArrangements::try_new(2).unwrap(), None).unwrap();
+        let arrangements = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(2).unwrap(),
+            None,
+        )
+        .unwrap();
 
         let expected_arrangements: Vec<Arrangement> = vec![
             Arrangement {
@@ -531,7 +553,13 @@ mod test_create_arrangements {
             Line::Rest,
         ];
 
-        let arrangements = create_arrangements(Guitar::default(), input_pitches, NumArrangements::try_new(1).unwrap(), None).unwrap();
+        let arrangements = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(1).unwrap(),
+            None,
+        )
+        .unwrap();
 
         let expected_arrangements: Vec<Arrangement> = vec![Arrangement {
             lines: vec![
@@ -550,10 +578,9 @@ mod test_create_arrangements {
     }
     #[test]
     fn max_fret_span_filter_drops_high_span_arrangements() {
-        let tuning = crate::guitar::create_string_tuning(
-            &crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES,
-        )
-        .unwrap();
+        let tuning =
+            crate::guitar::create_string_tuning(&crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES)
+                .unwrap();
         let guitar = crate::guitar::Guitar::new(tuning, 20, 0).unwrap();
         // G2B4 is a chord beat: G2 lands at fret 3 on string 6, B4 at fret 7 on string 1.
         // Some arrangements will have both notes at non-zero frets, producing a span > 0.
@@ -582,22 +609,17 @@ mod test_create_arrangements {
     }
     #[test]
     fn max_fret_span_filter_can_produce_empty_set() {
-        let tuning = crate::guitar::create_string_tuning(
-            &crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES,
-        )
-        .unwrap();
+        let tuning =
+            crate::guitar::create_string_tuning(&crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES)
+                .unwrap();
         let guitar = crate::guitar::Guitar::new(tuning, 20, 0).unwrap();
         // C3E3 forces both notes onto fretted positions (neither is an open string in
         // standard tuning), so every candidate arrangement has a non-zero fret span.
         let lines = crate::parser::parse_lines("C3E3".to_owned()).unwrap();
 
-        let filtered = create_arrangements(
-            guitar,
-            lines,
-            NumArrangements::try_new(5).unwrap(),
-            Some(0),
-        )
-        .expect("filter dropping every candidate is not an error");
+        let filtered =
+            create_arrangements(guitar, lines, NumArrangements::try_new(5).unwrap(), Some(0))
+                .expect("filter dropping every candidate is not an error");
         assert!(
             filtered.is_empty(),
             "max_fret_span_filter=Some(0) on an all-fretted chord must drop every candidate",
@@ -1553,8 +1575,8 @@ mod test_process_path {
 #[cfg(test)]
 mod proptest_invariants {
     use super::*;
-    use crate::guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES};
     use crate::NumArrangements;
+    use crate::guitar::{STD_6_STRING_TUNING_OPEN_PITCHES, create_string_tuning};
     use proptest::prelude::*;
     use std::collections::HashSet;
 
@@ -1586,7 +1608,8 @@ mod proptest_invariants {
             1u8..=5u8,
         )
             .prop_map(|(line_specs, num_arrangements)| {
-                let mut input_lines: Vec<Line<BeatVec<Pitch>>> = Vec::with_capacity(line_specs.len());
+                let mut input_lines: Vec<Line<BeatVec<Pitch>>> =
+                    Vec::with_capacity(line_specs.len());
                 let mut measure_break_positions = Vec::new();
                 let mut rest_positions = Vec::new();
                 let mut playable_pitches_per_line = Vec::new();

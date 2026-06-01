@@ -1,9 +1,9 @@
 #![allow(unused)]
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use guitar_tab_generator::{
-    create_arrangements, create_string_tuning, generate_arrangements, parse_lines, render_tab,
-    BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
+    BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput, create_arrangements,
+    create_string_tuning, generate_arrangements, parse_lines, render_tab,
 };
 // `__bench_internals` exposes the memoize escape hatches plus the now-private
 // tuning offset helpers so criterion benches can still measure them; see the
@@ -14,7 +14,14 @@ use guitar_tab_generator::__bench_internals::{
 };
 
 fn std_tuning() -> [Pitch; 6] {
-    [Pitch::E4, Pitch::B3, Pitch::G3, Pitch::D3, Pitch::A2, Pitch::E2]
+    [
+        Pitch::E4,
+        Pitch::B3,
+        Pitch::G3,
+        Pitch::D3,
+        Pitch::A2,
+        Pitch::E2,
+    ]
 }
 use itertools::Itertools;
 use std::{collections::BTreeMap, hint::black_box, time::Duration};
@@ -124,7 +131,11 @@ fn bench_parse_lines(c: &mut Criterion) {
 
 fn bench_create_string_tuning_offset(c: &mut Criterion) {
     c.bench_function("create_string_tuning_offset", |b| {
-        b.iter(|| create_string_tuning_offset(parse_tuning(black_box("openG")).expect("valid tuning name")))
+        b.iter(|| {
+            create_string_tuning_offset(
+                parse_tuning(black_box("openG")).expect("valid tuning name"),
+            )
+        })
     });
 }
 

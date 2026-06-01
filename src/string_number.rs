@@ -19,9 +19,15 @@ impl StringNumber {
     /// [`StringNumber::MAX`].
     pub fn new(string_number: u8) -> Result<Self, TabError> {
         match string_number {
-            0 => Err(TabError::StringNumberOutOfRange { value: 0, max: Self::MAX }),
+            0 => Err(TabError::StringNumberOutOfRange {
+                value: 0,
+                max: Self::MAX,
+            }),
             1..=Self::MAX => Ok(StringNumber(string_number)),
-            _ => Err(TabError::StringNumberOutOfRange { value: string_number, max: Self::MAX }),
+            _ => Err(TabError::StringNumberOutOfRange {
+                value: string_number,
+                max: Self::MAX,
+            }),
         }
     }
     /// Returns the underlying `u8`.

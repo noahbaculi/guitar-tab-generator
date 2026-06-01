@@ -1,6 +1,6 @@
 use guitar_tab_generator::{
-    create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar, Line,
-    NumArrangements, Pitch, TabError,
+    Guitar, Line, NumArrangements, Pitch, TabError, create_arrangements, create_string_tuning,
+    parse_lines, render_tab,
 };
 
 extern crate guitar_tab_generator;

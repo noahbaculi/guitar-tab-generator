@@ -497,7 +497,10 @@ fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
         .map(|_| {
             iters
                 .iter_mut()
-                .map(|n| n.next().expect("BUG: all inner vecs must have equal length for transpose"))
+                .map(|n| {
+                    n.next()
+                        .expect("BUG: all inner vecs must have equal length for transpose")
+                })
                 .collect::<Vec<T>>()
         })
         .collect()

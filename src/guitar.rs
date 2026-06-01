@@ -663,10 +663,7 @@ mod test_check_capo_number {
 ///   string.
 /// * `num_frets`: The `num_frets` parameter represents the number of
 ///   subsequent number of half steps to include in the range.
-fn create_string_range(
-    open_string_pitch: &Pitch,
-    num_frets: u8,
-) -> Result<Vec<Pitch>, TabError> {
+fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>, TabError> {
     let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
     let needed = num_frets as usize + 1;
 

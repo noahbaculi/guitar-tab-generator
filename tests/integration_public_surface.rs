@@ -10,10 +10,10 @@
 //! rather than fails an assertion.
 
 use guitar_tab_generator::{
-    create_arrangements, create_string_tuning, generate_arrangements, get_tuning_names, parse_lines,
-    render_tab, Arrangement, ArrangementSet, BeatVec, Guitar, Line, NormalizedBeat,
-    NumArrangements, ParseError, Pitch, PitchFingering, StringNumber, TabError, TabInput,
-    TuningName, UnplayablePitch,
+    Arrangement, ArrangementSet, BeatVec, Guitar, Line, NormalizedBeat, NumArrangements,
+    ParseError, Pitch, PitchFingering, StringNumber, TabError, TabInput, TuningName,
+    UnplayablePitch, create_arrangements, create_string_tuning, generate_arrangements,
+    get_tuning_names, parse_lines, render_tab,
 };
 
 fn fixture(num: u8) -> TabInput {
@@ -34,8 +34,14 @@ fn render_produces_non_empty_string_with_fret_markers() {
     let rendered = set.render(0, 30, 2, None).unwrap();
     assert!(!rendered.is_empty(), "rendered tab must not be empty");
     // The fixture uses all open strings; each beat column contains at least one '0'.
-    assert!(rendered.contains('0'), "rendered tab must include open-string fret marker");
-    assert!(rendered.contains('-'), "rendered tab must include dash fill characters");
+    assert!(
+        rendered.contains('0'),
+        "rendered tab must include open-string fret marker"
+    );
+    assert!(
+        rendered.contains('-'),
+        "rendered tab must include dash fill characters"
+    );
 }
 
 #[test]
@@ -73,16 +79,25 @@ fn tab_input_round_trips_from_camel_case_json() {
 #[test]
 fn get_tuning_names_returns_non_empty() {
     let names: Vec<TuningName> = get_tuning_names();
-    assert!(!names.is_empty(), "tuning name list must include at least one preset");
+    assert!(
+        !names.is_empty(),
+        "tuning name list must include at least one preset"
+    );
 }
 
 #[test]
 fn parse_variant_serializes_with_kind_tag() {
     let err = TabError::Parse {
-        errors: vec![ParseError { line: 1, text: "bad".to_owned() }],
+        errors: vec![ParseError {
+            line: 1,
+            text: "bad".to_owned(),
+        }],
     };
     let json = serde_json::to_string(&err).unwrap();
-    assert!(json.contains(r#""kind":"parse""#), "missing kind tag in {json}");
+    assert!(
+        json.contains(r#""kind":"parse""#),
+        "missing kind tag in {json}"
+    );
     assert!(json.contains(r#""line":1"#), "missing line field in {json}");
 }
 
@@ -93,7 +108,10 @@ fn arrangement_set_is_empty_when_filter_drops_every_candidate() {
     // JS demo surfaces via `set.isEmpty` and the "No arrangements match" message.
     let input = TabInput::new("C3E3", "standard", 20, 0, 5).with_max_fret_span_filter(0);
     let set = generate_arrangements(input).expect("empty filter result is not an error");
-    assert!(set.is_empty(), "set must be empty when no candidate survives the filter");
+    assert!(
+        set.is_empty(),
+        "set must be empty when no candidate survives the filter"
+    );
     assert_eq!(set.len(), 0);
 }
 
@@ -122,7 +140,11 @@ fn normalized_input_variants_are_publicly_constructible() {
     // the same enum is the Rust-side return value of `ArrangementSet::normalized_input`.
     let set = generate_arrangements(fixture(1)).unwrap();
     let beats: Vec<NormalizedBeat> = set.normalized_input();
-    assert!(beats.iter().any(|b| matches!(b, NormalizedBeat::Playable { .. })));
+    assert!(
+        beats
+            .iter()
+            .any(|b| matches!(b, NormalizedBeat::Playable { .. }))
+    );
 
     // Construct each variant directly to pin its public shape.
     let _playable = NormalizedBeat::Playable {
@@ -162,7 +184,14 @@ fn lower_level_pipeline_is_publicly_callable() {
     let lines: Vec<Line<BeatVec<Pitch>>> =
         parse_lines("E2\nA2\nD3".to_owned()).expect("clean input parses");
 
-    let open_pitches: [Pitch; 6] = [Pitch::E2, Pitch::A2, Pitch::D3, Pitch::G3, Pitch::B3, Pitch::E4];
+    let open_pitches: [Pitch; 6] = [
+        Pitch::E2,
+        Pitch::A2,
+        Pitch::D3,
+        Pitch::G3,
+        Pitch::B3,
+        Pitch::E4,
+    ];
     let tuning = create_string_tuning(&open_pitches).expect("six valid pitches");
     let guitar = Guitar::new(tuning, 18, 0).expect("standard configuration");
 
@@ -177,8 +206,14 @@ fn lower_level_pipeline_is_publicly_callable() {
     assert!(!arrangement_lines.is_empty());
 
     let rendered = render_tab(arrangement_lines, &guitar, 30, 1, None);
-    assert!(!rendered.is_empty(), "rendered tab is non-empty for valid input");
-    assert!(rendered.contains('0'), "all-open-string fixture renders open-fret markers");
+    assert!(
+        !rendered.is_empty(),
+        "rendered tab is non-empty for valid input"
+    );
+    assert!(
+        rendered.contains('0'),
+        "all-open-string fixture renders open-fret markers"
+    );
 }
 
 #[test]
@@ -197,7 +232,14 @@ fn pitch_fingering_is_publicly_named() {
     // structured read access for downstream callers building per-arrangement fingering
     // inspectors without re-running pathfinding.
     // String 1 is the highest pitch (E4); string 6 is the lowest (E2). See CONTEXT.md.
-    let open_pitches: [Pitch; 6] = [Pitch::E4, Pitch::B3, Pitch::G3, Pitch::D3, Pitch::A2, Pitch::E2];
+    let open_pitches: [Pitch; 6] = [
+        Pitch::E4,
+        Pitch::B3,
+        Pitch::G3,
+        Pitch::D3,
+        Pitch::A2,
+        Pitch::E2,
+    ];
     let guitar = Guitar::new(create_string_tuning(&open_pitches).unwrap(), 18, 0).unwrap();
     let lines = parse_lines("E2".to_owned()).unwrap();
     let n = NumArrangements::try_new(1).unwrap();
@@ -215,12 +257,19 @@ fn pitch_fingering_is_publicly_named() {
     // E2 in standard tuning is the open low-E string (string 6, fret 0).
     let s: StringNumber = typecheck.string_number();
     assert_eq!(s.get(), 6, "E2 in standard tuning sits on string 6");
-    assert_eq!(typecheck.fret(), 0, "E2 in standard tuning is the open string");
+    assert_eq!(
+        typecheck.fret(),
+        0,
+        "E2 in standard tuning is the open string"
+    );
     let p: Pitch = typecheck.pitch();
     assert_eq!(p, Pitch::E2);
 
     // Debug impl remains reachable for ad-hoc inspection.
-    assert!(!format!("{typecheck:?}").is_empty(), "Debug impl produces output");
+    assert!(
+        !format!("{typecheck:?}").is_empty(),
+        "Debug impl produces output"
+    );
 }
 
 #[test]
@@ -249,15 +298,9 @@ fn tuning_name_variant_is_publicly_constructible() {
 
 #[cfg(test)]
 mod boundary_variant_smoke {
-    use guitar_tab_generator::{generate_arrangements, TabError, TabInput};
+    use guitar_tab_generator::{TabError, TabInput, generate_arrangements};
 
-    fn input(
-        num_frets: u8,
-        capo: u8,
-        num_arrangements: u8,
-        tuning: &str,
-        input: &str,
-    ) -> TabInput {
+    fn input(num_frets: u8, capo: u8, num_arrangements: u8, tuning: &str, input: &str) -> TabInput {
         TabInput::new(input, tuning, num_frets, capo, num_arrangements)
     }
 
@@ -265,7 +308,13 @@ mod boundary_variant_smoke {
     fn num_frets_too_high() {
         let err = generate_arrangements(input(31, 0, 1, "standard", "E2")).unwrap_err();
         assert!(
-            matches!(err, TabError::NumFretsTooHigh { num_frets: 31, max: 30 }),
+            matches!(
+                err,
+                TabError::NumFretsTooHigh {
+                    num_frets: 31,
+                    max: 30
+                }
+            ),
             "got {err:?}"
         );
     }
@@ -283,7 +332,13 @@ mod boundary_variant_smoke {
     fn capo_exceeds_frets() {
         let err = generate_arrangements(input(2, 4, 1, "standard", "E2")).unwrap_err();
         assert!(
-            matches!(err, TabError::CapoExceedsFrets { capo: 4, num_frets: 2 }),
+            matches!(
+                err,
+                TabError::CapoExceedsFrets {
+                    capo: 4,
+                    num_frets: 2
+                }
+            ),
             "got {err:?}"
         );
     }
@@ -292,7 +347,10 @@ mod boundary_variant_smoke {
     fn num_arrangements_out_of_range() {
         let err = generate_arrangements(input(18, 0, 0, "standard", "E2")).unwrap_err();
         assert!(
-            matches!(err, TabError::NumArrangementsOutOfRange { value: 0, max: 20 }),
+            matches!(
+                err,
+                TabError::NumArrangementsOutOfRange { value: 0, max: 20 }
+            ),
             "got {err:?}"
         );
     }
@@ -362,9 +420,6 @@ mod boundary_variant_smoke {
     #[test]
     fn no_arrangements_found() {
         let err = generate_arrangements(input(18, 0, 1, "standard", "E2E2")).unwrap_err();
-        assert!(
-            matches!(err, TabError::NoArrangementsFound),
-            "got {err:?}"
-        );
+        assert!(matches!(err, TabError::NoArrangementsFound), "got {err:?}");
     }
 }

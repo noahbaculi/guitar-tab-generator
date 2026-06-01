@@ -56,38 +56,79 @@ impl std::fmt::Display for UnplayablePitch {
 /// Top-level error variant for the WASM boundary.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 #[tsify(into_wasm_abi)]
-#[serde(tag = "kind", rename_all = "camelCase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
 #[non_exhaustive]
 pub enum TabError {
-    Parse { errors: Vec<ParseError> },
-    NumFretsTooHigh { num_frets: u8, max: u8 },
-    CapoTooHigh { capo: u8, max: u8 },
-    CapoExceedsFrets { capo: u8, num_frets: u8 },
-    StringNumberOutOfRange { value: u8, max: u8 },
+    Parse {
+        errors: Vec<ParseError>,
+    },
+    NumFretsTooHigh {
+        num_frets: u8,
+        max: u8,
+    },
+    CapoTooHigh {
+        capo: u8,
+        max: u8,
+    },
+    CapoExceedsFrets {
+        capo: u8,
+        num_frets: u8,
+    },
+    StringNumberOutOfRange {
+        value: u8,
+        max: u8,
+    },
     /// `semitones` is `i16` (not `u8`) to mirror the offset arithmetic in [`crate::pitch::Pitch::plus_offset`]
     /// and to leave room for negative tuning offsets without a future breaking change. The
     /// 2.x emit site populates `0..=Guitar::MAX_CAPO` only.
-    OpenPitchOutOfRange { string: u8, semitones: i16 },
-    FretRangeExceedsPitchRange { open_pitch: String, playable_frets: u8 },
-    UnplayablePitches { pitches: Vec<UnplayablePitch> },
+    OpenPitchOutOfRange {
+        string: u8,
+        semitones: i16,
+    },
+    FretRangeExceedsPitchRange {
+        open_pitch: String,
+        playable_frets: u8,
+    },
+    UnplayablePitches {
+        pitches: Vec<UnplayablePitch>,
+    },
     NoArrangementsFound,
-    NumArrangementsOutOfRange { value: u8, max: u8 },
-    TuningNameUnknown { value: String },
-    IndexOutOfBounds { index: usize, len: usize },
+    NumArrangementsOutOfRange {
+        value: u8,
+        max: u8,
+    },
+    TuningNameUnknown {
+        value: String,
+    },
+    IndexOutOfBounds {
+        index: usize,
+        len: usize,
+    },
 }
 
 impl std::fmt::Display for TabError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TabError::Parse { errors } => {
-                let joined = errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
+                let joined = errors
+                    .iter()
+                    .map(|e| e.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
                 write!(f, "{joined}")
             }
             TabError::NumFretsTooHigh { num_frets, max } => {
                 write!(f, "Too many frets ({num_frets}). The maximum is {max}.")
             }
             TabError::CapoTooHigh { capo, max } => {
-                write!(f, "The capo fret ({capo}) is too high. The maximum is {max}.")
+                write!(
+                    f,
+                    "The capo fret ({capo}) is too high. The maximum is {max}."
+                )
             }
             TabError::CapoExceedsFrets { capo, num_frets } => {
                 write!(
@@ -102,7 +143,10 @@ impl std::fmt::Display for TabError {
                         "A guitar cannot have a string number of zero (0). Guitar string numbering commences at one (1)."
                     )
                 } else {
-                    write!(f, "The string number ({value}) is too high. The maximum is {max}.")
+                    write!(
+                        f,
+                        "The string number ({value}) is too high. The maximum is {max}."
+                    )
                 }
             }
             TabError::OpenPitchOutOfRange { string, semitones } => {
@@ -111,14 +155,21 @@ impl std::fmt::Display for TabError {
                     "Capo offset of {semitones} semitones on string {string} would push the open pitch out of the supported range."
                 )
             }
-            TabError::FretRangeExceedsPitchRange { open_pitch, playable_frets } => {
+            TabError::FretRangeExceedsPitchRange {
+                open_pitch,
+                playable_frets,
+            } => {
                 write!(
                     f,
                     "Too many frets ({playable_frets}) for string starting at pitch {open_pitch}. The highest playable pitch is B9."
                 )
             }
             TabError::UnplayablePitches { pitches } => {
-                let joined = pitches.iter().map(|p| p.to_string()).collect::<Vec<_>>().join("\n");
+                let joined = pitches
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n");
                 write!(f, "{joined}")
             }
             TabError::NoArrangementsFound => {
@@ -167,8 +218,14 @@ mod test_tab_error_display {
     fn parse_variant_joins_errors_with_newlines() {
         let err = TabError::Parse {
             errors: vec![
-                ParseError { line: 1, text: "xyz".to_owned() },
-                ParseError { line: 4, text: "BB.2".to_owned() },
+                ParseError {
+                    line: 1,
+                    text: "xyz".to_owned(),
+                },
+                ParseError {
+                    line: 4,
+                    text: "BB.2".to_owned(),
+                },
             ],
         };
         assert_eq!(
@@ -176,7 +233,6 @@ mod test_tab_error_display {
             "Input 'xyz' on line 1 could not be parsed into a pitch.\nInput 'BB.2' on line 4 could not be parsed into a pitch."
         );
     }
-
 }
 
 #[cfg(test)]
@@ -185,19 +241,28 @@ mod test_new_variant_display {
 
     #[test]
     fn num_frets_too_high() {
-        let err = TabError::NumFretsTooHigh { num_frets: 31, max: 30 };
+        let err = TabError::NumFretsTooHigh {
+            num_frets: 31,
+            max: 30,
+        };
         assert_eq!(err.to_string(), "Too many frets (31). The maximum is 30.");
     }
 
     #[test]
     fn capo_too_high() {
         let err = TabError::CapoTooHigh { capo: 9, max: 8 };
-        assert_eq!(err.to_string(), "The capo fret (9) is too high. The maximum is 8.");
+        assert_eq!(
+            err.to_string(),
+            "The capo fret (9) is too high. The maximum is 8."
+        );
     }
 
     #[test]
     fn capo_exceeds_frets() {
-        let err = TabError::CapoExceedsFrets { capo: 8, num_frets: 2 };
+        let err = TabError::CapoExceedsFrets {
+            capo: 8,
+            num_frets: 2,
+        };
         assert_eq!(
             err.to_string(),
             "The capo fret (8) cannot exceed the number of frets (2)."
@@ -224,7 +289,10 @@ mod test_new_variant_display {
 
     #[test]
     fn open_pitch_out_of_range() {
-        let err = TabError::OpenPitchOutOfRange { string: 1, semitones: 8 };
+        let err = TabError::OpenPitchOutOfRange {
+            string: 1,
+            semitones: 8,
+        };
         assert_eq!(
             err.to_string(),
             "Capo offset of 8 semitones on string 1 would push the open pitch out of the supported range."
@@ -247,8 +315,14 @@ mod test_new_variant_display {
     fn unplayable_pitches_joins_with_newlines() {
         let err = TabError::UnplayablePitches {
             pitches: vec![
-                UnplayablePitch { value: "A1".to_owned(), line: 1 },
-                UnplayablePitch { value: "B1".to_owned(), line: 4 },
+                UnplayablePitch {
+                    value: "A1".to_owned(),
+                    line: 1,
+                },
+                UnplayablePitch {
+                    value: "B1".to_owned(),
+                    line: 4,
+                },
             ],
         };
         assert_eq!(
@@ -270,12 +344,17 @@ mod test_new_variant_display {
     #[test]
     fn num_arrangements_out_of_range() {
         let err = TabError::NumArrangementsOutOfRange { value: 21, max: 20 };
-        assert_eq!(err.to_string(), "must be between 1 and 20 inclusive, got 21");
+        assert_eq!(
+            err.to_string(),
+            "must be between 1 and 20 inclusive, got 21"
+        );
     }
 
     #[test]
     fn tuning_name_unknown() {
-        let err = TabError::TuningNameUnknown { value: "openZ".to_owned() };
+        let err = TabError::TuningNameUnknown {
+            value: "openZ".to_owned(),
+        };
         assert_eq!(
             err.to_string(),
             "must be \"standard\" or one of the supported TuningName variants, got \"openZ\""
@@ -285,6 +364,9 @@ mod test_new_variant_display {
     #[test]
     fn index_out_of_bounds() {
         let err = TabError::IndexOutOfBounds { index: 99, len: 3 };
-        assert_eq!(err.to_string(), "index 99 is out of bounds for set of length 3");
+        assert_eq!(
+            err.to_string(),
+            "index 99 is out of bounds for set of length 3"
+        );
     }
 }

@@ -1,6 +1,6 @@
 use crate::{
     arrangement::{BeatVec, Line},
-    guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES},
+    guitar::{STD_6_STRING_TUNING_OPEN_PITCHES, create_string_tuning},
     pitch::Pitch,
     string_number::StringNumber,
 };
@@ -218,15 +218,17 @@ pub fn parse_lines(
         .build()
         .expect("BUG: Regex pattern should be valid");
 
-    let (parsed_lines, errors): (Vec<Line<BeatVec<Pitch>>>, Vec<Vec<crate::error::ParseError>>) =
-        input
-            .lines()
-            .enumerate()
-            .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
-            .partition_map(|result| match result {
-                Ok(line) => itertools::Either::Left(line),
-                Err(errs) => itertools::Either::Right(errs),
-            });
+    let (parsed_lines, errors): (
+        Vec<Line<BeatVec<Pitch>>>,
+        Vec<Vec<crate::error::ParseError>>,
+    ) = input
+        .lines()
+        .enumerate()
+        .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
+        .partition_map(|result| match result {
+            Ok(line) => itertools::Either::Left(line),
+            Err(errs) => itertools::Either::Right(errs),
+        });
 
     let flat_errors: Vec<crate::error::ParseError> = errors.into_iter().flatten().collect();
     if !flat_errors.is_empty() {
@@ -260,8 +262,14 @@ mod test_parse_lines {
         assert_eq!(
             *errors,
             vec![
-                crate::error::ParseError { line: 1, text: "xyz".to_owned() },
-                crate::error::ParseError { line: 4, text: "BB.2".to_owned() },
+                crate::error::ParseError {
+                    line: 1,
+                    text: "xyz".to_owned()
+                },
+                crate::error::ParseError {
+                    line: 4,
+                    text: "BB.2".to_owned()
+                },
             ],
         );
     }

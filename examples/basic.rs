@@ -1,6 +1,6 @@
 extern crate guitar_tab_generator;
 
-use guitar_tab_generator::{generate_arrangements, TabInput};
+use guitar_tab_generator::{TabInput, generate_arrangements};
 
 /// Basic usage example using `generate_arrangements` and `render`.
 fn main() {
