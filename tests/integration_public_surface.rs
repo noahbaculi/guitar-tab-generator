@@ -13,7 +13,7 @@ use guitar_tab_generator::{
     create_arrangements, create_string_tuning, generate_arrangements, get_tuning_names, parse_lines,
     render_tab, Arrangement, ArrangementSet, BeatVec, Guitar, Line, NormalizedBeat,
     NumArrangements, ParseError, Pitch, PitchFingering, StringNumber, TabError, TabInput,
-    TuningName,
+    TuningName, UnplayablePitch,
 };
 
 fn fixture(num: u8) -> TabInput {
@@ -221,6 +221,20 @@ fn pitch_fingering_is_publicly_named() {
 
     // Debug impl remains reachable for ad-hoc inspection.
     assert!(!format!("{typecheck:?}").is_empty(), "Debug impl produces output");
+}
+
+#[test]
+fn unplayable_pitch_is_nameable_from_crate_root() {
+    // `UnplayablePitch` is the element type of `TabError::UnplayablePitches`; it must be
+    // nameable in a downstream signature, not just readable as a field value.
+    let err = generate_arrangements(TabInput::new("A1", "standard", 18, 0, 1)).unwrap_err();
+    let pitches = match err {
+        TabError::UnplayablePitches { pitches } => pitches,
+        other => panic!("expected UnplayablePitches, got {other:?}"),
+    };
+    let first: &UnplayablePitch = &pitches[0];
+    assert_eq!(first.value, "A1");
+    assert_eq!(first.line, 1);
 }
 
 #[test]

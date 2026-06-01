@@ -35,7 +35,7 @@ pub(crate) mod string_number;
 /// for per-arrangement metadata is `ArrangementSet::difficulty(i)` and
 /// `ArrangementSet::max_fret_span(i)`; direct construction of `Arrangement` values is internal.
 pub use arrangement::{create_arrangements, Arrangement, BeatVec, Line};
-pub use error::{ParseError, TabError};
+pub use error::{ParseError, TabError, UnplayablePitch};
 pub use guitar::{create_string_tuning, Guitar, PitchFingering};
 pub use parser::{get_tuning_names, parse_lines, TuningName};
 pub use pitch::Pitch;
