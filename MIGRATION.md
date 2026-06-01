@@ -22,7 +22,7 @@ For a flat list of changes, see [`CHANGELOG.md`](CHANGELOG.md). For the architec
 
 | 1.x | 2.0 |
 |---|---|
-| `wrapper_create_arrangements(...)` | `generate_arrangements(TabInput { ... })?` |
+| `wrapper_create_arrangements(...)` | `generate_arrangements(TabInput::new(...))?` |
 | `CompositionInput` | `TabInput` |
 | `Composition` / `RenderedTab` structs | dropped; rendered string comes from `set.render(i, ...)` |
 | `create_arrangements(..., num: u8, ...)` | `create_arrangements(..., NumArrangements, ...)`; see [Direct Rust callers](#direct-rust-callers) |
@@ -116,14 +116,7 @@ After (2.0):
 ```rust
 use guitar_tab_generator::{generate_arrangements, TabInput};
 
-let set = generate_arrangements(TabInput {
-    input: "E2\nA2\nD3".to_owned(),
-    tuning_name: "standard".to_owned(),
-    guitar_num_frets: 18,
-    guitar_capo: 0,
-    num_arrangements: 1,
-    max_fret_span_filter: None,
-})?;
+let set = generate_arrangements(TabInput::new("E2\nA2\nD3", "standard", 18, 0, 1))?;
 let tab = set.render(0, 30, 1, None)?;
 ```
 
@@ -351,7 +344,7 @@ let set = build_arrangement_set(TabInput { /* ... */ })?;
 
 // After:
 use guitar_tab_generator::generate_arrangements;
-let set = generate_arrangements(TabInput { /* ... */ })?;
+let set = generate_arrangements(TabInput::new(/* ... */))?;
 ```
 
 ### Memoize escape hatches moved

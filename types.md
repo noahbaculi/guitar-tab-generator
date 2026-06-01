@@ -76,11 +76,19 @@ NormalizedBeat                         <- ArrangementSet.normalized_input elemen
     kind: "rest" | "measureBreak" | "playable"
     pitches?: string[]                 (present when kind == "playable")
 
-TabError                               <- thrown by generate_arrangements (JS: generateArrangements)
-    kind: "parse"        + errors:  ParseError[]
-    kind: "guitar"       + message: string
-    kind: "arrangement"  + message: string
-    kind: "invalidInput" + field:   string, message: string
+TabError                                  <- thrown by generate_arrangements (JS: generateArrangements)
+    kind: "parse"                      + errors: ParseError[]
+    kind: "numFretsTooHigh"            + numFrets: number, max: number
+    kind: "capoTooHigh"                + capo: number, max: number
+    kind: "capoExceedsFrets"           + capo: number, numFrets: number
+    kind: "stringNumberOutOfRange"     + value: number, max: number          (lower-level Rust API only)
+    kind: "openPitchOutOfRange"        + string: number, semitones: number   (lower-level Rust API only)
+    kind: "fretRangeExceedsPitchRange" + openPitch: string, playableFrets: number  (lower-level Rust API only)
+    kind: "unplayablePitches"          + pitches: UnplayablePitch[]
+    kind: "noArrangementsFound"
+    kind: "numArrangementsOutOfRange"  + value: number, max: number
+    kind: "tuningNameUnknown"          + value: string
+    kind: "indexOutOfBounds"           + index: number, len: number
 
 ParseError
     line: u32

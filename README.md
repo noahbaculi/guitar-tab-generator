@@ -57,7 +57,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 - Configurable number of frets
 - Tab width and padding formatting
 - Playback indicator for playback applications
-- Pathfinding algorithm leverage Dijkstra's algorithm to calculate the arrangement with the least difficulty.
+- Pathfinding via Yen's k-shortest-paths algorithm (built on Dijkstra) to rank arrangements from least to most difficult.
 
 ## Quick start (2.0.0)
 
@@ -66,17 +66,12 @@ Rust:
 ```rust
 use guitar_tab_generator::{generate_arrangements, TabInput};
 
-let input = TabInput {
-    input: "E2\nA2\nD3".into(),
-    tuning_name: "standard".into(),
-    guitar_num_frets: 18,
-    guitar_capo: 0,
-    num_arrangements: 1,
-    max_fret_span_filter: None,
-};
+// Newline-separated pitches. Blank lines are rests; a line like "D4G4" is a chord.
+let input = TabInput::new("E2\nA2\nD3", "standard", 18, 0, 1);
 
-let set = generate_arrangements(input)?;
-println!("{}", set.render(0, 30, 2, None)?);
+// Arrangements are ranked by difficulty, easiest first.
+let set = generate_arrangements(input).expect("input is valid");
+println!("{}", set.render(0, 30, 2, None).expect("arrangement 0 exists"));
 ```
 
 TypeScript (after `wasm-pack build`):
@@ -289,7 +284,7 @@ flowchart TB
 
 ### Algorithm choice
 
-The number of fingering combinations grows exponentially with more beats and pitches so the choice of [shortest path algorithm](https://en.wikipedia.org/wiki/Shortest_path_problem) is critical. The [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) pathfinding algorithm was chosen for this application of the "shortest path exercise" for the following reasons:
+The number of fingering combinations grows exponentially with more beats and pitches so the choice of [shortest path algorithm](https://en.wikipedia.org/wiki/Shortest_path_problem) is critical. [Yen's k-shortest-paths algorithm](https://en.wikipedia.org/wiki/Yen%27s_algorithm), built on [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm), was chosen so the search returns several ranked arrangements rather than a single path, for the following reasons:
 
 - The sequential nature of the musical arrangement problem results in a _directed_ graph where only nodes representing consecutive beat fingering combinations have edges from one to the next.
 - The edges between nodes are _weighted_ with the difficulty of moving from one fingering combination to another so the graph above is already constructed with the only possible next nodes connected.

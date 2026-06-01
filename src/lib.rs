@@ -1,22 +1,5 @@
 #![deny(clippy::correctness)]
-
-//! Generate fingerstyle guitar tabs from a sequence of pitches.
-//!
-//! Given a string of newline-separated pitches (e.g. `"E2\nA2\nD3"`), a tuning,
-//! and guitar parameters, this crate picks playable fingerings and renders an
-//! ASCII tab. Arrangements are ranked by difficulty and returned in ascending
-//! order; the first arrangement is the easiest to play.
-//!
-//! # Quick start
-//!
-//! ```no_run
-//! use guitar_tab_generator::{generate_arrangements, TabError, TabInput};
-//!
-//! let set = generate_arrangements(TabInput::new("E2\nA2\nD3", "standard", 18, 0, 1))?;
-//! let tab = set.render(0, 30, 2, None)?;
-//! println!("{tab}");
-//! # Ok::<(), TabError>(())
-//! ```
+#![doc = include_str!("../README.md")]
 
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU8;
