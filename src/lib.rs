@@ -91,6 +91,36 @@ pub struct TabInput {
     pub max_fret_span_filter: Option<u8>,
 }
 
+impl TabInput {
+    /// Builds a `TabInput` with `max_fret_span_filter` defaulted to `None`.
+    ///
+    /// External callers use this instead of a struct literal. Set the optional fret-span
+    /// filter with [`TabInput::with_max_fret_span_filter`].
+    pub fn new(
+        input: impl Into<String>,
+        tuning_name: impl Into<String>,
+        guitar_num_frets: u8,
+        guitar_capo: u8,
+        num_arrangements: u8,
+    ) -> Self {
+        Self {
+            input: input.into(),
+            tuning_name: tuning_name.into(),
+            guitar_num_frets,
+            guitar_capo,
+            num_arrangements,
+            max_fret_span_filter: None,
+        }
+    }
+
+    /// Sets `max_fret_span_filter` to `Some(filter)`.
+    #[must_use]
+    pub fn with_max_fret_span_filter(mut self, filter: u8) -> Self {
+        self.max_fret_span_filter = Some(filter);
+        self
+    }
+}
+
 /// Validated count of arrangements to compute. Construction enforces `1..=NumArrangements::MAX`.
 ///
 /// Constructed at the boundary by `generate_arrangements` from `TabInput::num_arrangements`.
@@ -670,5 +700,27 @@ mod test_num_arrangements {
     fn get_returns_inner_value() {
         let n = NumArrangements::try_new(7).unwrap();
         assert_eq!(n.get(), 7);
+    }
+}
+
+#[cfg(test)]
+mod test_tab_input {
+    use super::*;
+
+    #[test]
+    fn new_defaults_max_fret_span_filter_to_none() {
+        let input = TabInput::new("E2\nA2", "standard", 18, 0, 1);
+        assert_eq!(input.input, "E2\nA2");
+        assert_eq!(input.tuning_name, "standard");
+        assert_eq!(input.guitar_num_frets, 18);
+        assert_eq!(input.guitar_capo, 0);
+        assert_eq!(input.num_arrangements, 1);
+        assert_eq!(input.max_fret_span_filter, None);
+    }
+
+    #[test]
+    fn with_max_fret_span_filter_sets_some() {
+        let input = TabInput::new("E2", "standard", 18, 0, 1).with_max_fret_span_filter(5);
+        assert_eq!(input.max_fret_span_filter, Some(5));
     }
 }
