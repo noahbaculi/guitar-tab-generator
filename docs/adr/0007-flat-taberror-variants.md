@@ -2,6 +2,7 @@
 
 Status: accepted
 Date: 2026-05-20
+Supersedes [ADR-0002](0002-tab-error-discriminated-union.md).
 
 ## Context
 

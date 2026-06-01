@@ -1,5 +1,8 @@
 # NumArrangements newtype enforces the 1..=20 range in one place
 
+Status: accepted
+Date: 2026-05-20
+
 In 2.0.0, `create_arrangements` accepts a `NumArrangements` newtype (`NumArrangements(NonZeroU8)` with a `MAX` constant and a `try_new` constructor) instead of a raw `u8`. `TabInput` keeps a plain `u8` so the JS wire stays a plain JSON number; `generate_arrangements` validates and lifts the value to the newtype at the boundary.
 
 ## Considered Options

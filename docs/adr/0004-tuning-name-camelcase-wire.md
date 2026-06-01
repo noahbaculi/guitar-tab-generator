@@ -1,5 +1,8 @@
 # TuningName serializes as camelCase on the wire
 
+Status: accepted
+Date: 2026-05-20
+
 In 2.0.0, the `TuningName` enum (`OpenG`, `DropD`, `C6`, etc.) crosses the WASM boundary as a camelCase string: `"openG"`, `"dropD"`, `"c6"`. `getTuningNames()` returns `TuningName[]` typed as a union of those camelCase literals. The Rust-side parser (`parse_tuning`) remains case-insensitive (`"DropD"`, `"dropd"`, `"DROPD"` all resolve) because it lowercases first.
 
 ## Considered Options

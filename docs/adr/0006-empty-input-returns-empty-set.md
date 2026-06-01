@@ -1,5 +1,8 @@
 # Empty / all-rest input returns Ok(set), not an error
 
+Status: accepted
+Date: 2026-05-20
+
 In 2.0.0, `generate_arrangements` returns `Ok(set)` when the input parses cleanly but contains zero `Playable` lines (only rests, only measure breaks, or fully blank). `set.len == num_arrangements`, every `set.render(i, ...)` returns the empty string, and `set.normalized_input()` echoes the input lines as `Rest` / `MeasureBreak` variants. Pinned by `empty_input_returns_set_with_requested_count` in `src/lib.rs`.
 
 This ADR also covers the related but distinct case where `max_fret_span_filter` rejects every candidate arrangement. The two paths share a motivation (a benign zero state should not look like a parse failure) but they surface differently on the handle.

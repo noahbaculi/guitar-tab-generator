@@ -1,5 +1,8 @@
 # Use tsify-next to generate the TypeScript surface from Rust types
 
+Status: accepted
+Date: 2026-05-20
+
 In 2.0.0, types crossing the WASM boundary derive `tsify_next::Tsify`. The generated `.d.ts` lives next to the `.wasm` after `wasm-pack build` and is the canonical TypeScript surface for downstream consumers. A snapshot of the generated `.d.ts` is committed at `tests/snapshots/wasm.d.ts` and a CI step fails the build when the generated file drifts from the snapshot.
 
 ## Considered Options

@@ -1,5 +1,12 @@
 # TabError is a discriminated union with a `kind` tag
 
+Status: Superseded by ADR-0007
+Date: 2026-05-20
+
+> Superseded by [ADR-0007](0007-flat-taberror-variants.md): the four umbrella variants
+> described below (`parse`, `guitar`, `arrangement`, `invalidInput`) were flattened into
+> 12 specific variants. This record is kept for historical context.
+
 In 2.0.0, errors crossing the WASM boundary are typed: `generate_arrangements` and the `ArrangementSet` methods throw a `TabError` whose `kind` field discriminates between four variants (`parse`, `guitar`, `arrangement`, `invalidInput`). The enum is `#[non_exhaustive]` and serialized with `#[serde(tag = "kind", rename_all = "camelCase")]`, so JS callers `switch (err.kind)` instead of parsing message strings.
 
 ## Considered Options
