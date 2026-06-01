@@ -252,8 +252,9 @@
         //  7. Enable `Playback`; move the slider; the rendered tab shows v / ^ indicators
         //     walking through beats.
         //  8. Open `Debug: normalizedInput`; JSON pretty-prints the current beat sequence.
-        //  9. Type `21` into `Arrangements` and Tab away; the field-error slot reads the
-        //     boundary `numArrangements must be between 1 and 20 inclusive` message.
+        //  9. Type `21` into `Arrangements` and Tab away; the num-arrangements-error slot
+        //     reads "Arrangements must be between 1 and 20 inclusive (got 21)." built from
+        //     the typed `numArrangementsOutOfRange` payload (value/max), not a `.message` field.
         // 10. Reload the page; no console error about a leaked handle.
         //
         // The library uses tsify-next typed bindings; if you're editing in an editor with
@@ -447,7 +448,11 @@ C4`,
                 metaEl.innerHTML = `Arrangement <strong>${i + 1}</strong> / ${set.len}  (difficulty ${diff}, span ${span})`;
             } catch (err) {
                 console.error("Render error:", err);
-                tabEl.textContent = `Error: ${err?.kind ?? "unknown"} ${err?.message ?? ""}`;
+                const detail =
+                    err?.kind === "indexOutOfBounds"
+                        ? `index ${err.index} is out of bounds for a set of length ${err.len}`
+                        : (err?.kind ?? "unknown");
+                tabEl.textContent = `Render error: ${detail}`;
                 tabEl.classList.add("error");
             }
             refreshNavButtons();
@@ -540,52 +545,103 @@ C4`,
             const metaEl = document.getElementById("tab-meta");
             state.normalizedInput = null;
             refreshDebugPane();
+            // Reset every error slot first so a previous error of a different kind cannot
+            // linger in its pane next to the current one.
+            clearErrorPanes();
+
+            const inputText = document.getElementById("input").value;
+            const clearTab = () => {
+                tabEl.textContent = "";
+                tabEl.classList.remove("error");
+                metaEl.textContent = "";
+            };
+
             switch (err?.kind) {
                 case "parse": {
-                    const lines = err.errors.map((e) => `line ${e.line}: "${e.text}"`).join("\n");
-                    document.getElementById("parse-errors").textContent = lines;
-                    renderLineMarkers(err.errors, document.getElementById("input").value);
-                    tabEl.textContent = "";
+                    document.getElementById("parse-errors").textContent =
+                        err.errors.map((e) => `line ${e.line}: "${e.text}"`).join("\n");
+                    renderLineMarkers(err.errors, inputText);
+                    clearTab();
+                    return;
+                }
+                case "unplayablePitches": {
+                    document.getElementById("parse-errors").textContent = err.pitches
+                        .map((p) => `line ${p.line}: ${p.value} cannot be played on the configured guitar`)
+                        .join("\n");
+                    renderLineMarkers(err.pitches, inputText);
+                    clearTab();
+                    return;
+                }
+                case "tuningNameUnknown": {
+                    document.getElementById("tuningName-error").textContent =
+                        `Unknown tuning "${err.value}". Choose a listed tuning or "standard".`;
+                    clearTab();
+                    return;
+                }
+                case "numFretsTooHigh": {
+                    document.getElementById("guitar-error").textContent =
+                        `Too many frets (${err.numFrets}). The maximum is ${err.max}.`;
+                    clearTab();
+                    return;
+                }
+                case "capoTooHigh": {
+                    document.getElementById("guitar-error").textContent =
+                        `The capo fret (${err.capo}) is too high. The maximum is ${err.max}.`;
+                    clearTab();
+                    return;
+                }
+                case "capoExceedsFrets": {
+                    document.getElementById("guitar-error").textContent =
+                        `The capo fret (${err.capo}) cannot exceed the number of frets (${err.numFrets}).`;
+                    clearTab();
+                    return;
+                }
+                case "numArrangementsOutOfRange": {
+                    document.getElementById("num-arrangements-error").textContent =
+                        `Arrangements must be between 1 and ${err.max} inclusive (got ${err.value}).`;
+                    clearTab();
+                    return;
+                }
+                case "noArrangementsFound": {
+                    tabEl.textContent = "No arrangements could be calculated.";
                     tabEl.classList.remove("error");
                     metaEl.textContent = "";
                     return;
                 }
-                case "guitar": {
-                    document.getElementById("guitar-error").textContent = err.message;
-                    tabEl.textContent = "";
-                    tabEl.classList.remove("error");
-                    metaEl.textContent = "";
+                case "indexOutOfBounds": {
+                    document.getElementById("field-error-default").textContent =
+                        `Index ${err.index} is out of bounds for a set of length ${err.len}.`;
+                    clearTab();
                     return;
                 }
-                case "arrangement": {
-                    tabEl.textContent = `No playable arrangement: ${err.message}`;
-                    tabEl.classList.add("error");
-                    metaEl.textContent = "";
+                // The next three are part of the TabError enum but are not reachable from
+                // generateArrangements with preset tunings and 1..6 string numbers; they fire
+                // only on the lower-level Rust API. Handled here so a future boundary that emits
+                // them shows a message instead of nothing.
+                case "stringNumberOutOfRange": {
+                    document.getElementById("field-error-default").textContent =
+                        `String number ${err.value} is out of range (maximum ${err.max}).`;
+                    clearTab();
                     return;
                 }
-                case "invalidInput": {
-                    // Most fields map to `<field>-error`; numArrangements is the historical
-                    // kebab-case outlier. Unmapped fields (e.g. `index`, a programmer-side
-                    // bounds error - see ArrangementSet doc on the Rust side) fall through to
-                    // the shared default region so downstream copies of this dispatch don't
-                    // silently mis-route them into the tab pane.
-                    const slotId = err.field === "numArrangements" ? "num-arrangements-error" : `${err.field}-error`;
-                    const fieldErrEl = document.getElementById(slotId);
-                    if (fieldErrEl) {
-                        fieldErrEl.textContent = err.message;
-                    } else {
-                        document.getElementById("field-error-default").textContent = `Invalid input (${err.field}): ${err.message}`;
-                    }
-                    tabEl.textContent = "";
-                    tabEl.classList.remove("error");
-                    metaEl.textContent = "";
+                case "openPitchOutOfRange": {
+                    document.getElementById("field-error-default").textContent =
+                        `A capo offset of ${err.semitones} semitones on string ${err.string} exceeds the supported pitch range.`;
+                    clearTab();
+                    return;
+                }
+                case "fretRangeExceedsPitchRange": {
+                    document.getElementById("field-error-default").textContent =
+                        `Too many frets (${err.playableFrets}) for a string starting at ${err.openPitch}; the highest playable pitch is B9.`;
+                    clearTab();
                     return;
                 }
                 default: {
-                    console.error("Unknown TabError:", err);
-                    tabEl.textContent = `Error: ${JSON.stringify(err)}`;
-                    tabEl.classList.add("error");
-                    metaEl.textContent = "";
+                    // #[non_exhaustive]: a future 2.x release may add a variant this build predates.
+                    console.error("Unhandled TabError kind:", err);
+                    document.getElementById("field-error-default").textContent =
+                        `Unexpected error kind: ${err?.kind ?? "unknown"}`;
+                    clearTab();
                 }
             }
         }
