@@ -2,7 +2,7 @@
 name = "guitar-tab-generator"
 version = "2.0.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.86"
 authors = ["Noah Baculi <noahbaculi@gmail.com>"]
 description = "Generate fingerstyle guitar tabs based on the difficulty of different finger positions"
 readme = "README.md"

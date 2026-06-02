@@ -29,7 +29,7 @@
 - `Guitar::MAX_NUM_FRETS` and `Guitar::MAX_CAPO` are now `pub const` on `Guitar`, alongside the existing `NumArrangements::MAX`. (Additive.)
 - `StringNumber::MAX` is now `pub const` on `StringNumber`. (Additive.)
 - `TabInput` is now `#[non_exhaustive]`. Construct it with `TabInput::new(input, tuningName, guitarNumFrets, guitarCapo, numArrangements)` and set the optional filter via `.with_max_fret_span_filter(n)`. JS callers are unaffected; the deserialized wire shape is unchanged. See [ADR-0008](docs/adr/0008-tab-input-sealed-constructor.md).
-- Crate edition upgraded to 2024; minimum supported Rust version is now 1.85, declared via `rust-version` in `Cargo.toml`.
+- Crate edition upgraded to 2024; minimum supported Rust version is now 1.86, declared via `rust-version` in `Cargo.toml`.
 
 ### Added
 

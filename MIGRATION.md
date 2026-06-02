@@ -46,9 +46,9 @@ Rust-only callers: see [Direct Rust callers](#direct-rust-callers) for migration
 
 ## Toolchain
 
-2.0.0 builds on Rust edition 2024 and requires Rust 1.85 or newer
-(`rust-version = "1.85"` in `Cargo.toml`). Run `rustup update` if your
-toolchain is below 1.85.
+2.0.0 builds on Rust edition 2024 and requires Rust 1.86 or newer
+(`rust-version = "1.86"` in `Cargo.toml`). Run `rustup update` if your
+toolchain is below 1.86.
 
 ## Generating arrangements
 
