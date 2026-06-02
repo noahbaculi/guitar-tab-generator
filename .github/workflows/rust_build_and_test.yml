@@ -59,4 +59,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: "1.85"
-      - run: cargo check
+      - run: cargo check --all-targets
