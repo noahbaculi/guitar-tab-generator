@@ -107,7 +107,7 @@ pub enum TabError {
         len: usize,
     },
     /// The requested render `width` is below the minimum needed to lay out one beat at the
-    /// given `padding`. `ArrangementSet::render` rejects widths below `padding + 3`.
+    /// given `padding`. `ArrangementSet::render` rejects widths below `2 * padding + 3`.
     RenderWidthTooSmall {
         width: u16,
         min: u16,

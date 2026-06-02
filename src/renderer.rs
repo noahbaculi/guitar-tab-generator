@@ -6,6 +6,18 @@ use itertools::Itertools;
 use std::collections::VecDeque;
 use std::fmt::Write;
 
+/// Widest fret column the renderer lays down (two-digit frets such as `12`).
+pub(crate) const MAX_FRET_RENDER_WIDTH: usize = 2;
+
+/// Minimum `width` [`render_tab`] needs to lay out one beat at the given `padding`.
+///
+/// A row carries a `padding`-wide dash margin on each side plus up to `MAX_FRET_RENDER_WIDTH`
+/// for the fret, so anything narrower cannot hold a single beat. `ArrangementSet::render`
+/// rejects smaller widths with `TabError::RenderWidthTooSmall`.
+pub(crate) const fn min_render_width(padding: u8) -> u16 {
+    2 * padding as u16 + MAX_FRET_RENDER_WIDTH as u16 + 1
+}
+
 /// Renders an `Arrangement`'s lines as an ASCII guitar tab.
 ///
 /// The `width` parameter controls the character width of each row group (rows wrap to a
@@ -154,6 +166,17 @@ mod test_render_tab {
         println!("expected output :\n{expected_output}");
 
         assert_eq!(output, expected_output);
+    }
+
+    #[test]
+    fn width_below_minimum_does_not_panic() {
+        // Regression: a width smaller than `min_render_width(padding)` must neither underflow
+        // the column math nor stall the wrap loop. `ArrangementSet::render` rejects such widths
+        // up front; `render_tab` itself stays total via the saturating floor plus the
+        // one-beat-per-row progress floor (`content_cap`).
+        let arrangement_lines = get_arrangement_lines();
+        let output = render_tab(&arrangement_lines, &Guitar::default(), 1, 0, None);
+        assert!(!output.is_empty());
     }
 }
 
@@ -549,7 +572,6 @@ fn render_string_groups(
 ) -> (Vec<Vec<String>>, Option<PlaybackIndicatorPosition>) {
     let padding_render = "-".repeat(padding as usize);
 
-    const MAX_FRET_RENDER_WIDTH: usize = 2;
     let mut strings_rows: Vec<Vec<String>> = vec![];
 
     let mut playback_indicator_position: Option<PlaybackIndicatorPosition> = None;
@@ -562,7 +584,11 @@ fn render_string_groups(
         while !remaining_string_beat_columns.is_empty() {
             let mut string_row = String::with_capacity(width as usize);
             string_row.push_str(&padding_render);
-            while string_row.len() < (width as usize - padding as usize - MAX_FRET_RENDER_WIDTH) {
+            let content_cap = (width as usize)
+                .saturating_sub(padding as usize)
+                .saturating_sub(MAX_FRET_RENDER_WIDTH)
+                .max(padding as usize + 1);
+            while string_row.len() < content_cap {
                 let next_string_item = remaining_string_beat_columns.pop_front();
                 match next_string_item {
                     None => {
@@ -594,7 +620,7 @@ fn render_string_groups(
 
                 string_row.push_str(&padding_render);
             }
-            let remaining_characters = width as usize - string_row.len();
+            let remaining_characters = (width as usize).saturating_sub(string_row.len());
             string_row.push_str(&"-".repeat(remaining_characters));
 
             string_rows.push(string_row);

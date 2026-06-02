@@ -230,6 +230,10 @@ impl ArrangementSet {
             .arrangements
             .get(index)
             .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))?;
+        let min = renderer::min_render_width(padding);
+        if width < min {
+            return Err(TabError::RenderWidthTooSmall { width, min });
+        }
         Ok(renderer::render_tab(
             &arrangement.lines,
             &self.guitar,
@@ -566,6 +570,14 @@ mod test_boundary_types {
             TabError::IndexOutOfBounds { .. } => {}
             other => panic!("expected IndexOutOfBounds, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn arrangement_set_render_rejects_width_below_minimum() {
+        let set = arrangement_set_fixture(1);
+        // padding 1 -> min width = 2 * 1 + 2 + 1 = 5; width 3 is below it.
+        let err = set.render(0, 3, 1, None).unwrap_err();
+        assert_eq!(err, TabError::RenderWidthTooSmall { width: 3, min: 5 });
     }
 
     #[test]
