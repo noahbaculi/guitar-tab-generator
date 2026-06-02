@@ -32,9 +32,7 @@ impl std::fmt::Display for ParseError {
 
 /// A pitch that could not be played on the configured guitar, with its 1-indexed line number.
 ///
-/// Public payload of [`TabError::UnplayablePitches`]. Replaces the prose
-/// "Pitch X on line N cannot be played on any strings of the configured guitar."
-/// string that 1.x and the pre-final 2.0.0 surface returned.
+/// Public payload of [`TabError::UnplayablePitches`]; the structured `{ value, line }` record replaced the free-form prose string used for unplayable pitches before 2.0.0.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 #[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]
@@ -107,6 +105,12 @@ pub enum TabError {
     IndexOutOfBounds {
         index: usize,
         len: usize,
+    },
+    /// The requested render `width` is below the minimum needed to lay out one beat at the
+    /// given `padding`. `ArrangementSet::render` rejects widths below `padding + 3`.
+    RenderWidthTooSmall {
+        width: u16,
+        min: u16,
     },
 }
 
@@ -186,6 +190,12 @@ impl std::fmt::Display for TabError {
             }
             TabError::IndexOutOfBounds { index, len } => {
                 write!(f, "index {index} is out of bounds for set of length {len}")
+            }
+            TabError::RenderWidthTooSmall { width, min } => {
+                write!(
+                    f,
+                    "The render width ({width}) is too small. The minimum is {min}."
+                )
             }
         }
     }
@@ -367,6 +377,15 @@ mod test_new_variant_display {
         assert_eq!(
             err.to_string(),
             "index 99 is out of bounds for set of length 3"
+        );
+    }
+
+    #[test]
+    fn render_width_too_small() {
+        let err = TabError::RenderWidthTooSmall { width: 3, min: 4 };
+        assert_eq!(
+            err.to_string(),
+            "The render width (3) is too small. The minimum is 4."
         );
     }
 }

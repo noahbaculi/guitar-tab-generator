@@ -3,9 +3,7 @@
 /**
  * A pitch that could not be played on the configured guitar, with its 1-indexed line number.
  *
- * Public payload of [`TabError::UnplayablePitches`]. Replaces the prose
- * \"Pitch X on line N cannot be played on any strings of the configured guitar.\
- * string that 1.x and the pre-final 2.0.0 surface returned.
+ * Public payload of [`TabError::UnplayablePitches`]; the structured `{ value, line }` record replaced the free-form prose string used for unplayable pitches before 2.0.0.
  */
 export interface UnplayablePitch {
     value: string;
@@ -65,7 +63,7 @@ export interface ParseError {
 /**
  * Top-level error variant for the WASM boundary.
  */
-export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "numFretsTooHigh"; numFrets: number; max: number } | { kind: "capoTooHigh"; capo: number; max: number } | { kind: "capoExceedsFrets"; capo: number; numFrets: number } | { kind: "stringNumberOutOfRange"; value: number; max: number } | { kind: "openPitchOutOfRange"; string: number; semitones: number } | { kind: "fretRangeExceedsPitchRange"; openPitch: string; playableFrets: number } | { kind: "unplayablePitches"; pitches: UnplayablePitch[] } | { kind: "noArrangementsFound" } | { kind: "numArrangementsOutOfRange"; value: number; max: number } | { kind: "tuningNameUnknown"; value: string } | { kind: "indexOutOfBounds"; index: number; len: number };
+export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "numFretsTooHigh"; numFrets: number; max: number } | { kind: "capoTooHigh"; capo: number; max: number } | { kind: "capoExceedsFrets"; capo: number; numFrets: number } | { kind: "stringNumberOutOfRange"; value: number; max: number } | { kind: "openPitchOutOfRange"; string: number; semitones: number } | { kind: "fretRangeExceedsPitchRange"; openPitch: string; playableFrets: number } | { kind: "unplayablePitches"; pitches: UnplayablePitch[] } | { kind: "noArrangementsFound" } | { kind: "numArrangementsOutOfRange"; value: number; max: number } | { kind: "tuningNameUnknown"; value: string } | { kind: "indexOutOfBounds"; index: number; len: number } | { kind: "renderWidthTooSmall"; width: number; min: number };
 
 
 /**
