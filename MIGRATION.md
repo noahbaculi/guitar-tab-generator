@@ -224,7 +224,7 @@ try {
 }
 ```
 
-`Parse` carries structured `errors: ParseError[]` so an editor UI can highlight failing lines without re-parsing. See [ADR-0002](docs/adr/0002-tab-error-discriminated-union.md).
+`Parse` carries structured `errors: ParseError[]` so an editor UI can highlight failing lines without re-parsing. See [ADR-0002](docs/adr/0002-tab-error-discriminated-union.md) (superseded by [ADR-0007](docs/adr/0007-flat-taberror-variants.md)).
 
 ## Normalized input
 
@@ -396,6 +396,7 @@ switch (err.kind) {
   case "numArrangementsOutOfRange": showRangeError(err.value, err.max); break;
   case "tuningNameUnknown": showUnknownTuning(err.value); break;
   case "indexOutOfBounds": showRangeError(err.index, err.len); break;
+  case "renderWidthTooSmall": showRangeError(err.width, err.min); break;
 }
 ```
 

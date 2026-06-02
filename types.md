@@ -54,6 +54,10 @@ Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Opt
                          set.difficulty(i) -> i32
 ```
 
+> `parse_lines`, `parse_tuning`, and `create_string_tuning_offset` are crate-internal stages,
+> not part of the stable public API. They are surfaced only through the `#[doc(hidden)]`
+> `__bench_internals` module, for benchmarks.
+
 ## Types Up Close
 
 ```
@@ -89,6 +93,7 @@ TabError                                  <- thrown by generate_arrangements (JS
     kind: "numArrangementsOutOfRange"  + value: number, max: number
     kind: "tuningNameUnknown"          + value: string
     kind: "indexOutOfBounds"           + index: number, len: number
+    kind: "renderWidthTooSmall"        + width: number, min: number
 
 ParseError
     line: u32

@@ -107,7 +107,7 @@ This project has been attempted numerous times with varying levels of success. T
 
 ## Pathfinding Algorithm Visualization
 
-The pathfinding calculation is initiated by the `Arrangement::create_arrangements()` function.
+The pathfinding calculation is initiated by the `create_arrangements()` function.
 
 Let's look at an example with a standard guitar where we want to find the optimal arrangement to play a G3, then a rest, then a B3, then a D4 and G4 simultaneously. The pitch input for this example could look like this:
 

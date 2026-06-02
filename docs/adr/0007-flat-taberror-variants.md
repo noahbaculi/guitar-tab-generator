@@ -22,7 +22,7 @@ to flatten was now.
 
 `TabError` is a flat tagged union. Each concrete failure mode is its own
 variant with a structured payload. The umbrella variants are removed.
-The initial variant set (twelve kinds including the unchanged `Parse`)
+The variant set (thirteen kinds, including the unchanged `Parse`)
 captures every error path currently reachable from `generate_arrangements`
 and the public Rust API:
 
@@ -38,6 +38,7 @@ and the public Rust API:
 - `NumArrangementsOutOfRange { value, max }`
 - `TuningNameUnknown { value }`
 - `IndexOutOfBounds { index, len }`
+- `RenderWidthTooSmall { width, min }`
 
 The variant count grew by one (`NoArrangementsFound`) during implementation.
 The original plan called for a `panic!` on the empty-`path_results` path in
@@ -62,6 +63,16 @@ pathfinding graph through `multi_cartesian_product` plus
 `no_duplicate_strings` produces no valid sequence for an input whose
 individual pitches all reach the guitar. Internal proptests reach this
 state with valid-looking random input, so it is not a panic-worthy BUG.
+
+`RenderWidthTooSmall` was added in the post-release audit pass. `ArrangementSet::render`
+previously handed an unvalidated `width` to the renderer, where a value below the minimum
+underflowed the column arithmetic (debug panic, release allocation blow-up) for the smallest
+widths and stalled the wrap loop for the rest. The minimum is `2 * padding + 3`, not
+`padding + 3`: each beat column reserves a `padding`-wide margin on both sides, so the loop
+makes progress only when `width > 2 * padding + 2`. Validating at the boundary and returning a
+typed variant matches the "structured throw, not trap" rule the indexed accessors already
+follow (`IndexOutOfBounds`); the renderer also floors its column math with `saturating_sub`
+plus a one-beat-per-row progress floor so the lower-level `render_tab` stays total.
 
 ## Consequences
 
