@@ -55,7 +55,7 @@ pub(crate) fn first_playable_index<T>(lines: &[Line<T>]) -> usize {
 /// inputs (average non-zero fret, non-zero fret span).
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct ScoredBeatFingering {
-    fingering_combo: BeatVec<PitchFingering>,
+    beat_fingering: BeatVec<PitchFingering>,
     avg_non_zero_fret: Option<OrderedFloat<f64>>,
     non_zero_fret_span: u8,
 }
@@ -67,7 +67,7 @@ impl ScoredBeatFingering {
         let non_zero_fret_span = calc_fret_span(&beat_fingering_candidate).unwrap_or(0);
 
         ScoredBeatFingering {
-            fingering_combo: beat_fingering_candidate,
+            beat_fingering: beat_fingering_candidate,
             avg_non_zero_fret,
             non_zero_fret_span,
         }
@@ -87,12 +87,12 @@ mod test_create_scored_beat_fingering {
         };
 
         let ScoredBeatFingering {
-            fingering_combo,
+            beat_fingering,
             avg_non_zero_fret,
             non_zero_fret_span,
         } = ScoredBeatFingering::new(vec![pitch_fingering_1]);
 
-        assert_eq!(fingering_combo, vec![pitch_fingering_1]);
+        assert_eq!(beat_fingering, vec![pitch_fingering_1]);
         assert_eq!(avg_non_zero_fret, Some(OrderedFloat(2.0)));
         assert_eq!(non_zero_fret_span, 0);
     }
@@ -120,7 +120,7 @@ mod test_create_scored_beat_fingering {
         };
 
         let ScoredBeatFingering {
-            fingering_combo,
+            beat_fingering,
             avg_non_zero_fret,
             non_zero_fret_span,
         } = ScoredBeatFingering::new(vec![
@@ -131,7 +131,7 @@ mod test_create_scored_beat_fingering {
         ]);
 
         assert_eq!(
-            fingering_combo,
+            beat_fingering,
             vec![
                 pitch_fingering_1,
                 pitch_fingering_2,
@@ -310,7 +310,7 @@ pub fn create_arrangements(
         .filter(|line| matches!(line, Line::Playable(_)))
         .collect_vec();
     if input_playable_lines.is_empty() {
-        let empty_compositions = vec![
+        let empty_arrangements = vec![
             Arrangement {
                 lines: vec![],
                 difficulty: 0,
@@ -318,7 +318,7 @@ pub fn create_arrangements(
             };
             num_arrangements.get() as usize
         ];
-        return Ok(empty_compositions);
+        return Ok(empty_arrangements);
     }
 
     let first_playable_index = first_playable_index(&input_lines);
@@ -351,7 +351,7 @@ pub fn create_arrangements(
                 line_index: line_index as u16,
             }],
             Playable(beat_fingerings_per_pitch) => {
-                generate_fingering_combos(&beat_fingerings_per_pitch)
+                generate_beat_fingerings(&beat_fingerings_per_pitch)
                     .into_iter()
                     .map(|pitch_fingering_group| Node::Playable {
                         line_index: line_index as u16,
@@ -806,12 +806,12 @@ mod test_validate_fingerings {
 }
 
 /// Generates all playable combinations of fingerings for all the pitches in a beat.
-fn generate_fingering_combos(
+fn generate_beat_fingerings(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
 ) -> Vec<BeatVec<PitchFingering>> {
     assert!(
         !beat_fingerings_per_pitch.is_empty(),
-        "BUG: generate_fingering_combos called with empty input"
+        "BUG: generate_beat_fingerings called with empty input"
     );
 
     beat_fingerings_per_pitch
@@ -822,7 +822,7 @@ fn generate_fingering_combos(
         .collect()
 }
 #[cfg(test)]
-mod test_generate_fingering_combos {
+mod test_generate_beat_fingerings {
     use super::*;
     use crate::string_number::StringNumber;
 
@@ -837,7 +837,7 @@ mod test_generate_fingering_combos {
         let beat_fingerings_per_pitch = &[vec![pitch_fingering]];
 
         assert_eq!(
-            generate_fingering_combos(beat_fingerings_per_pitch),
+            generate_beat_fingerings(beat_fingerings_per_pitch),
             beat_fingerings_per_pitch
         );
     }
@@ -877,7 +877,7 @@ mod test_generate_fingering_combos {
                 pitch_fingering_b_string_4,
             ],
         ];
-        let expected_fingering_combos = vec![
+        let expected_beat_fingerings = vec![
             vec![pitch_fingering_a_string_2, pitch_fingering_b_string_3],
             vec![pitch_fingering_a_string_2, pitch_fingering_b_string_4],
             vec![pitch_fingering_a_string_3, pitch_fingering_b_string_2],
@@ -885,15 +885,15 @@ mod test_generate_fingering_combos {
         ];
 
         assert_eq!(
-            generate_fingering_combos(&beat_fingerings_per_pitch),
-            expected_fingering_combos
+            generate_beat_fingerings(&beat_fingerings_per_pitch),
+            expected_beat_fingerings
         );
     }
 
     #[test]
-    #[should_panic(expected = "BUG: generate_fingering_combos called with empty input")]
+    #[should_panic(expected = "BUG: generate_beat_fingerings called with empty input")]
     fn empty_input_panics() {
-        let _ = generate_fingering_combos(&[]);
+        let _ = generate_beat_fingerings(&[]);
     }
 }
 
@@ -1105,7 +1105,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 0,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(0.1)),
                     non_zero_fret_span: 0,
                 }),
@@ -1113,7 +1113,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 0,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(0.2)),
                     non_zero_fret_span: 0,
                 }),
@@ -1121,7 +1121,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 1,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(1.1)),
                     non_zero_fret_span: 1,
                 }),
@@ -1131,7 +1131,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 4,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 }),
@@ -1139,7 +1139,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 4,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 }),
@@ -1155,7 +1155,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 0,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(0.1)),
                     non_zero_fret_span: 0,
                 }),
@@ -1163,7 +1163,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 0,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(0.2)),
                     non_zero_fret_span: 0,
                 }),
@@ -1183,7 +1183,7 @@ mod test_calc_next_nodes {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(0.1)),
                 non_zero_fret_span: 0,
             }),
@@ -1192,7 +1192,7 @@ mod test_calc_next_nodes {
         let expected_nodes_and_costs = [Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(1.1)),
                 non_zero_fret_span: 1,
             }),
@@ -1211,7 +1211,7 @@ mod test_calc_next_nodes {
         let current_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(1.1)),
                 non_zero_fret_span: 1,
             }),
@@ -1249,7 +1249,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 4,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 }),
@@ -1257,7 +1257,7 @@ mod test_calc_next_nodes {
             Node::Playable {
                 line_index: 4,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    fingering_combo: vec![],
+                    beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(4.1)),
                     non_zero_fret_span: 4,
                 }),
@@ -1325,7 +1325,7 @@ mod test_calculate_node_difficulty {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             }),
@@ -1333,7 +1333,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             }),
@@ -1346,7 +1346,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             }),
@@ -1359,7 +1359,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             }),
@@ -1375,7 +1375,7 @@ mod test_calculate_node_difficulty {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.5)),
                 non_zero_fret_span: 0,
             }),
@@ -1391,7 +1391,7 @@ mod test_calculate_node_difficulty {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.0)),
                 non_zero_fret_span: 0,
             }),
@@ -1399,7 +1399,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(1.6)),
                 non_zero_fret_span: 0,
             }),
@@ -1412,7 +1412,7 @@ mod test_calculate_node_difficulty {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(4.133333)),
                 non_zero_fret_span: 0,
             }),
@@ -1420,7 +1420,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(4.133333)),
                 non_zero_fret_span: 3,
             }),
@@ -1433,7 +1433,7 @@ mod test_calculate_node_difficulty {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(5.0)),
                 non_zero_fret_span: 0,
             }),
@@ -1441,7 +1441,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(2.0)),
                 non_zero_fret_span: 5,
             }),
@@ -1454,7 +1454,7 @@ mod test_calculate_node_difficulty {
         let current_node = Node::Playable {
             line_index: 0,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(7.3333333)),
                 non_zero_fret_span: 0,
             }),
@@ -1462,7 +1462,7 @@ mod test_calculate_node_difficulty {
         let next_node = Node::Playable {
             line_index: 1,
             scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                fingering_combo: vec![],
+                beat_fingering: vec![],
                 avg_non_zero_fret: Some(OrderedFloat(3.6666666)),
                 non_zero_fret_span: 4,
             }),
@@ -1486,7 +1486,7 @@ fn process_path(
             Node::Playable {
                 scored_beat_fingering,
                 ..
-            } => Line::Playable(scored_beat_fingering.fingering_combo.clone()),
+            } => Line::Playable(scored_beat_fingering.beat_fingering.clone()),
         })
         .collect_vec();
     // Re-inject measure breaks. `measure_break_indices` is built by `enumerate().filter()`
@@ -1524,7 +1524,7 @@ mod test_process_path {
     #[test]
     fn simple() {
         let placeholder_scored_beat_fingering = ScoredBeatFingering {
-            fingering_combo: vec![PitchFingering {
+            beat_fingering: vec![PitchFingering {
                 pitch: Pitch::C4,
                 string_number: StringNumber::new(1).unwrap(),
                 fret: 3,
@@ -1544,7 +1544,7 @@ mod test_process_path {
         let arrangement = process_path(path_nodes, 123, &[]);
 
         let expected_arrangement = Arrangement {
-            lines: vec![Playable(placeholder_scored_beat_fingering.fingering_combo)],
+            lines: vec![Playable(placeholder_scored_beat_fingering.beat_fingering)],
             difficulty: 123,
             max_fret_span: 0,
         };
@@ -1554,7 +1554,7 @@ mod test_process_path {
     #[test]
     fn complex() {
         let placeholder_scored_beat_fingering = ScoredBeatFingering {
-            fingering_combo: vec![PitchFingering {
+            beat_fingering: vec![PitchFingering {
                 pitch: Pitch::C4,
                 string_number: StringNumber::new(1).unwrap(),
                 fret: 3,
@@ -1589,14 +1589,14 @@ mod test_process_path {
         let expected_arrangement = Arrangement {
             lines: vec![
                 MeasureBreak,
-                Playable(placeholder_scored_beat_fingering.clone().fingering_combo),
+                Playable(placeholder_scored_beat_fingering.clone().beat_fingering),
                 MeasureBreak,
-                Playable(placeholder_scored_beat_fingering.clone().fingering_combo),
+                Playable(placeholder_scored_beat_fingering.clone().beat_fingering),
                 Rest,
                 MeasureBreak,
-                Playable(placeholder_scored_beat_fingering.clone().fingering_combo),
+                Playable(placeholder_scored_beat_fingering.clone().beat_fingering),
                 MeasureBreak,
-                Playable(placeholder_scored_beat_fingering.fingering_combo),
+                Playable(placeholder_scored_beat_fingering.beat_fingering),
             ],
             difficulty: 321,
             max_fret_span: 4,

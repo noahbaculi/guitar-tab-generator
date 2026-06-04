@@ -95,7 +95,8 @@ pub fn create_string_tuning(
         .collect()
 }
 
-/// A guitar configuration: tuning, fret count, effective pitch range, and per-string ranges.
+/// A guitar configuration: tuning, fret count, playable fret count and reachable pitch set,
+/// and per-string ranges.
 ///
 /// Construct with `Guitar::new` for validated input or `Guitar::default` for a standard
 /// 18-fret 6-string instrument.
@@ -684,11 +685,14 @@ mod test_check_capo_number {
 ///
 /// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
 ///   string.
-/// * `num_frets`: The `num_frets` parameter represents the number of
-///   subsequent number of half steps to include in the range.
-fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>, TabError> {
+/// * `playable_frets`: the playable fret count: the number of half steps above the open
+///   pitch to include.
+fn create_string_range(
+    open_string_pitch: &Pitch,
+    playable_frets: u8,
+) -> Result<Vec<Pitch>, TabError> {
     let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
-    let needed = num_frets as usize + 1;
+    let needed = playable_frets as usize + 1;
 
     let string_range: Vec<Pitch> = Pitch::iter()
         .skip(lowest_pitch_index)
@@ -700,7 +704,7 @@ fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<P
     } else {
         Err(TabError::FretRangeExceedsPitchRange {
             open_pitch: open_string_pitch.to_string(),
-            playable_frets: num_frets,
+            playable_frets,
         })
     }
 }

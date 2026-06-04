@@ -58,10 +58,10 @@ pub fn render_tab(
 
     let beat_column_renders = transpose(columns);
 
-    let (strings_rows, playback_indicator_position) =
+    let (rows_by_string, playback_indicator_position) =
         render_string_groups(beat_column_renders, width, padding, line_index_of_playback);
 
-    render_string_output(&strings_rows, playback_indicator_position)
+    render_string_output(&rows_by_string, playback_indicator_position)
 }
 #[cfg(test)]
 mod test_render_tab {
@@ -576,23 +576,23 @@ fn render_string_groups(
 ) -> (Vec<Vec<String>>, Option<PlaybackIndicatorPosition>) {
     let padding_render = "-".repeat(padding as usize);
 
-    let mut strings_rows: Vec<Vec<String>> = vec![];
+    let mut rows_by_string: Vec<Vec<String>> = vec![];
 
     let mut playback_indicator_position: Option<PlaybackIndicatorPosition> = None;
 
     for string_beat_columns in beat_column_renders {
         let num_render_columns = string_beat_columns.len();
         let mut remaining_string_beat_columns = VecDeque::from(string_beat_columns);
-        let mut string_rows: Vec<String> = vec![];
+        let mut single_string_rows: Vec<String> = vec![];
 
         while !remaining_string_beat_columns.is_empty() {
-            let mut string_row = String::with_capacity(width as usize);
-            string_row.push_str(&padding_render);
+            let mut row = String::with_capacity(width as usize);
+            row.push_str(&padding_render);
             let content_cap = (width as usize)
                 .saturating_sub(padding as usize)
                 .saturating_sub(MAX_FRET_RENDER_WIDTH)
                 .max(padding as usize + 1);
-            while string_row.len() < content_cap {
+            while row.len() < content_cap {
                 let next_string_item = remaining_string_beat_columns.pop_front();
                 match next_string_item {
                     None => {
@@ -612,28 +612,28 @@ fn render_string_groups(
                                 };
 
                                 playback_indicator_position = Some(PlaybackIndicatorPosition {
-                                    row_group_index: string_rows.len(),
-                                    column_index: string_row.len() + wide_fret_playback_offset,
+                                    row_group_index: single_string_rows.len(),
+                                    column_index: row.len() + wide_fret_playback_offset,
                                 });
                             }
                             _ => {}
                         }
-                        string_row.push_str(&string_item)
+                        row.push_str(&string_item)
                     }
                 }
 
-                string_row.push_str(&padding_render);
+                row.push_str(&padding_render);
             }
-            let remaining_characters = (width as usize).saturating_sub(string_row.len());
-            string_row.push_str(&"-".repeat(remaining_characters));
+            let remaining_characters = (width as usize).saturating_sub(row.len());
+            row.push_str(&"-".repeat(remaining_characters));
 
-            string_rows.push(string_row);
+            single_string_rows.push(row);
         }
 
-        strings_rows.push(string_rows);
+        rows_by_string.push(single_string_rows);
     }
 
-    (strings_rows, playback_indicator_position)
+    (rows_by_string, playback_indicator_position)
 }
 #[cfg(test)]
 mod test_render_string_groups {
@@ -778,14 +778,14 @@ mod test_render_string_groups {
 }
 
 fn render_string_output(
-    strings_rows: &[Vec<String>],
+    rows_by_string: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
-    let num_strings = strings_rows.len();
-    let num_row_groups = strings_rows[0].len();
+    let num_strings = rows_by_string.len();
+    let num_row_groups = rows_by_string[0].len();
     let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
-    for (row_group_index, _) in strings_rows[0].iter().enumerate() {
+    for (row_group_index, _) in rows_by_string[0].iter().enumerate() {
         let playback_line = |symbol: &str| -> String {
             match playback_indicator_position {
                 Some(ref pos) if row_group_index == pos.row_group_index => {
@@ -797,9 +797,9 @@ fn render_string_output(
 
         output_lines.push(playback_line("▼"));
 
-        for string_rows in strings_rows {
+        for single_string_rows in rows_by_string {
             output_lines.push(
-                string_rows
+                single_string_rows
                     .get(row_group_index)
                     .map(String::as_str)
                     .expect("BUG: every string has the same row-group count")
