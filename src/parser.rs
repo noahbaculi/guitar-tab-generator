@@ -16,7 +16,7 @@ use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 const PITCH_PATTERN: &str =
-    r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
+    r"(?P<three_char_pitch>[A-G][#♯b♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
 
 #[cfg(test)]
 fn test_pitch_regex() -> Regex {
@@ -691,5 +691,21 @@ mod test_get_tuning_names {
     #[test]
     fn returns_non_empty_set() {
         assert!(!get_tuning_names().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod test_pitch_pattern {
+    use super::*;
+
+    #[test]
+    fn accidentals_match_but_literal_pipe_does_not() {
+        let re = test_pitch_regex();
+        assert!(re.is_match("C#1"));
+        assert!(re.is_match("Cb1"));
+        assert!(re.is_match("C\u{266f}1")); // C sharp
+        assert!(re.is_match("C\u{266d}1")); // C flat
+        // A pipe is not an accidental; the character class must not accept it.
+        assert!(!re.is_match("C|1"));
     }
 }
