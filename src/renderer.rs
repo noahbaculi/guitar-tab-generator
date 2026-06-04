@@ -575,6 +575,10 @@ fn render_string_groups(
     playback_column_index: Option<usize>,
 ) -> (Vec<Vec<String>>, Option<PlaybackIndicatorPosition>) {
     let padding_render = "-".repeat(padding as usize);
+    let content_cap = (width as usize)
+        .saturating_sub(padding as usize)
+        .saturating_sub(MAX_FRET_RENDER_WIDTH)
+        .max(padding as usize + 1);
 
     let mut rows_by_string: Vec<Vec<String>> = vec![];
 
@@ -588,10 +592,6 @@ fn render_string_groups(
         while !remaining_string_beat_columns.is_empty() {
             let mut row = String::with_capacity(width as usize);
             row.push_str(&padding_render);
-            let content_cap = (width as usize)
-                .saturating_sub(padding as usize)
-                .saturating_sub(MAX_FRET_RENDER_WIDTH)
-                .max(padding as usize + 1);
             while row.len() < content_cap {
                 let next_string_item = remaining_string_beat_columns.pop_front();
                 match next_string_item {

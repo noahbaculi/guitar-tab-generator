@@ -10,8 +10,8 @@ use regex::{Regex, RegexBuilder};
 use serde::Serialize;
 use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
-use strum::VariantNames;
-use strum_macros::{EnumString, VariantNames};
+use strum::IntoEnumIterator;
+use strum_macros::{EnumIter, EnumString};
 use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
@@ -30,7 +30,7 @@ fn test_pitch_regex() -> Regex {
 ///
 /// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
 /// attribute requires external matches to include a wildcard arm.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, VariantNames, Serialize, Tsify)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, EnumIter, Serialize, Tsify)]
 #[strum(ascii_case_insensitive)]
 #[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]
@@ -52,10 +52,7 @@ pub enum TuningName {
 #[wasm_bindgen(js_name = "getTuningNames")]
 #[must_use]
 pub fn get_tuning_names() -> Vec<TuningName> {
-    TuningName::VARIANTS
-        .iter()
-        .map(|&v| TuningName::from_str(v).expect("BUG: VARIANTS yields parseable strings"))
-        .collect()
+    TuningName::iter().collect()
 }
 
 /// Returns the 6-element semitone offsets for a named tuning, relative to standard 6-string
@@ -65,6 +62,8 @@ pub fn get_tuning_names() -> Vec<TuningName> {
 /// Returns `TabError::TuningNameUnknown { value }` for any string that does not match a
 /// `TuningName` variant or `"standard"`.
 pub fn parse_tuning(tuning_name: &str) -> Result<[i8; 6], crate::error::TabError> {
+    // Offsets are semitones per string relative to standard tuning, ordered string 1
+    // (highest) to string 6 (lowest).
     match TuningName::from_str(tuning_name) {
         Ok(TuningName::OpenG) => Ok([-2, 0, 0, 0, -2, -2]),
         Ok(TuningName::OpenD) => Ok([-2, 0, 0, -1, -2, -2]),
