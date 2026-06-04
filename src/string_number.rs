@@ -33,7 +33,7 @@ impl StringNumber {
     /// Returns the underlying `u8`.
     #[inline]
     #[must_use]
-    pub fn get(&self) -> u8 {
+    pub fn get(self) -> u8 {
         self.0
     }
 }

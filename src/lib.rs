@@ -75,6 +75,7 @@ impl TabInput {
     ///
     /// External callers use this instead of a struct literal. Set the optional fret-span
     /// filter with [`TabInput::with_max_fret_span_filter`].
+    #[must_use]
     pub fn new(
         input: impl Into<String>,
         tuning_name: impl Into<String>,
@@ -207,7 +208,10 @@ impl ArrangementSet {
         self.arrangements
             .get(index)
             .map(|a| a.max_fret_span())
-            .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))
+            .ok_or(TabError::IndexOutOfBounds {
+                index,
+                len: self.arrangements.len(),
+            })
     }
 
     /// Difficulty score for the arrangement at `index`. Lower is easier.
@@ -215,7 +219,10 @@ impl ArrangementSet {
         self.arrangements
             .get(index)
             .map(|a| a.difficulty())
-            .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))
+            .ok_or(TabError::IndexOutOfBounds {
+                index,
+                len: self.arrangements.len(),
+            })
     }
 
     /// Renders the arrangement at `index` at the supplied `width`, `padding`, and optional
@@ -237,7 +244,10 @@ impl ArrangementSet {
         let arrangement = self
             .arrangements
             .get(index)
-            .ok_or_else(|| out_of_bounds_error(index, self.arrangements.len()))?;
+            .ok_or(TabError::IndexOutOfBounds {
+                index,
+                len: self.arrangements.len(),
+            })?;
         let min = renderer::min_render_width(padding);
         if width < min {
             return Err(TabError::RenderWidthTooSmall { width, min });
@@ -250,10 +260,6 @@ impl ArrangementSet {
             playback,
         ))
     }
-}
-
-fn out_of_bounds_error(index: usize, len: usize) -> TabError {
-    TabError::IndexOutOfBounds { index, len }
 }
 
 /// Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
