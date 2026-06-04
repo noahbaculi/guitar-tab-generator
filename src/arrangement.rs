@@ -523,6 +523,23 @@ mod test_create_arrangements {
         assert_eq!(arrangements, expected_arrangements);
     }
     #[test]
+    fn duplicate_pitches_in_beat_yield_no_arrangements() {
+        // Each E2 is individually playable, but the no-duplicate-strings constraint filters
+        // every fingering combination for the beat, so pathfinding finds no route and
+        // `create_arrangements` reports `NoArrangementsFound`.
+        let input_pitches = vec![Line::Playable(vec![Pitch::E2, Pitch::E2])];
+
+        let err = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(1).unwrap(),
+            None,
+        )
+        .unwrap_err();
+
+        assert!(matches!(*err, TabError::NoArrangementsFound), "got {err:?}");
+    }
+    #[test]
     fn empty_input() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![];
 
