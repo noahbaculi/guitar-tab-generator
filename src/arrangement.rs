@@ -56,7 +56,7 @@ pub(crate) fn first_playable_index<T>(lines: &[Line<T>]) -> usize {
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct ScoredBeatFingering {
     fingering_combo: BeatVec<PitchFingering>,
-    avg_non_zero_fret: Option<OrderedFloat<f32>>,
+    avg_non_zero_fret: Option<OrderedFloat<f64>>,
     non_zero_fret_span: u8,
 }
 impl ScoredBeatFingering {
@@ -146,16 +146,17 @@ mod test_create_scored_beat_fingering {
 
 fn calc_avg_non_zero_fret(
     beat_fingering_candidate: &[PitchFingering],
-) -> Option<OrderedFloat<f32>> {
+) -> Option<OrderedFloat<f64>> {
     let non_zero_fingerings = beat_fingering_candidate
         .iter()
         .filter(|fingering| fingering.fret != 0)
         .map(|fingering| fingering.fret as f64)
         .collect::<Mean>();
 
-    match non_zero_fingerings.is_empty() {
-        true => None,
-        false => Some(OrderedFloat(non_zero_fingerings.mean() as f32)),
+    if non_zero_fingerings.is_empty() {
+        None
+    } else {
+        Some(OrderedFloat(non_zero_fingerings.mean()))
     }
 }
 #[cfg(test)]
@@ -1306,7 +1307,7 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDiffi
             ..
         } => (
             scored_beat_fingering.avg_non_zero_fret,
-            scored_beat_fingering.non_zero_fret_span as f32,
+            scored_beat_fingering.non_zero_fret_span as f64,
         ),
     };
 
