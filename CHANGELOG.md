@@ -5,7 +5,7 @@
 ### Breaking changes
 
 - `wasm_create_guitar_compositions(input)` replaced by `generateArrangements(input)` (JS) / `generate_arrangements(input)` (Rust).
-- `get_tuning_names()` replaced by `getTuningNames()`; returns typed `TuningName[]` instead of `string[]`.
+- JS export `get_tuning_names()` renamed to `getTuningNames()` and now returns the typed `TuningName[]` union instead of `string[]`. The Rust crate-root re-export keeps the name `get_tuning_names`; its return type is now `Vec<TuningName>`.
 - Output shape: `Composition[]` replaced by a single `ArrangementSet` handle. Access pattern: `for (let i = 0; i < set.len; i++) set.render(i, width, padding, playback)`.
 - Input field `pitches` renamed to `input`.
 - Input field renames flow to the JS side as `numArrangements`, `tuningName`, `guitarNumFrets`, `guitarCapo`, `maxFretSpanFilter`.

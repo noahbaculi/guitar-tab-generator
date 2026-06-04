@@ -264,7 +264,7 @@ for (const beat of set.normalizedInput) {
 
 ## Tuning names
 
-`getTuningNames()` returns a typed `TuningName[]`. The preset names are camelCase on the wire (`"openG"`, `"dropD"`, etc.).
+`getTuningNames()` returns a typed `TuningName[]`. The preset names are camelCase on the wire (`"openG"`, `"dropD"`, etc.). Only the JS export was renamed: Rust callers keep the crate-root re-export `get_tuning_names`, which now returns `Vec<TuningName>`.
 
 ```ts
 const names: TuningName[] = getTuningNames();
@@ -421,6 +421,10 @@ As of the additional 2.0.0 changes it is also re-exported from the crate root, s
 ### Empty string no longer means standard tuning
 
 `tuningName: ""` previously fell back to standard tuning. It now returns `TabError::TuningNameUnknown { value: "" }`. Callers wanting standard tuning must pass `"standard"` (case-insensitive) explicitly. The case-insensitive `"standard"` literal continues to work.
+
+### Input is capped at 65,535 lines
+
+Input longer than 65,535 lines now returns `TabError::Parse` whose first `ParseError.line` marks the first line past the limit, instead of overflowing the internal `u16` beat index. This surfaces through the existing `parse` arm, so callers that already handle `TabError::Parse` need no new branch. A real transcription stays far below this bound; only pathological input is rejected.
 
 ## See also
 
