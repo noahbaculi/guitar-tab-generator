@@ -221,6 +221,12 @@ impl ArrangementSet {
     /// Renders the arrangement at `index` at the supplied `width`, `padding`, and optional
     /// `playback` beat indicator. Cheap to call repeatedly with different render parameters
     /// -- pathfinding does not re-run.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TabError::RenderWidthTooSmall`] when `width` is below the minimum needed to
+    /// lay out one beat at the given `padding` (`2 * padding + 3`), in addition to the
+    /// [`TabError::IndexOutOfBounds`] shared by every indexed accessor.
     pub fn render(
         &self,
         index: usize,

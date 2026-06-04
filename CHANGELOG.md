@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 -- 2026-06-03
+## 2.0.0 -- 2026-06-04
 
 ### Breaking changes
 
@@ -17,7 +17,7 @@
 - `create_arrangements` takes `NumArrangements` instead of `u8` for `num_arrangements`; construct via `NumArrangements::try_new(n)?`. Direct Rust callers no longer validate the range themselves.
 - `memoized_original_create_arrangements` and `memoized_original_parse_lines` moved from the crate root to the `__bench_internals` namespace. The namespace is `#[doc(hidden)]`, not part of the stable 2.x API, and may be removed without a major version bump.
 - `Arrangement::lines` is now a getter returning `&[Line<BeatVec<PitchFingering>>]` instead of a `pub` field. Direct Rust consumers call `arrangement.lines()` instead of `&arrangement.lines`. `difficulty` and `max_fret_span` were already getters.
-- `parse_tuning`, `create_string_tuning_offset`, and `STD_6_STRING_TUNING_OPEN_PITCHES` are no longer re-exported from the crate root. They were leaked from a 1.x composition pattern that `generate_arrangements` and the `tuning_name` field on `TabInput` make redundant; non-preset tunings continue to flow through `create_string_tuning(&[Pitch; N])` plus `Guitar::new`. The two helpers remain reachable from criterion benches via `__bench_internals` and may be removed without a major version bump.
+- `parse_tuning`, `create_string_tuning_offset`, and `STD_6_STRING_TUNING_OPEN_PITCHES` are no longer re-exported from the crate root. They were leaked from a 1.x composition pattern that `generate_arrangements` and the `tuning_name` field on `TabInput` make redundant; non-preset tunings continue to flow through `create_string_tuning(&[Pitch])` plus `Guitar::new`. The two helpers remain reachable from criterion benches via `__bench_internals` and may be removed without a major version bump.
 - `build_arrangement_set` is renamed to `generate_arrangements`. The Rust function and the JS function (`generateArrangements`) now share a single implementation and parallel names; the `#[wasm_bindgen]` wrapper is gone. Direct Rust callers update their imports.
 - `TabError` flattened: the umbrella `Guitar { message }`, `Arrangement { message }`, and `InvalidInput { field, message }` variants are removed. Each failure mode now has its own variant with structured payload. See [MIGRATION.md](MIGRATION.md#flat-taberror-variants) for the full mapping and [ADR-0007](docs/adr/0007-flat-taberror-variants.md) for the rationale.
 - `TabError::NoArrangementsFound` (payloadless) reports the case where every input pitch reaches the guitar but no valid arrangement exists. Reachable from inputs like duplicate pitches in a single beat (e.g. `"E2E2"`), which the `no_duplicate_strings` constraint filters to zero candidate fingerings. JS callers handling an exhaustive `switch (err.kind)` must add a `"noArrangementsFound"` arm.
@@ -43,6 +43,6 @@
 
 - Adopted `tsify-next` for typed TypeScript bindings. `serde-wasm-bindgen` is now a transitive dependency only; no consumer-visible change beyond `cargo tree` ordering.
 - Parser returns structured `Vec<ParseError>` internally; the wire format reuses the same struct via `crate::error::ParseError`.
-- Released `CONTEXT.md` (domain glossary) and `docs/adr/0001-arrangement-set-opaque-handle.md` (ADR for the opaque-handle pattern).
+- Released `CONTEXT.md` (domain glossary) and the architecture decision records in `docs/adr/` (ADR-0001 through ADR-0008), beginning with the opaque-handle pattern in [ADR-0001](docs/adr/0001-arrangement-set-opaque-handle.md).
 - `TabError` now derives `PartialEq, Eq` and carries `#[non_exhaustive]` so future structured-error variants land non-breakingly.
 - Dropped the unused `serde` `"rc"` feature.

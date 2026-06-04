@@ -100,7 +100,7 @@ plus a one-beat-per-row progress floor so the lower-level `render_tab` stays tot
 - `UnplayablePitch` becomes a public type. Its prior home as a private
   struct in `arrangement.rs` is gone.
 - Removing the umbrella variants required removing `anyhow` from public
-  Rust signatures so the typed errors do not get re-wrapped. See ADR-0007's
+  Rust signatures so the typed errors do not get re-wrapped. See this ADR's
   companion changes in the 2.0.0 final-pass commits.
 - `Pitch::plus_offset` returns `Option<Pitch>` rather than `Result<_, TabError>`
   because the math has no context to populate `OpenPitchOutOfRange`. The

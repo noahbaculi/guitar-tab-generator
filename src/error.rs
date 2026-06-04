@@ -32,7 +32,8 @@ impl std::fmt::Display for ParseError {
 
 /// A pitch that could not be played on the configured guitar, with its 1-indexed line number.
 ///
-/// Public payload of [`TabError::UnplayablePitches`]; the structured `{ value, line }` record replaced the free-form prose string used for unplayable pitches before 2.0.0.
+/// Public payload of [`TabError::UnplayablePitches`]. The structured `{ value, line }`
+/// record replaced the free-form prose string used before 2.0.0.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 #[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]

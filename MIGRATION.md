@@ -27,7 +27,7 @@ For a flat list of changes, see [`CHANGELOG.md`](CHANGELOG.md). For the architec
 | `Composition` / `RenderedTab` structs | dropped; rendered string comes from `set.render(i, ...)` |
 | `create_arrangements(..., num: u8, ...)` | `create_arrangements(..., NumArrangements, ...)`; see [Direct Rust callers](#direct-rust-callers) |
 | `&arrangement.lines` (field) | `arrangement.lines()` (getter) |
-| `parse_tuning`, `create_string_tuning_offset`, `STD_6_STRING_TUNING_OPEN_PITCHES` re-exports | removed from crate root; non-preset tunings build a `BTreeMap<StringNumber, Pitch>` directly, or use `create_string_tuning(&[Pitch; N])` |
+| `parse_tuning`, `create_string_tuning_offset`, `STD_6_STRING_TUNING_OPEN_PITCHES` re-exports | removed from crate root; non-preset tunings build a `BTreeMap<StringNumber, Pitch>` directly, or use `create_string_tuning(&[Pitch])` |
 | `memoized_original_create_arrangements`, `memoized_original_parse_lines` re-exports | moved to `__bench_internals::*`, `#[doc(hidden)]`, not part of the stable 2.x API |
 
 Rust-only callers: see [Direct Rust callers](#direct-rust-callers) for migration snippets.
@@ -361,7 +361,7 @@ use guitar_tab_generator::__bench_internals::memoized_original_create_arrangemen
 
 ### Tuning offset helpers are now private
 
-`parse_tuning`, `create_string_tuning_offset`, and `STD_6_STRING_TUNING_OPEN_PITCHES` are no longer re-exported from the crate root. They were the `[i8; 6]` offset machinery the table-driven preset path uses internally. Callers that need a non-preset tuning continue to build a `BTreeMap<StringNumber, Pitch>` directly and pass it to `Guitar::new`; the public `create_string_tuning(&[Pitch; N])` helper covers the common shape.
+`parse_tuning`, `create_string_tuning_offset`, and `STD_6_STRING_TUNING_OPEN_PITCHES` are no longer re-exported from the crate root. They were the `[i8; 6]` offset machinery the table-driven preset path uses internally. Callers that need a non-preset tuning continue to build a `BTreeMap<StringNumber, Pitch>` directly and pass it to `Guitar::new`; the public `create_string_tuning(&[Pitch])` helper covers the common shape.
 
 `parse_tuning` and `create_string_tuning_offset` remain reachable from criterion benches via `__bench_internals`; this namespace is `#[doc(hidden)]` and not part of the stable 2.x API.
 
