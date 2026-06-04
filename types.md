@@ -50,7 +50,7 @@ Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Opt
                 normalized_input  : Vec<NormalizedBeat>
 
   per-arrangement reach: set.render(i, width, padding, playback) -> String
-                         set.max_fret_span(i) -> u8
+                         set.maxFretSpan(i) -> u8
                          set.difficulty(i) -> i32
 ```
 
@@ -76,9 +76,10 @@ Vec<Line<BeatVec<PitchFingering>>>     <- arrangement output
 > changes: `Pitch` after parsing, `PitchFingering` after arranging.
 
 ```
-NormalizedBeat                         <- ArrangementSet.normalized_input element
-    kind: "rest" | "measureBreak" | "playable"
-    pitches?: string[]                 (present when kind == "playable")
+NormalizedBeat                         <- ArrangementSet.normalizedInput element
+    { kind: "playable", pitches: string[] }
+  | { kind: "rest" }
+  | { kind: "measureBreak" }
 
 TabError                                  <- thrown by generate_arrangements (JS: generateArrangements)
     kind: "parse"                      + errors: ParseError[]

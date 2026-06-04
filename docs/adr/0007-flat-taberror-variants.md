@@ -64,7 +64,7 @@ pathfinding graph through `multi_cartesian_product` plus
 individual pitches all reach the guitar. Internal proptests reach this
 state with valid-looking random input, so it is not a panic-worthy BUG.
 
-`RenderWidthTooSmall` was added in the post-release audit pass. `ArrangementSet::render`
+`RenderWidthTooSmall` was added during the 2.0.0 final-pass audit. `ArrangementSet::render`
 previously handed an unvalidated `width` to the renderer, where a value below the minimum
 underflowed the column arithmetic (debug panic, release allocation blow-up) for the smallest
 widths and stalled the wrap loop for the rest. The minimum is `2 * padding + 3`, not

@@ -60,6 +60,10 @@ _Avoid_: Pitch fingering options, pitch fingering group
 The chosen [[Pitch fingering]]s for one [[Beat]] — one per pitch in the beat, with no two pitches landing on the same string. The cartesian product of [[Pitch fingering candidates]] across the beat's pitches, filtered for string collisions. When decorated with [[Difficulty features]], it is held as `ScoredBeatFingering`.
 _Avoid_: Beat fingering combo (the type name is current shorthand; "combo" suggests "one of many" but the chosen one is just *the* beat fingering), fingering combination
 
+**Guitar**:
+The configured instrument the arranger targets: a [[Tuning]] over its strings, a [[Fret count]], and a capo position. `Guitar::new` validates these and derives the [[Playable fret count]] that bounds the fingering search. Built once per [[TabInput]] and held on the [[ArrangementSet]].
+_Avoid_: Instrument (the canonical word is "guitar")
+
 **Tuning**:
 The assignment of open-string pitches to a guitar's strings — a map from `StringNumber` to `Pitch`. There is one canonical form (the map); the public API also accepts a **tuning preset** (the `TuningName` enum + the string `"standard"`) which resolves through a fixed table of semitone offsets relative to standard 6-string tuning. The offset array (`[i8; 6]`) is a parsing waypoint, not a separate domain concept.
 _Avoid_: Tuning offsets / tuning array as standalone terms (they're encodings of a tuning, not tunings in their own right)

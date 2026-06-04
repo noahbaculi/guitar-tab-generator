@@ -340,7 +340,7 @@ The Rust function name now matches the JS function name. The signature and behav
 ```rust
 // Before:
 use guitar_tab_generator::build_arrangement_set;
-let set = build_arrangement_set(TabInput { /* ... */ })?;
+let set = build_arrangement_set(TabInput::new(/* ... */))?;
 
 // After:
 use guitar_tab_generator::generate_arrangements;
