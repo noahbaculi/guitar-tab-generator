@@ -81,6 +81,22 @@ plus a one-beat-per-row progress floor so the lower-level `render_tab` stays tot
   field on the catch-all. UIs that previously rendered `err.message`
   build a per-kind string from the structured fields, or fall through
   to a default handler.
+- The non-breaking evolution envelope is narrower than the enum-level
+  `#[non_exhaustive]` alone suggests. Adding a new variant in 2.x is
+  non-breaking; adding a field to an existing variant
+  (`OpenPitchOutOfRange`, `FretRangeExceedsPitchRange`, `Parse`, and the
+  rest) is breaking, because the variants are not individually
+  `#[non_exhaustive]`. This is a deliberate omission: per-variant
+  `#[non_exhaustive]` would force a `..` on every Rust `match` arm, and no
+  roadmap item adds a field to a specific existing variant. The trade-off
+  is that variant field types must be chosen for the long run up front.
+  `OpenPitchOutOfRange.semitones` is `i16` rather than `u8` for exactly
+  this reason (`error.rs:83`): it reserves room for negative tuning
+  offsets so the planned custom-tuning feature lands without a 3.0. This
+  envelope was first recorded in
+  [ADR-0002](0002-tab-error-discriminated-union.md) and is restated here
+  because that record's worked example referenced the now-removed umbrella
+  variants.
 - `UnplayablePitch` becomes a public type. Its prior home as a private
   struct in `arrangement.rs` is gone.
 - Removing the umbrella variants required removing `anyhow` from public

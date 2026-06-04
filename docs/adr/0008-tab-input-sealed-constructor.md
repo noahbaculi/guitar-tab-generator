@@ -37,10 +37,15 @@ count warrants; `new` plus `with_*` setters covers the one optional field
 today and scales to future ones.
 
 The output types (`NormalizedBeat`, `Line`, `ParseError`, `UnplayablePitch`)
-were deliberately left open. No roadmap item adds variants or fields to them,
-and `#[non_exhaustive]` on a closed enum removes downstream exhaustiveness
-checking. `TabError` and `TuningName` keep their seals because they genuinely
-grow (new error conditions, new tuning presets); the output types do not.
+were deliberately left open, because no roadmap item adds variants or fields
+to them. The cost of sealing differs by shape: on the enums (`NormalizedBeat`,
+`Line`) `#[non_exhaustive]` removes downstream exhaustiveness checking, forcing
+a catch-all arm over a set of cases that is in fact closed; on the structs
+(`ParseError`, `UnplayablePitch`) it blocks struct-literal construction and
+forces `..` in destructuring, for types a consumer only ever reads back. Absent
+a concrete field to add, neither cost buys anything. `TabError` and `TuningName`
+keep their seals because they genuinely grow (new error conditions, new tuning
+presets); the output types do not.
 
 ## Consequences
 
