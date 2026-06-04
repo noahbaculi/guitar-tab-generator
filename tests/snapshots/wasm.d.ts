@@ -3,7 +3,8 @@
 /**
  * A pitch that could not be played on the configured guitar, with its 1-indexed line number.
  *
- * Public payload of [`TabError::UnplayablePitches`]; the structured `{ value, line }` record replaced the free-form prose string used for unplayable pitches before 2.0.0.
+ * Public payload of [`TabError::UnplayablePitches`]. The structured `{ value, line }`
+ * record replaced the free-form prose string used before 2.0.0.
  */
 export interface UnplayablePitch {
     value: string;
@@ -89,6 +90,12 @@ export class ArrangementSet {
      * Renders the arrangement at `index` at the supplied `width`, `padding`, and optional
      * `playback` beat indicator. Cheap to call repeatedly with different render parameters
      * -- pathfinding does not re-run.
+     *
+     * # Errors
+     *
+     * Returns [`TabError::RenderWidthTooSmall`] when `width` is below the minimum needed to
+     * lay out one beat at the given `padding` (`2 * padding + 3`), in addition to the
+     * [`TabError::IndexOutOfBounds`] shared by every indexed accessor.
      */
     render(index: number, width: number, padding: number, playback?: number | null): string;
     /**
