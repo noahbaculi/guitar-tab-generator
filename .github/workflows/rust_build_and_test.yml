@@ -17,11 +17,16 @@ jobs:
       - run: cargo build --examples --benches
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack build --target web --out-dir pkg/wasm_guitar_tab_generator && ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
-      - name: Verify wasm-pack .d.ts snapshot
+      - name: Verify wasm-pack .d.ts public surface
         shell: bash
         run: |
-          diff -u tests/snapshots/wasm.d.ts pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts \
-            || { echo "::error::Generated .d.ts differs from tests/snapshots/wasm.d.ts. Regenerate locally with: cp pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts tests/snapshots/wasm.d.ts && git commit"; exit 1; }
+          # Snapshot only the public typed surface. Everything from `export type InitInput`
+          # onward is wasm-bindgen's loader/ABI boilerplate (the `__wbindgen_export*` symbols
+          # and init signatures), which churns between toolchain versions and is not
+          # consumer-facing, so it is stripped before diffing.
+          sed '/^export type InitInput/,$d' pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts > generated.public.d.ts
+          diff -u tests/snapshots/wasm.d.ts generated.public.d.ts \
+            || { echo "::error::Public .d.ts surface differs from tests/snapshots/wasm.d.ts. Regenerate locally with: sed '/^export type InitInput/,\$d' pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts > tests/snapshots/wasm.d.ts && git commit"; exit 1; }
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
   test:
