@@ -1817,14 +1817,17 @@ mod proptest_invariants {
         }
 
         // Invariant 6: deterministic. Same input produces the same output twice.
+        // Both calls go through the uncached `memoized_original_create_arrangements`. The
+        // memoized `create_arrangements` would serve the second call from its cache and never
+        // re-run the pathfinder, which would make the comparison trivially true.
         #[test]
         fn invariant_deterministic(case in arb_case()) {
             let guitar1 = std_guitar();
             let guitar2 = std_guitar();
-            let first = create_arrangements(
+            let first = memoized_original_create_arrangements(
                 guitar1, case.input_lines.clone(), case.num_arrangements, None,
             );
-            let second = create_arrangements(
+            let second = memoized_original_create_arrangements(
                 guitar2, case.input_lines, case.num_arrangements, None,
             );
             match (first, second) {
