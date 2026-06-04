@@ -483,10 +483,17 @@ fn parse_pitch(
             .map(|unmatched_input_indices| {
                 let first_idx = *unmatched_input_indices.first().unwrap();
                 let last_idx = *unmatched_input_indices.last().unwrap();
-                let unmatched_input = &input_line[first_idx..=last_idx];
+                // Collect by char so the unmatched run can never slice across a UTF-8
+                // boundary: `matched_mask` is byte-indexed, so `input_line[first..=last]`
+                // could panic on a non-boundary index.
+                let unmatched_input: String = input_line
+                    .char_indices()
+                    .filter(|(byte_idx, _)| (first_idx..=last_idx).contains(byte_idx))
+                    .map(|(_, ch)| ch)
+                    .collect();
                 crate::error::ParseError {
                     line: line_number,
-                    text: unmatched_input.to_owned(),
+                    text: unmatched_input,
                 }
             })
             .collect();
@@ -527,6 +534,15 @@ mod test_parse_pitch {
             parse_pitch(&test_pitch_regex(), 0, "Bb2").unwrap(),
             Line::Playable(vec![Pitch::ASharpBFlat2])
         );
+    }
+    #[test]
+    fn multibyte_unmatched_char_reports_full_char() {
+        // A multibyte character that matches no pitch surfaces intact in the error text,
+        // never sliced across a UTF-8 boundary.
+        let errors = parse_pitch(&test_pitch_regex(), 0, "A2🎸").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].text, "🎸");
+        assert_eq!(errors[0].line, 1);
     }
     #[test]
     fn case_insensitivity() {
