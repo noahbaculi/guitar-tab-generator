@@ -83,7 +83,15 @@ pub fn create_string_tuning(
     open_string_pitches
         .iter()
         .enumerate()
-        .map(|(i, p)| StringNumber::new((i + 1) as u8).map(|sn| (sn, *p)))
+        .map(|(i, p)| {
+            let string_number = u8::try_from(i + 1).map_err(|_| {
+                TabError::StringNumberOutOfRange {
+                    value: u8::MAX,
+                    max: StringNumber::MAX,
+                }
+            })?;
+            StringNumber::new(string_number).map(|sn| (sn, *p))
+        })
         .collect()
 }
 
@@ -983,5 +991,25 @@ mod test_generate_pitch_fingering {
             vec![]
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_create_string_tuning_bounds {
+    use super::*;
+
+    #[test]
+    fn over_long_slice_is_rejected() {
+        // 13 open strings exceeds StringNumber::MAX (12). The Result-collect short-circuits
+        // at the first over-max string number, so the function rejects rather than truncating.
+        let pitches = vec![Pitch::E2; 13];
+        let err = create_string_tuning(&pitches).unwrap_err();
+        assert!(
+            matches!(
+                err,
+                TabError::StringNumberOutOfRange { value: 13, max: 12 }
+            ),
+            "got {err:?}"
+        );
     }
 }
