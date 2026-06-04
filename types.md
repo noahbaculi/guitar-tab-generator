@@ -97,8 +97,8 @@ TabError                                  <- thrown by generate_arrangements (JS
     kind: "renderWidthTooSmall"        + width: number, min: number
 
 ParseError
-    line: u32
-    text: String
+    line: number
+    text: string
 
 TuningName                             <- enum returned by getTuningNames()
     "openG" | "openD" | "c6" | "dsus4" | "dropD"

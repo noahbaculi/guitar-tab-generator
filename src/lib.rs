@@ -147,7 +147,7 @@ impl From<NumArrangements> for u8 {
 ///
 /// Serialized as a discriminated union tagged by `kind`, so JS code can `switch (b.kind)`
 /// instead of comparing strings.
-#[derive(Debug, Clone, Serialize, Tsify)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 #[tsify(into_wasm_abi)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NormalizedBeat {
@@ -300,10 +300,7 @@ impl ArrangementSet {
 pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
-    let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errs| {
-        // `parse_lines` is `#[memoize]`d: the cache retains a strong reference, so the returned
-        // Arc is always shared. Clone the inner Vec out (this is the cold parse-failure path).
-        let errors = (*errs).clone();
+    let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errors| {
         debug_assert!(
             !errors.is_empty(),
             "parser must not return Err with empty error list"
@@ -333,8 +330,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         input_lines,
         num_arrangements,
         tab_input.max_fret_span_filter,
-    )
-    .map_err(|arc| (*arc).clone())?;
+    )?;
 
     Ok(ArrangementSet {
         arrangements,

@@ -8,7 +8,7 @@ use itertools::Itertools;
 use memoize::memoize;
 use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
-use std::{collections::HashSet, rc::Rc, sync::Arc};
+use std::{collections::HashSet, rc::Rc};
 
 /// One logical line of a parsed or arranged composition.
 ///
@@ -303,7 +303,7 @@ pub fn create_arrangements(
     input_lines: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: crate::NumArrangements,
     max_fret_span_filter: Option<u8>,
-) -> Result<Vec<Arrangement>, Arc<TabError>> {
+) -> Result<Vec<Arrangement>, TabError> {
     let input_playable_lines = input_lines
         .iter()
         .filter(|line| matches!(line, Line::Playable(_)))
@@ -326,8 +326,7 @@ pub fn create_arrangements(
     // input line, then drop the leading rests for pathfinding. Skipping before validation would
     // report the line relative to the post-skip beat sequence (off by the leading-rest count).
     let pitch_fingering_candidates: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> =
-        validate_fingerings(&guitar, &input_lines)
-            .map_err(Arc::new)?
+        validate_fingerings(&guitar, &input_lines)?
             .into_iter()
             .skip(first_playable_index)
             .collect_vec();
@@ -381,7 +380,7 @@ pub fn create_arrangements(
         num_arrangements.get() as usize,
     );
     if path_results.is_empty() {
-        return Err(Arc::new(TabError::NoArrangementsFound));
+        return Err(TabError::NoArrangementsFound);
     }
 
     let mut arrangements = path_results
@@ -407,8 +406,7 @@ mod test_create_arrangements {
         let lines = parse_lines("A1".to_owned()).unwrap();
         let n = NumArrangements::try_new(1).unwrap();
         let err = create_arrangements(Guitar::default(), lines, n, None).unwrap_err();
-        let inner = std::sync::Arc::try_unwrap(err).unwrap_or_else(|arc| (*arc).clone());
-        match inner {
+        match err {
             TabError::UnplayablePitches { pitches } => {
                 assert_eq!(pitches.len(), 1);
                 assert_eq!(pitches[0].value, "A1");
@@ -539,7 +537,7 @@ mod test_create_arrangements {
         )
         .unwrap_err();
 
-        assert!(matches!(*err, TabError::NoArrangementsFound), "got {err:?}");
+        assert!(matches!(err, TabError::NoArrangementsFound), "got {err:?}");
     }
     #[test]
     fn empty_input() {

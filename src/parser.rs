@@ -8,7 +8,7 @@ use itertools::Itertools;
 use memoize::memoize;
 use regex::{Regex, RegexBuilder};
 use serde::Serialize;
-use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
+use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
 use strum::VariantNames;
 use strum_macros::{EnumString, VariantNames};
@@ -30,7 +30,7 @@ fn test_pitch_regex() -> Regex {
 ///
 /// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
 /// attribute requires external matches to include a wildcard arm.
-#[derive(Debug, EnumString, VariantNames, Serialize, Tsify)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, VariantNames, Serialize, Tsify)]
 #[strum(ascii_case_insensitive)]
 #[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]
@@ -217,15 +217,15 @@ const MAX_INPUT_LINES: usize = u16::MAX as usize;
 #[memoize(Capacity: 10)]
 pub fn parse_lines(
     input: String,
-) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<Vec<crate::error::ParseError>>> {
+) -> Result<Vec<Line<BeatVec<Pitch>>>, Vec<crate::error::ParseError>> {
     // Reject pathological input up front so every beat index stays within the u16 range
     // used by the pathfinding graph. `take` short-circuits, so an enormous paste is not
     // fully scanned. A real transcription is far below this bound.
     if input.lines().take(MAX_INPUT_LINES + 1).count() > MAX_INPUT_LINES {
-        return Err(Arc::new(vec![crate::error::ParseError {
+        return Err(vec![crate::error::ParseError {
             line: (MAX_INPUT_LINES + 1) as u32,
             text: format!("input exceeds the maximum of {MAX_INPUT_LINES} lines"),
-        }]));
+        }]);
     }
 
     let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
@@ -247,7 +247,7 @@ pub fn parse_lines(
 
     let flat_errors: Vec<crate::error::ParseError> = errors.into_iter().flatten().collect();
     if !flat_errors.is_empty() {
-        return Err(Arc::new(flat_errors));
+        return Err(flat_errors);
     }
 
     Ok(parsed_lines)
@@ -275,7 +275,7 @@ mod test_parse_lines {
 
         let errors = parse_lines(input).unwrap_err();
         assert_eq!(
-            *errors,
+            errors,
             vec![
                 crate::error::ParseError {
                     line: 1,

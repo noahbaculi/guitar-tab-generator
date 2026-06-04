@@ -218,7 +218,9 @@ try {
       }
       break;
     default:
-      // Defensive: a future non-breaking 2.x release may add a variant.
+      // Defensive: render-time variants (`renderWidthTooSmall`, thrown by
+      // `set.render(...)` rather than `generateArrangements`) and any variant a
+      // future non-breaking 2.x release may add land here.
       showRawError(err);
   }
 }

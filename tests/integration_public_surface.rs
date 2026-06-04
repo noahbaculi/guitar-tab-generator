@@ -290,10 +290,10 @@ fn unplayable_pitch_is_nameable_from_crate_root() {
 fn tuning_name_variant_is_publicly_constructible() {
     // `TuningName` is `#[non_exhaustive]`, but constructing an existing variant
     // directly must still work for callers that build select-list UIs or test
-    // fixtures. The type doesn't derive `PartialEq`; match on it instead.
+    // fixtures.
     let _preset: TuningName = TuningName::OpenG;
     let names = get_tuning_names();
-    assert!(names.iter().any(|n| matches!(n, TuningName::OpenG)));
+    assert!(names.contains(&TuningName::OpenG));
 }
 
 #[cfg(test)]

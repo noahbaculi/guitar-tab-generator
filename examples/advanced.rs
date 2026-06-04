@@ -25,12 +25,10 @@ fn main() -> Result<(), TabError> {
         A3"
     .to_string();
 
-    // Mirror the cache-hit-safe unwrap pattern from `generate_arrangements`:
-    // a fresh `Arc` (cache miss) unwraps cleanly, a shared one (cache hit) clones.
-    let lines: Vec<Line<Vec<Pitch>>> = parse_lines(input).map_err(|errs| {
-        let errors = std::sync::Arc::try_unwrap(errs).unwrap_or_else(|arc| (*arc).clone());
-        TabError::Parse { errors }
-    })?;
+    // `parse_lines` hands back the structured parse errors; wrap them in `TabError::Parse`
+    // exactly as `generate_arrangements` does at the boundary.
+    let lines: Vec<Line<Vec<Pitch>>> =
+        parse_lines(input).map_err(|errors| TabError::Parse { errors })?;
 
     let tuning = create_string_tuning(&[
         Pitch::E4,
@@ -46,8 +44,7 @@ fn main() -> Result<(), TabError> {
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
 
     let num_arrangements = NumArrangements::try_new(1)?;
-    let arrangements = create_arrangements(guitar.clone(), lines, num_arrangements, None)
-        .map_err(|arc| std::sync::Arc::try_unwrap(arc).unwrap_or_else(|a| (*a).clone()))?;
+    let arrangements = create_arrangements(guitar.clone(), lines, num_arrangements, None)?;
 
     // dbg!(&arrangements);
 
