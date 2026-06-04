@@ -201,6 +201,10 @@ mod test_create_string_tuning_offset {
     }
 }
 
+/// Upper bound on input lines. Ties to `u16::MAX` so the pathfinding graph's
+/// `Node::line_index` (`u16`) can address every beat without truncating.
+const MAX_INPUT_LINES: usize = u16::MAX as usize;
+
 /// Parses a newline-delimited input string into a sequence of `Line` values.
 ///
 /// Each input line is classified as `Playable` (one or more pitches, e.g. `"A3"` or
@@ -209,11 +213,8 @@ mod test_create_string_tuning_offset {
 ///
 /// # Errors
 ///
-/// Returns an error listing every unparseable substring with its 1-indexed line number.
-/// Upper bound on input lines: ties to `u16::MAX` so the pathfinding graph's
-/// `Node::line_index` (`u16`) can address every beat without truncating.
-const MAX_INPUT_LINES: usize = u16::MAX as usize;
-
+/// Returns an error listing every unparseable substring with its 1-indexed line number,
+/// or a single over-limit error when the input exceeds `MAX_INPUT_LINES` lines.
 #[memoize(Capacity: 10)]
 pub fn parse_lines(
     input: String,

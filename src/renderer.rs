@@ -7,13 +7,17 @@ use std::collections::VecDeque;
 use std::fmt::Write;
 
 /// Widest fret column the renderer lays down (two-digit frets such as `12`).
+///
+/// Assumes `Guitar::MAX_NUM_FRETS` keeps fret renders to two digits; a three-digit fret
+/// would break the `min_render_width` slack below.
 pub(crate) const MAX_FRET_RENDER_WIDTH: usize = 2;
 
 /// Minimum `width` [`render_tab`] needs to lay out one beat at the given `padding`.
 ///
-/// A row carries a `padding`-wide dash margin on each side plus up to `MAX_FRET_RENDER_WIDTH`
-/// for the fret, so anything narrower cannot hold a single beat. `ArrangementSet::render`
-/// rejects smaller widths with `TabError::RenderWidthTooSmall`.
+/// A row carries a `padding`-wide dash margin on each side plus `MAX_FRET_RENDER_WIDTH`
+/// for the fret, plus one column of slack so the wrap loop admits exactly one beat at the
+/// minimum (`2 * padding + MAX_FRET_RENDER_WIDTH + 1`). `ArrangementSet::render` rejects
+/// smaller widths with `TabError::RenderWidthTooSmall`.
 pub(crate) const fn min_render_width(padding: u8) -> u16 {
     2 * padding as u16 + MAX_FRET_RENDER_WIDTH as u16 + 1
 }

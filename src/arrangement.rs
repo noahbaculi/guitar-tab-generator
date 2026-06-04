@@ -647,24 +647,19 @@ mod test_create_arrangements {
     }
 }
 
-/// Generates fingerings for each pitch, and returns a result containing the fingerings or
-/// an error message if any impossible pitches (with no fingerings) are found.
+/// Generates the candidate `PitchFingering`s for every pitch in each beat.
 ///
-/// Arguments:
+/// Returns the per-beat fingerings on success, or [`TabError::UnplayablePitches`] listing
+/// every pitch that reached no string on the configured guitar (with its 1-indexed input
+/// line). All unplayable pitches are collected before returning, not just the first.
 ///
-/// * `guitar`: A reference to a `Guitar` object, which contains information about the guitar's
-///   string ranges.
-/// * `input_pitches`: A slice of vectors, where each vector represents a beat and contains a
-///   vector of pitches.
-///
-/// Returns a `Result` containing either a
-/// `Vec<Vec<Vec<Fingering>>>` if the input pitches are valid, or an `Err` containing an error
-/// message if there are invalid pitches.
+/// * `guitar`: the configured guitar, supplying per-string ranges.
+/// * `input_pitches`: the parsed beats to place.
 fn validate_fingerings(
     guitar: &Guitar,
     input_pitches: &[Line<BeatVec<Pitch>>],
 ) -> Result<Vec<Line<BeatVec<PitchVec<PitchFingering>>>>, TabError> {
-    let mut impossible_pitches: Vec<UnplayablePitch> = vec![];
+    let mut unplayable_pitches: Vec<UnplayablePitch> = vec![];
     let fingerings: Vec<Line<BeatVec<PitchVec<PitchFingering>>>> = input_pitches
         .iter()
         .enumerate()
@@ -678,7 +673,7 @@ fn validate_fingerings(
                         let pitch_fingerings: PitchVec<PitchFingering> =
                             generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                         if pitch_fingerings.is_empty() {
-                            impossible_pitches.push(UnplayablePitch {
+                            unplayable_pitches.push(UnplayablePitch {
                                 value: beat_pitch.plain_text().to_owned(),
                                 line: (beat_index as u32) + 1,
                             })
@@ -690,9 +685,9 @@ fn validate_fingerings(
         })
         .collect();
 
-    if !impossible_pitches.is_empty() {
+    if !unplayable_pitches.is_empty() {
         return Err(TabError::UnplayablePitches {
-            pitches: impossible_pitches,
+            pitches: unplayable_pitches,
         });
     }
 
@@ -1494,8 +1489,10 @@ fn process_path(
             } => Line::Playable(scored_beat_fingering.fingering_combo.clone()),
         })
         .collect_vec();
-    // Add measure breaks back in
-    for &measure_break_index in measure_break_indices.iter().sorted() {
+    // Re-inject measure breaks. `measure_break_indices` is built by `enumerate().filter()`
+    // upstream, so it is already ascending; inserting low to high lands each break at its
+    // original post-skip slot without shifting an earlier one.
+    for &measure_break_index in measure_break_indices {
         lines.insert(measure_break_index, Line::MeasureBreak);
     }
 

@@ -204,6 +204,10 @@ impl ArrangementSet {
     }
 
     /// Largest non-zero fret span across any beat in the arrangement at `index`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TabError::IndexOutOfBounds`] when `index >= self.len`.
     #[wasm_bindgen(js_name = "maxFretSpan")]
     pub fn max_fret_span(&self, index: usize) -> Result<u8, TabError> {
         self.arrangements
@@ -216,6 +220,10 @@ impl ArrangementSet {
     }
 
     /// Difficulty score for the arrangement at `index`. Lower is easier.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TabError::IndexOutOfBounds`] when `index >= self.len`.
     pub fn difficulty(&self, index: usize) -> Result<i32, TabError> {
         self.arrangements
             .get(index)
