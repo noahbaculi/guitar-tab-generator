@@ -325,12 +325,12 @@ mod test_pitch_display {
 impl Pitch {
     #[inline]
     #[must_use]
-    pub fn index(&self) -> u8 {
+    pub(crate) fn index(&self) -> u8 {
         *self as u8
     }
 
     #[must_use]
-    pub fn plain_text(&self) -> &'static str {
+    pub(crate) fn plain_text(&self) -> &'static str {
         match self {
             Pitch::C0 => "C0",
             Pitch::CSharpDFlat0 => "Db0",
