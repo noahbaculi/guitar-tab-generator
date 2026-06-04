@@ -198,6 +198,7 @@ impl ArrangementSet {
     /// `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
     /// cache in the rerender path; that pattern is the intended consumer shape.
     #[wasm_bindgen(getter, js_name = "normalizedInput")]
+    #[must_use]
     pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
         self.normalized_input.clone()
     }
