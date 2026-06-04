@@ -422,4 +422,19 @@ mod boundary_variant_smoke {
         let err = generate_arrangements(input(18, 0, 1, "standard", "E2E2")).unwrap_err();
         assert!(matches!(err, TabError::NoArrangementsFound), "got {err:?}");
     }
+
+    #[test]
+    fn input_beyond_max_lines_returns_parse_error() {
+        // One line past the u16 beat-index limit (65,535) fails fast as a Parse error at
+        // the public boundary instead of overflowing the index and corrupting the result.
+        let huge = "A2\n".repeat(u16::MAX as usize + 1);
+        let err = generate_arrangements(input(18, 0, 1, "standard", &huge)).unwrap_err();
+        match err {
+            TabError::Parse { errors } => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0].line, u16::MAX as u32 + 1);
+            }
+            other => panic!("expected Parse, got {other:?}"),
+        }
+    }
 }

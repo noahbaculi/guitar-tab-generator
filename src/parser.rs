@@ -209,10 +209,24 @@ mod test_create_string_tuning_offset {
 /// # Errors
 ///
 /// Returns an error listing every unparseable substring with its 1-indexed line number.
+/// Upper bound on input lines: ties to `u16::MAX` so the pathfinding graph's
+/// `Node::line_index` (`u16`) can address every beat without truncating.
+const MAX_INPUT_LINES: usize = u16::MAX as usize;
+
 #[memoize(Capacity: 10)]
 pub fn parse_lines(
     input: String,
 ) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<Vec<crate::error::ParseError>>> {
+    // Reject pathological input up front so every beat index stays within the u16 range
+    // used by the pathfinding graph. `take` short-circuits, so an enormous paste is not
+    // fully scanned. A real transcription is far below this bound.
+    if input.lines().take(MAX_INPUT_LINES + 1).count() > MAX_INPUT_LINES {
+        return Err(Arc::new(vec![crate::error::ParseError {
+            line: (MAX_INPUT_LINES + 1) as u32,
+            text: format!("input exceeds the maximum of {MAX_INPUT_LINES} lines"),
+        }]));
+    }
+
     let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
         .case_insensitive(true)
         .build()
@@ -271,6 +285,21 @@ mod test_parse_lines {
                     text: "BB.2".to_owned()
                 },
             ],
+        );
+    }
+    #[test]
+    fn rejects_input_beyond_max_lines() {
+        // One line past the cap fails fast with a single error marking the limit, instead
+        // of letting the beat count overflow the u16 pathfinding index.
+        let input = "A2\n".repeat(MAX_INPUT_LINES + 1);
+
+        let errors = parse_lines(input).unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, (MAX_INPUT_LINES + 1) as u32);
+        assert!(
+            errors[0].text.contains("exceeds the maximum"),
+            "got {:?}",
+            errors[0].text
         );
     }
 }

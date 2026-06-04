@@ -345,6 +345,8 @@ pub fn create_arrangements(
         .enumerate()
         .map(|(line_index, line_candidate)| match line_candidate {
             MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
+            // `line_index as u16` cannot truncate: `parse_lines` caps input at u16::MAX
+            // lines, so the beat index always fits.
             Rest => vec![Node::Rest {
                 line_index: line_index as u16,
             }],

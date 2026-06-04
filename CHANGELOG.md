@@ -37,6 +37,7 @@
 - `PitchFingering::string_number()`, `::fret()`, and `::pitch()` getters give Rust callers structured read access to the fingerings returned by `Arrangement::lines()`, replacing the previous `Debug`-only path. The fields stay `pub(crate)`; the getters are the stable surface.
 - `UnplayablePitch` is re-exported from the crate root, so direct Rust callers can name the type in signatures. It was previously reachable only as a `TabError::UnplayablePitches` field value.
 - `TabError::RenderWidthTooSmall { width, min }` is returned by `ArrangementSet::render` when `width` is below the minimum needed to lay out one beat at the given `padding` (`2 * padding + 3`). A too-small width previously underflowed the renderer's column math (debug panic, release allocation blow-up) or stalled its wrap loop. JS callers with an exhaustive `switch (err.kind)` may add a `"renderWidthTooSmall"` arm; the existing default arm already covers it.
+- Input longer than 65,535 lines returns a `TabError::Parse` error whose `line` marks the first line past the limit, rather than overflowing the internal `u16` beat index. A real transcription is far below this bound, so this only rejects pathological input.
 
 ### Internal
 
