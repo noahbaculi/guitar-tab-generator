@@ -347,6 +347,18 @@ mod test_new_variant_display {
     }
 
     #[test]
+    fn unplayable_pitch_display_reproduces_legacy_message() {
+        let pitch = UnplayablePitch {
+            value: "A1".to_owned(),
+            line: 3,
+        };
+        assert_eq!(
+            pitch.to_string(),
+            "Pitch A1 on line 3 cannot be played on any strings of the configured guitar."
+        );
+    }
+
+    #[test]
     fn no_arrangements_found() {
         let err = TabError::NoArrangementsFound;
         assert_eq!(err.to_string(), "No arrangements could be calculated.");

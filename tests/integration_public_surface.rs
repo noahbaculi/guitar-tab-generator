@@ -409,6 +409,17 @@ mod boundary_variant_smoke {
         );
     }
 
+    #[test]
+    fn render_width_too_small() {
+        let set = generate_arrangements(input(18, 0, 1, "standard", "E2")).unwrap();
+        // padding 1 -> min width = 2*1 + 2 + 1 = 5; width 3 is below it.
+        let err = set.render(0, 3, 1, None).unwrap_err();
+        assert!(
+            matches!(err, TabError::RenderWidthTooSmall { width: 3, min: 5 }),
+            "got {err:?}"
+        );
+    }
+
     /// Duplicate pitches in a single beat are individually playable but produce no
     /// valid arrangement because the `no_duplicate_strings` constraint filters every
     /// candidate fingering combination. This is the failure mode the proptest seeds

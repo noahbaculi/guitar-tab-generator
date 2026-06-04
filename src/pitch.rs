@@ -511,3 +511,27 @@ mod test_pitch_plus_offset {
         assert_eq!(Pitch::ASharpBFlat9.plus_offset(2), None);
     }
 }
+
+#[cfg(test)]
+mod test_display_plain_text_agreement {
+    use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn display_and_plain_text_share_octave_and_naturals_match() {
+        for pitch in Pitch::iter() {
+            let display = pitch.to_string();
+            let plain = pitch.plain_text();
+            // Every spelling ends with the same single octave digit.
+            assert_eq!(
+                display.chars().last(),
+                plain.chars().last(),
+                "octave digit drift for {pitch:?}: display {display:?} vs plain_text {plain:?}"
+            );
+            // Natural pitches (two-char plain text like "E2") spell identically in both.
+            if plain.chars().count() == 2 {
+                assert_eq!(display, plain, "natural pitch drift for {pitch:?}");
+            }
+        }
+    }
+}
