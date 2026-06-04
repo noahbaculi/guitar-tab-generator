@@ -129,6 +129,8 @@ impl NumArrangements {
     }
 
     /// Returns the underlying `u8` in `1..=MAX`.
+    #[inline]
+    #[must_use]
     pub fn get(self) -> u8 {
         self.0.get()
     }
