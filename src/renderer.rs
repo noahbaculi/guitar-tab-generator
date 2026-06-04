@@ -798,7 +798,7 @@ fn render_string_output(
                 string_rows
                     .get(row_group_index)
                     .map(String::as_str)
-                    .unwrap_or("???")
+                    .expect("BUG: every string has the same row-group count")
                     .to_string(),
             );
         }
