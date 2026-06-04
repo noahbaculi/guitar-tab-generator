@@ -5,7 +5,7 @@ A Rust library (with WASM bindings) that turns a newline-delimited list of pitch
 ## Language
 
 **TabInput**:
-The bundle of configuration a caller hands across the WASM boundary to generate tabs: the raw `input` text, tuning, guitar parameters, render parameters, and `num_arrangements`. Drives one [[ArrangementSet]] per call.
+The bundle of configuration a caller hands across the WASM boundary to generate tabs: the raw `input` text, tuning, guitar parameters, and `num_arrangements`. Render parameters live on [[ArrangementSet]] instead, supplied per call to its render method. Drives one [[ArrangementSet]] per call.
 _Avoid_: CompositionInput (former name, renamed in 2.0.0), TabRequest, GenerateTabInput
 
 **ArrangementSet**:
