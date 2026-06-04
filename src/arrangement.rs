@@ -661,7 +661,7 @@ fn validate_fingerings(
                             generate_pitch_fingerings(&guitar.string_ranges, beat_pitch);
                         if pitch_fingerings.is_empty() {
                             impossible_pitches.push(UnplayablePitch {
-                                value: format!("{beat_pitch:?}"),
+                                value: beat_pitch.plain_text().to_owned(),
                                 line: (beat_index as u32) + 1,
                             })
                         }
@@ -740,6 +740,23 @@ mod test_validate_fingerings {
             TabError::UnplayablePitches { pitches } => {
                 assert_eq!(pitches.len(), 1);
                 assert_eq!(pitches[0].value, "B9");
+                assert_eq!(pitches[0].line, 1);
+            }
+            other => panic!("expected UnplayablePitches, got {other:?}"),
+        }
+    }
+    #[test]
+    fn invalid_accidental_reports_plain_text_spelling() {
+        // An unplayable accidental reports its plain-text spelling ("Db9"), matching the
+        // normalized-input pitch strings, rather than the internal enum name ("CSharpDFlat9").
+        let guitar = Guitar::default();
+        let input_pitches = vec![Playable(vec![Pitch::CSharpDFlat9])];
+
+        let err = validate_fingerings(&guitar, &input_pitches).unwrap_err();
+        match err {
+            TabError::UnplayablePitches { pitches } => {
+                assert_eq!(pitches.len(), 1);
+                assert_eq!(pitches[0].value, "Db9");
                 assert_eq!(pitches[0].line, 1);
             }
             other => panic!("expected UnplayablePitches, got {other:?}"),
