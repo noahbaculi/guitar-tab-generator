@@ -645,6 +645,43 @@ mod test_create_arrangements {
             "max_fret_span_filter=Some(0) on an all-fretted chord must drop every candidate",
         );
     }
+
+    #[test]
+    fn max_fret_span_filter_keeps_only_low_span_arrangements() {
+        let tuning =
+            crate::guitar::create_string_tuning(&crate::guitar::STD_6_STRING_TUNING_OPEN_PITCHES)
+                .unwrap();
+        let guitar = crate::guitar::Guitar::new(tuning, 20, 0).unwrap();
+        // C3G3: G3 is open on string 3, C3 must be fretted. Across the 5 best arrangements,
+        // some keep the fretted notes tight (span 0) and some stretch (span > 0), so a
+        // Some(0) filter drops a strict subset rather than all or none.
+        let lines = crate::parser::parse_lines("C3G3".to_owned()).unwrap();
+
+        let unfiltered = create_arrangements(
+            guitar.clone(),
+            lines.clone(),
+            NumArrangements::try_new(5).unwrap(),
+            None,
+        )
+        .unwrap();
+        assert_eq!(unfiltered.len(), 5);
+        assert!(
+            unfiltered.iter().any(|a| a.max_fret_span() == 0),
+            "expected at least one span-0 arrangement"
+        );
+        assert!(
+            unfiltered.iter().any(|a| a.max_fret_span() > 0),
+            "expected at least one span>0 arrangement so the filter does real work"
+        );
+
+        let filtered =
+            create_arrangements(guitar, lines, NumArrangements::try_new(5).unwrap(), Some(0))
+                .unwrap();
+        // Exactly the two span-0 arrangements survive: 0 < 2 < 5, exercising the
+        // "return what we have" fallback (fewer than num_arrangements, no error).
+        assert_eq!(filtered.len(), 2);
+        assert!(filtered.iter().all(|a| a.max_fret_span() == 0));
+    }
 }
 
 /// Generates the candidate `PitchFingering`s for every pitch in each beat.
