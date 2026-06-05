@@ -1647,7 +1647,9 @@ mod test_process_path {
     }
 }
 
-#[cfg(test)]
+// `proptest` is a non-wasm dev-dependency (it does not compile for `wasm32`), so this module
+// is gated off the wasm test build alongside it.
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod proptest_invariants {
     use super::*;
     use crate::NumArrangements;

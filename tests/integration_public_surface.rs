@@ -8,6 +8,10 @@
 //! this file. Behaviour coverage lives in unit tests and `examples/advanced.rs`; the
 //! tests here are deliberately shallow so a visibility tightening fails to compile
 //! rather than fails an assertion.
+//!
+//! Host-only: these use the default libtest harness. The WASM boundary lane lives in
+//! `tests/wasm_boundary.rs`; this file is empty on `wasm32` so `wasm-pack test` skips it.
+#![cfg(not(target_arch = "wasm32"))]
 
 use guitar_tab_generator::{
     Arrangement, ArrangementSet, BeatVec, Guitar, Line, NormalizedBeat, NumArrangements,

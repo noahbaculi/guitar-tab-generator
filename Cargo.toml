@@ -38,10 +38,16 @@ lto = true
 codegen-units = 1
 
 [dev-dependencies]
-criterion = { version = "0.8", features = ["html_reports"] }
-proptest = "1"
 serde_json = "1"
 wasm-bindgen-test = "0.3.72"
+
+# `criterion` (benches) and `proptest` (property tests) are host-only tooling whose
+# transitive dependencies do not compile for `wasm32`. The WASM boundary test lane
+# (`wasm-pack test --node`) builds the dev-dependency graph for wasm, so scope these to
+# non-wasm targets. The wasm lane needs only `wasm-bindgen-test`.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
+proptest = "1"
 
 [[bench]]
 name = "benchmarks"
