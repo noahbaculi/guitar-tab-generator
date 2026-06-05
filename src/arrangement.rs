@@ -1112,6 +1112,8 @@ type NodeDifficulty = i32;
 fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, NodeDifficulty)> {
     let next_node_index = match current_node {
         Node::Start => 0,
+        // `parse_lines` caps accepted input at `MAX_INPUT_LINES` (`u16::MAX`), so the largest
+        // `line_index` is `u16::MAX - 1` and this `+ 1` reaches at most `u16::MAX`: no overflow.
         Node::Rest { line_index } | Node::Playable { line_index, .. } => line_index + 1,
     };
 
