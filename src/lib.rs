@@ -625,7 +625,9 @@ mod test_boundary_types {
     #[test]
     fn arrangement_set_difficulty_returns_value_for_in_bounds_index() {
         let set = arrangement_set_fixture(1);
-        let _difficulty = set.difficulty(0).unwrap();
+        // The fixture is all open strings (E2/A2/D3 in standard tuning), so the optimal
+        // arrangement has difficulty 0. Pin the value, not just that the call succeeds.
+        assert_eq!(set.difficulty(0).unwrap(), 0);
     }
 
     #[test]

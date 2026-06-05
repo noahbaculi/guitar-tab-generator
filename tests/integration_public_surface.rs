@@ -25,7 +25,8 @@ fn generate_arrangements_happy_path() {
     let set = generate_arrangements(fixture(1)).expect("valid input must produce a set");
     assert_eq!(set.len(), 1);
     assert_eq!(set.max_fret_span(0).unwrap(), 0);
-    assert!(set.difficulty(0).is_ok());
+    // All-open fixture: optimal difficulty is 0. Pin the value, not just Ok-ness.
+    assert_eq!(set.difficulty(0).unwrap(), 0);
 }
 
 #[test]
