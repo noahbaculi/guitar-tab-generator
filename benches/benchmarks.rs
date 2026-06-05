@@ -125,7 +125,7 @@ fn bench_parse_lines(c: &mut Criterion) {
     let fur_elise_input = fur_elise_input();
 
     c.bench_function("parse_lines", |b| {
-        b.iter(|| memoized_original_parse_lines(fur_elise_input.to_owned()))
+        b.iter(|| memoized_original_parse_lines(black_box(fur_elise_input).to_owned()))
     });
 }
 

@@ -45,6 +45,17 @@ fn render_produces_non_empty_string_with_fret_markers() {
 }
 
 #[test]
+fn render_is_stateless_across_repeated_calls() {
+    let set = generate_arrangements(fixture(1)).unwrap();
+    let first = set.render(0, 30, 2, None).unwrap();
+    let second = set.render(0, 30, 2, None).unwrap();
+    assert_eq!(
+        first, second,
+        "repeated render with identical parameters must return identical output"
+    );
+}
+
+#[test]
 fn tab_input_round_trips_from_camel_case_json() {
     let json = r#"{
         "input": "E2\nA2",
