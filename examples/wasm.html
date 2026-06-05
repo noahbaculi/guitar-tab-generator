@@ -614,10 +614,12 @@ C4`,
                     clearTab();
                     return;
                 }
-                // The next three are part of the TabError enum but are not reachable from
-                // generateArrangements with preset tunings and 1..6 string numbers; they fire
-                // only on the lower-level Rust API. Handled here so a future boundary that emits
-                // them shows a message instead of nothing.
+                // These three lower-level variants are part of the TabError enum but are not
+                // reachable from generateArrangements with preset tunings and 1..6 string numbers;
+                // they fire only on the lower-level Rust API. Handled here so a future boundary that
+                // emits them shows a message instead of nothing. (renderWidthTooSmall is also
+                // unreachable here -- the width slider's min keeps it valid -- so it falls to the
+                // default arm below.)
                 case "stringNumberOutOfRange": {
                     document.getElementById("field-error-default").textContent =
                         `String number ${err.value} is out of range (maximum ${err.max}).`;

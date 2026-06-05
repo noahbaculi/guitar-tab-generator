@@ -50,7 +50,7 @@ Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Opt
                 normalized_input  : Vec<NormalizedBeat>
 
   per-arrangement reach: set.render(i, width, padding, playback) -> String
-                         set.maxFretSpan(i) -> u8
+                         set.max_fret_span(i) -> u8
                          set.difficulty(i) -> i32
 ```
 
