@@ -52,7 +52,7 @@ pub(crate) fn first_playable_index<T>(lines: &[Line<T>]) -> usize {
 }
 
 /// A single playable assignment of fingerings for one beat, with precomputed difficulty
-/// inputs (average non-zero fret, non-zero fret span).
+/// features (average non-zero fret, non-zero fret span).
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct ScoredBeatFingering {
     beat_fingering: BeatVec<PitchFingering>,
@@ -61,7 +61,7 @@ pub(crate) struct ScoredBeatFingering {
 }
 impl ScoredBeatFingering {
     /// Builds a `ScoredBeatFingering` from a per-beat `PitchFingering` list, precomputing
-    /// the stats used by the pathfinding cost function.
+    /// the difficulty features used to score pathfinding transitions.
     pub(crate) fn new(beat_fingering_candidate: BeatVec<PitchFingering>) -> Self {
         let avg_non_zero_fret = calc_avg_non_zero_fret(&beat_fingering_candidate);
         let non_zero_fret_span = calc_fret_span(&beat_fingering_candidate).unwrap_or(0);
@@ -1066,11 +1066,11 @@ mod test_calc_fret_span {
 
 type NodeDifficulty = i32;
 
-/// Calculates the next nodes and their costs based on the current node and a
-/// list of all path nodes.
+/// Calculates the next nodes and their transition difficulties based on the current node
+/// and a list of all path nodes.
 ///
 /// Returns a vector of tuples, where each tuple contains a `Node` and the `NodeDifficulty`
-/// which quantifies the cost of moving to that node.
+/// of moving to that node.
 fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, NodeDifficulty)> {
     let next_node_index = match current_node {
         Node::Start => 0,
@@ -1283,7 +1283,7 @@ mod test_calc_next_nodes {
     }
 }
 
-/// Calculates the cost of transitioning from one node to another based on the
+/// Calculates the transition difficulty from one node to another based on the
 /// average fret difference and fret span.
 fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDifficulty {
     let current_avg_fret = match current_node {

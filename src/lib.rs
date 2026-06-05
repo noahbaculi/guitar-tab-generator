@@ -286,10 +286,12 @@ impl ArrangementSet {
 ///   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).
 ///
 /// [`TabError::OpenPitchOutOfRange`], [`TabError::StringNumberOutOfRange`], and
-/// [`TabError::FretRangeExceedsPitchRange`] are members of the enum but are not reachable through this
-/// entry point: the preset tunings and fixed 1..=6 string numbering keep every open-string pitch and
-/// fret range well inside the supported `Pitch` range. They surface only on the lower-level Rust API
-/// ([`Guitar::new`], [`create_string_tuning`]).
+/// [`TabError::FretRangeExceedsPitchRange`] are members of the enum and live on the [`Guitar::new`] path
+/// this function calls, but no `TabInput` reachable today can trip them: the preset tunings and fixed
+/// 1..=6 string numbering keep every open-string pitch and fret range well inside the supported `Pitch`
+/// range. They fire only when constructed directly through the lower-level Rust API ([`Guitar::new`],
+/// [`create_string_tuning`]) with out-of-range inputs, such as a custom tuning (deferred to a later
+/// release).
 ///
 /// # Validation order
 ///
