@@ -1306,11 +1306,12 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDiffi
         ),
     };
 
-    let mut avg_fret_difference = 0.0;
-    if let (Some(current_avg_fret_num), Some(next_avg_fret_num)) = (current_avg_fret, next_avg_fret)
-    {
-        avg_fret_difference = (next_avg_fret_num - current_avg_fret_num).abs();
-    }
+    let avg_fret_difference = match (current_avg_fret, next_avg_fret) {
+        (Some(current_avg_fret_num), Some(next_avg_fret_num)) => {
+            (next_avg_fret_num - current_avg_fret_num).abs()
+        }
+        _ => 0.0,
+    };
 
     ((avg_fret_difference * 100.0)
         + (next_fret_span * 10.0)
