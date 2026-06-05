@@ -207,7 +207,7 @@ impl std::fmt::Display for TabError {
             TabError::TuningNameUnknown { value } => {
                 write!(
                     f,
-                    "The tuning name ({value:?}) is not recognized. Use \"standard\" or a supported TuningName variant."
+                    "The tuning name ({value:?}) is not recognized. Use \"standard\" or another supported tuning name."
                 )
             }
             TabError::IndexOutOfBounds { index, len } => {
@@ -425,7 +425,7 @@ mod test_new_variant_display {
         };
         assert_eq!(
             err.to_string(),
-            "The tuning name (\"openZ\") is not recognized. Use \"standard\" or a supported TuningName variant."
+            "The tuning name (\"openZ\") is not recognized. Use \"standard\" or another supported tuning name."
         );
     }
 
