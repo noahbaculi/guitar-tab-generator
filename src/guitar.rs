@@ -1,8 +1,5 @@
 use crate::{arrangement::PitchVec, error::TabError, pitch::Pitch, string_number::StringNumber};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-};
+use std::{collections::BTreeMap, fmt};
 use strum::IntoEnumIterator;
 
 /// The assignment of a single `Pitch` to a specific `StringNumber` and `fret` position.
@@ -95,16 +92,14 @@ pub fn create_string_tuning(
         .collect()
 }
 
-/// A guitar configuration: tuning, fret count, playable fret count and reachable pitch set,
-/// and per-string ranges.
+/// A guitar configuration: the playable fret count above the capo and the reachable pitch
+/// range for each string.
 ///
 /// Construct with `Guitar::new` for validated input or `Guitar::default` for a standard
 /// 18-fret 6-string instrument.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Guitar {
-    pub(crate) tuning: BTreeMap<StringNumber, Pitch>,
     pub(crate) playable_frets: u8,
-    pub(crate) range: BTreeSet<Pitch>,
     pub(crate) string_ranges: BTreeMap<StringNumber, Box<[Pitch]>>,
 }
 impl Default for Guitar {
@@ -163,18 +158,8 @@ impl Guitar {
             );
         }
 
-        let range =
-            string_ranges
-                .iter()
-                .fold(BTreeSet::new(), |mut all_pitches, string_pitches| {
-                    all_pitches.extend(string_pitches.1);
-                    all_pitches
-                });
-
         Ok(Guitar {
-            tuning: adjusted_tuning,
             playable_frets,
-            range,
             string_ranges,
         })
     }
@@ -190,34 +175,7 @@ mod test_create_guitar {
         const NUM_FRETS: u8 = 3;
 
         let expected_guitar = Guitar {
-            tuning: tuning.clone(),
             playable_frets: NUM_FRETS,
-            range: BTreeSet::from([
-                Pitch::E2,
-                Pitch::F2,
-                Pitch::FSharpGFlat2,
-                Pitch::G2,
-                Pitch::A2,
-                Pitch::ASharpBFlat2,
-                Pitch::B2,
-                Pitch::C3,
-                Pitch::D3,
-                Pitch::DSharpEFlat3,
-                Pitch::E3,
-                Pitch::F3,
-                Pitch::G3,
-                Pitch::GSharpAFlat3,
-                Pitch::A3,
-                Pitch::ASharpBFlat3,
-                Pitch::B3,
-                Pitch::C4,
-                Pitch::CSharpDFlat4,
-                Pitch::D4,
-                Pitch::E4,
-                Pitch::F4,
-                Pitch::FSharpGFlat4,
-                Pitch::G4,
-            ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
@@ -263,34 +221,7 @@ mod test_create_guitar {
         const CAPO: u8 = 4;
 
         let expected_guitar = Guitar {
-            tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3])?,
             playable_frets: NUM_FRETS - CAPO,
-            range: BTreeSet::from([
-                Pitch::G5,
-                Pitch::D4,
-                Pitch::A5,
-                Pitch::CSharpDFlat5,
-                Pitch::ASharpBFlat4,
-                Pitch::B4,
-                Pitch::GSharpAFlat4,
-                Pitch::D5,
-                Pitch::E4,
-                Pitch::E5,
-                Pitch::C5,
-                Pitch::DSharpEFlat5,
-                Pitch::DSharpEFlat4,
-                Pitch::F4,
-                Pitch::GSharpAFlat5,
-                Pitch::G4,
-                Pitch::C4,
-                Pitch::ASharpBFlat5,
-                Pitch::CSharpDFlat4,
-                Pitch::B3,
-                Pitch::FSharpGFlat4,
-                Pitch::F5,
-                Pitch::A4,
-                Pitch::FSharpGFlat5,
-            ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
@@ -366,53 +297,7 @@ mod test_create_guitar {
         const NUM_FRETS: u8 = 18;
 
         let expected_guitar = Guitar {
-            tuning: tuning.clone(),
             playable_frets: NUM_FRETS,
-            range: BTreeSet::from([
-                Pitch::E2,
-                Pitch::F2,
-                Pitch::FSharpGFlat2,
-                Pitch::G2,
-                Pitch::GSharpAFlat2,
-                Pitch::A2,
-                Pitch::ASharpBFlat2,
-                Pitch::B2,
-                Pitch::C3,
-                Pitch::CSharpDFlat3,
-                Pitch::D3,
-                Pitch::DSharpEFlat3,
-                Pitch::E3,
-                Pitch::F3,
-                Pitch::FSharpGFlat3,
-                Pitch::G3,
-                Pitch::GSharpAFlat3,
-                Pitch::A3,
-                Pitch::ASharpBFlat3,
-                Pitch::B3,
-                Pitch::C4,
-                Pitch::CSharpDFlat4,
-                Pitch::D4,
-                Pitch::DSharpEFlat4,
-                Pitch::E4,
-                Pitch::F4,
-                Pitch::FSharpGFlat4,
-                Pitch::G4,
-                Pitch::GSharpAFlat4,
-                Pitch::A4,
-                Pitch::ASharpBFlat4,
-                Pitch::B4,
-                Pitch::C5,
-                Pitch::CSharpDFlat5,
-                Pitch::D5,
-                Pitch::DSharpEFlat5,
-                Pitch::E5,
-                Pitch::F5,
-                Pitch::FSharpGFlat5,
-                Pitch::G5,
-                Pitch::GSharpAFlat5,
-                Pitch::A5,
-                Pitch::ASharpBFlat5,
-            ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
@@ -691,7 +576,9 @@ fn create_string_range(
     open_string_pitch: &Pitch,
     playable_frets: u8,
 ) -> Result<Vec<Pitch>, TabError> {
-    let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
+    let lowest_pitch_index = Pitch::iter()
+        .position(|x| &x == open_string_pitch)
+        .expect("BUG: every Pitch is produced by Pitch::iter()");
     let needed = playable_frets as usize + 1;
 
     let string_range: Vec<Pitch> = Pitch::iter()
