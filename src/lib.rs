@@ -119,14 +119,13 @@ impl NumArrangements {
     ///
     /// Returns [`TabError::NumArrangementsOutOfRange`] for `n == 0` or `n > MAX`.
     pub fn try_new(n: u8) -> Result<Self, TabError> {
-        if n == 0 || n > Self::MAX {
-            return Err(TabError::NumArrangementsOutOfRange {
+        match NonZeroU8::new(n) {
+            Some(nz) if n <= Self::MAX => Ok(Self(nz)),
+            _ => Err(TabError::NumArrangementsOutOfRange {
                 value: n,
                 max: Self::MAX,
-            });
+            }),
         }
-        let nz = NonZeroU8::new(n).expect("BUG: n != 0 verified above");
-        Ok(Self(nz))
     }
 
     /// Returns the underlying `u8` in `1..=MAX`.
