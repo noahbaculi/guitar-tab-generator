@@ -666,6 +666,28 @@ mod test_boundary_types {
         assert_eq!(set.len(), 0);
     }
 
+    #[test]
+    fn arrangement_set_render_rejects_index_when_filter_empties_the_set() {
+        // C3E3 forces both notes onto fretted positions, so max_fret_span_filter = Some(0)
+        // drops every candidate and leaves an empty set. render(0, ..) must report
+        // IndexOutOfBounds rather than reaching the renderer's non-empty guard.
+        let tab_input = TabInput {
+            input: "C3E3".to_owned(),
+            tuning_name: "standard".to_owned(),
+            guitar_num_frets: 20,
+            guitar_capo: 0,
+            num_arrangements: 5,
+            max_fret_span_filter: Some(0),
+        };
+        let set = generate_arrangements(tab_input).unwrap();
+        assert!(set.is_empty());
+        let err = set.render(0, 30, 2, None).unwrap_err();
+        assert!(
+            matches!(err, TabError::IndexOutOfBounds { index: 0, len: 0 }),
+            "got {err:?}"
+        );
+    }
+
     fn arrangement_set_fixture(num_arrangements: u8) -> ArrangementSet {
         let tab_input = TabInput {
             input: "E2\nA2\nD3".to_owned(),
