@@ -34,7 +34,7 @@ pub(crate) const fn min_render_width(padding: u8) -> u16 {
 /// beat column corresponding to the 0-indexed beat (counting `Playable` and `Rest` lines,
 /// skipping `MeasureBreak`s).
 ///
-/// Returns an empty string if `arrangement_lines` is empty.
+/// Returns an empty string if `arrangement_lines` is empty or the guitar has no strings.
 #[must_use]
 pub fn render_tab(
     arrangement_lines: &[Line<BeatVec<PitchFingering>>],
@@ -47,6 +47,9 @@ pub fn render_tab(
         return String::new();
     }
     let num_strings = guitar.string_ranges.len();
+    if num_strings == 0 {
+        return String::new();
+    }
 
     let line_index_of_playback: Option<usize> = match playback {
         None => None,
@@ -185,6 +188,22 @@ mod test_render_tab {
         let arrangement_lines = get_arrangement_lines();
         let output = render_tab(&arrangement_lines, &Guitar::default(), 1, 0, None);
         assert!(!output.is_empty());
+    }
+
+    #[test]
+    fn zero_string_guitar_does_not_panic() {
+        // A guitar with no strings is constructible via the low-level API. Rendering any
+        // non-empty line sequence against it must return an empty string, not panic in
+        // `render_string_output`.
+        let no_pitches: [Pitch; 0] = [];
+        let guitar = Guitar::new(
+            crate::guitar::create_string_tuning(&no_pitches).unwrap(),
+            0,
+            0,
+        )
+        .unwrap();
+        let lines = vec![Line::Rest, Line::MeasureBreak];
+        assert_eq!(render_tab(&lines, &guitar, 20, 1, None), "");
     }
 }
 
