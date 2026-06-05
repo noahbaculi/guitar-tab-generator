@@ -63,6 +63,10 @@ export interface ParseError {
 
 /**
  * Top-level error variant for the WASM boundary.
+ *
+ * Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
+ * attribute requires external matches to include a wildcard arm. JS consumers should keep a
+ * `default` arm in any `switch (err.kind)`.
  */
 export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "inputTooManyLines"; max: number } | { kind: "numFretsTooHigh"; numFrets: number; max: number } | { kind: "capoTooHigh"; capo: number; max: number } | { kind: "capoExceedsFrets"; capo: number; numFrets: number } | { kind: "stringNumberOutOfRange"; value: number; max: number } | { kind: "openPitchOutOfRange"; string: number; semitones: number } | { kind: "fretRangeExceedsPitchRange"; openPitch: string; playableFrets: number } | { kind: "unplayablePitches"; pitches: UnplayablePitch[] } | { kind: "noArrangementsFound" } | { kind: "numArrangementsOutOfRange"; value: number; max: number } | { kind: "tuningNameUnknown"; value: string } | { kind: "indexOutOfBounds"; index: number; len: number } | { kind: "renderWidthTooSmall"; width: number; min: number };
 

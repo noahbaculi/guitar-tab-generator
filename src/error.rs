@@ -53,6 +53,10 @@ impl std::fmt::Display for UnplayablePitch {
 }
 
 /// Top-level error variant for the WASM boundary.
+///
+/// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
+/// attribute requires external matches to include a wildcard arm. JS consumers should keep a
+/// `default` arm in any `switch (err.kind)`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
 #[tsify(into_wasm_abi)]
 #[serde(
