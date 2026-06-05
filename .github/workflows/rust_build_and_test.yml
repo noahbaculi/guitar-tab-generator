@@ -65,3 +65,11 @@ jobs:
         with:
           toolchain: "1.86"
       - run: cargo check --all-targets
+
+  wasm-test:
+    name: WASM boundary tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - run: wasm-pack test --node -- --test wasm_boundary
