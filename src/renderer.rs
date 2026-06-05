@@ -205,6 +205,23 @@ mod test_render_tab {
         let lines = vec![Line::Rest, Line::MeasureBreak];
         assert_eq!(render_tab(&lines, &guitar, 20, 1, None), "");
     }
+
+    #[test]
+    fn mismatched_guitar_string_count_does_not_panic() {
+        // An arrangement built on a wider guitar, rendered against a narrower one, must drop the
+        // out-of-range fingerings instead of panicking on the per-string slice index.
+        // `get_arrangement_lines` places notes on strings 1 and 2; a 1-string render guitar keeps
+        // string 1 and skips string 2.
+        let arrangement_lines = get_arrangement_lines();
+        let one_string = Guitar::new(
+            crate::guitar::create_string_tuning(&[Pitch::E4]).unwrap(),
+            12,
+            0,
+        )
+        .unwrap();
+        let output = render_tab(&arrangement_lines, &one_string, 20, 1, None);
+        assert!(!output.is_empty());
+    }
 }
 
 fn line_index_of_beat_index(
@@ -289,21 +306,32 @@ mod test_line_index_of_beat_index {
 }
 
 /// Renders Line as a vector of strings representing the fret positions on a guitar.
+///
+/// Stays total when the line and the render guitar disagree: an empty `Playable` beat renders as
+/// a rest, and a fingering whose string number exceeds `num_strings` is skipped. Both require a
+/// hand-built line/guitar mismatch (the parser and `create_arrangements` never produce them), but
+/// `render_tab` is public, so it must not panic on them.
 fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<String> {
     let pitch_fingerings = match line {
         Line::MeasureBreak => return vec!["|".to_owned(); num_strings],
         Line::Rest => return vec!["-".to_owned(); num_strings],
         Line::Playable(pitch_fingerings) => pitch_fingerings.iter().sorted().collect_vec(),
     };
+    if pitch_fingerings.is_empty() {
+        return vec!["-".to_owned(); num_strings];
+    }
     let fret_width_max = calc_fret_width_max(&pitch_fingerings);
 
     // Instantiate vec with rest dashes for all strings with the max fret width
     let mut playable_render = vec!["-".repeat(fret_width_max); num_strings];
 
-    // Add the rendered frets for the strings that are played
+    // Add the rendered frets for the strings that are played. Skip a fingering whose string number
+    // is beyond the render guitar: the arrangement was built on a guitar with more strings.
     for fingering in pitch_fingerings {
-        playable_render[fingering.string_number.get() as usize - 1] =
-            render_fret(fingering.fret, fret_width_max)
+        let string_index = fingering.string_number.get() as usize - 1;
+        if let Some(slot) = playable_render.get_mut(string_index) {
+            *slot = render_fret(fingering.fret, fret_width_max);
+        }
     }
 
     playable_render
@@ -397,8 +425,9 @@ mod test_render_line {
         );
     }
     #[test]
-    #[should_panic]
-    fn playable_more_fingerings_than_strings() {
+    fn playable_string_number_beyond_render_guitar_is_skipped() {
+        // String 2 is beyond a 1-string render guitar. The in-range fingering renders; the
+        // out-of-range one is dropped instead of panicking on the slice index.
         let pitch_fingerings = vec![
             PitchFingering {
                 string_number: StringNumber::new(1).unwrap(),
@@ -411,7 +440,16 @@ mod test_render_line {
                 pitch: Pitch::G4,
             },
         ];
-        render_line(&Line::Playable(pitch_fingerings), 1);
+        assert_eq!(render_line(&Line::Playable(pitch_fingerings), 1), vec!["9"]);
+    }
+    #[test]
+    fn playable_empty_beat_renders_as_rest() {
+        // A hand-built empty `Playable` beat has no fingerings, so it renders as a rest row
+        // rather than reaching `calc_fret_width_max`'s non-empty contract.
+        assert_eq!(
+            render_line(&Line::Playable(vec![]), 4),
+            vec!["-".to_owned(); 4]
+        );
     }
 }
 
