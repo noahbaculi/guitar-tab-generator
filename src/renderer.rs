@@ -220,7 +220,15 @@ mod test_render_tab {
         )
         .unwrap();
         let output = render_tab(&arrangement_lines, &one_string, 20, 1, None);
-        assert!(!output.is_empty());
+        // The render guitar has one string, so string 2's fingering is out of range and dropped:
+        // exactly one string row is laid out, carrying string 1's frets (0, _, 0, |, 4, 12).
+        // `playback` is None, so the indicator rows are blank; filtering blanks leaves the string
+        // rows only. A regression that kept string 2 would yield two rows and fail this.
+        let string_rows: Vec<&str> = output
+            .lines()
+            .filter(|row| !row.trim().is_empty())
+            .collect();
+        assert_eq!(string_rows, vec!["-0---0---|-4-12-----"]);
     }
 }
 
