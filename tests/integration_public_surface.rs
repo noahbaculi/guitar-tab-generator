@@ -441,6 +441,21 @@ mod boundary_variant_smoke {
             matches!(err, TabError::IndexOutOfBounds { index: 99, len: 1 }),
             "got {err:?}"
         );
+        // All three indexed handle methods share the bounds guard; pin each at the boundary.
+        assert!(
+            matches!(
+                set.max_fret_span(99).unwrap_err(),
+                TabError::IndexOutOfBounds { index: 99, len: 1 }
+            ),
+            "max_fret_span out-of-bounds must report IndexOutOfBounds"
+        );
+        assert!(
+            matches!(
+                set.difficulty(99).unwrap_err(),
+                TabError::IndexOutOfBounds { index: 99, len: 1 }
+            ),
+            "difficulty out-of-bounds must report IndexOutOfBounds"
+        );
     }
 
     #[test]
