@@ -185,6 +185,16 @@ fn num_arrangements_newtype_round_trips() {
 }
 
 #[test]
+fn public_max_consts_are_reachable() {
+    // Pin the `pub const` bounds from outside the crate so a refactor that tightens their
+    // visibility fails to compile here instead of silently dropping them from the surface.
+    assert_eq!(Guitar::MAX_NUM_FRETS, 30);
+    assert_eq!(Guitar::MAX_CAPO, 8);
+    assert_eq!(StringNumber::MAX, 12);
+    assert_eq!(NumArrangements::MAX, 20);
+}
+
+#[test]
 fn lower_level_pipeline_is_publicly_callable() {
     // Exercises the direct-Rust pipeline that the WASM boundary builds on top of:
     // `parse_lines` -> `Guitar::new` -> `create_arrangements` -> `render_tab`,
