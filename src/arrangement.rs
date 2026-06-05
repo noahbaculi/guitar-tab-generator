@@ -1051,6 +1051,7 @@ fn calc_fret_span(beat_fingering_candidate: &[PitchFingering]) -> Option<u8> {
     match non_zero_frets.minmax() {
         MinMaxResult::NoElements => None,
         MinMaxResult::OneElement(_) => Some(0),
+        // `minmax()` guarantees `max >= min`, so this `u8` subtraction cannot underflow.
         MinMaxResult::MinMax(min, max) => Some(max - min),
     }
 }
