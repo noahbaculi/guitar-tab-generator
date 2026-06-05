@@ -84,12 +84,11 @@ pub fn create_string_tuning(
         .iter()
         .enumerate()
         .map(|(i, p)| {
-            let string_number = u8::try_from(i + 1).map_err(|_| {
-                TabError::StringNumberOutOfRange {
+            let string_number =
+                u8::try_from(i + 1).map_err(|_| TabError::StringNumberOutOfRange {
                     value: u8::MAX,
                     max: StringNumber::MAX,
-                }
-            })?;
+                })?;
             StringNumber::new(string_number).map(|sn| (sn, *p))
         })
         .collect()
@@ -1009,10 +1008,7 @@ mod test_create_string_tuning_bounds {
         let pitches = vec![Pitch::E2; 13];
         let err = create_string_tuning(&pitches).unwrap_err();
         assert!(
-            matches!(
-                err,
-                TabError::StringNumberOutOfRange { value: 13, max: 12 }
-            ),
+            matches!(err, TabError::StringNumberOutOfRange { value: 13, max: 12 }),
             "got {err:?}"
         );
     }
