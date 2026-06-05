@@ -108,8 +108,7 @@ pub enum TabError {
         len: usize,
     },
     /// The requested render `width` is below the minimum needed to lay out one beat at the
-    /// given `padding`. `ArrangementSet::render` rejects widths below `min_render_width(padding)`,
-    /// currently `2 * padding + 3`.
+    /// given `padding`. `ArrangementSet::render` rejects widths below `min_render_width(padding)`.
     RenderWidthTooSmall {
         width: u16,
         min: u16,
@@ -120,6 +119,9 @@ impl std::fmt::Display for TabError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TabError::Parse { errors } => {
+                if errors.is_empty() {
+                    return write!(f, "Input could not be parsed.");
+                }
                 let joined = errors
                     .iter()
                     .map(|e| e.to_string())
@@ -171,6 +173,12 @@ impl std::fmt::Display for TabError {
                 )
             }
             TabError::UnplayablePitches { pitches } => {
+                if pitches.is_empty() {
+                    return write!(
+                        f,
+                        "Some pitches could not be played on the configured guitar."
+                    );
+                }
                 let joined = pitches
                     .iter()
                     .map(|p| p.to_string())
