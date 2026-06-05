@@ -267,13 +267,13 @@ fn bench_render_tab(c: &mut Criterion) {
             &playback_index,
             |b, &playback_index| {
                 b.iter(|| {
-                    render_tab(
+                    black_box(render_tab(
                         black_box(arrangements[0].lines()),
                         black_box(&Guitar::default()),
                         black_box(20),
                         black_box(2),
                         black_box(Some(playback_index)),
-                    );
+                    ));
                 });
             },
         );
@@ -299,7 +299,7 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
                 b.iter(|| {
                     let set = guitar_tab_generator::generate_arrangements(black_box(input.clone()));
                     if let Ok(set) = set {
-                        let _ = set.render(0, 40, 2, Some(12));
+                        let _ = black_box(set.render(0, 40, 2, Some(12)));
                     }
                 });
             },
@@ -326,7 +326,7 @@ fn bench_create_single_composition_large_scaling(c: &mut Criterion) {
                 b.iter(|| {
                     let set = guitar_tab_generator::generate_arrangements(black_box(input.clone()));
                     if let Ok(set) = set {
-                        let _ = set.render(0, 40, 2, Some(12));
+                        let _ = black_box(set.render(0, 40, 2, Some(12)));
                     }
                 });
             },
