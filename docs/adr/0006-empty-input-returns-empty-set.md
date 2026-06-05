@@ -23,6 +23,8 @@ Two distinct zero-arrangement states exist on `ArrangementSet`. Callers that nee
 | Empty / all-rest input | `num_arrangements` | `false` | `""` for every `i` | echoes input as `Rest` / `MeasureBreak` beats |
 | `maxFretSpanFilter` dropped every candidate | `0` | `true` | `index` out of bounds -> `TabError::IndexOutOfBounds` | echoes the playable input the filter rejected |
 
+The `render` outcomes assume `width >= min_render_width(padding)`. Below that floor, `render` returns `TabError::RenderWidthTooSmall` on either path, regardless of `len` or `isEmpty`.
+
 - Interactive UIs (the in-repo demo, the noahbaculi.com app) handle "no playable beats yet" with the same `set` shape as a normal render. No error-pane bounce per keystroke.
 - To detect empty / all-rest input, callers check `set.render(0, ...).is_empty()` (or walk `set.normalizedInput` for any `Playable` variant). `set.isEmpty` will not flip on this path.
 - To detect the filter-drops-everything case, callers check `set.isEmpty` (equivalently `set.len === 0`). `set.normalizedInput` still holds the playable input the filter rejected, so the UI can render the source while explaining why no arrangement appears.
