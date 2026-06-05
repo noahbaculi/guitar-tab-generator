@@ -28,7 +28,7 @@ Input: `TabInput`. Output: `ArrangementSet` (opaque handle).
           │                           ▼
           │                        Guitar
           │                           │
-          ▼                           │              num_arrangements: NumArrangements (u8 on JSON wire)
+          ▼                           │              num_arrangements: u8 lifted to NumArrangements at the boundary
 Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Option<u8>
           │                           │                        │
           └──────────────┬────────────┴────────────────────────┘
