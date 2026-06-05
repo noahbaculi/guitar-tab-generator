@@ -83,6 +83,7 @@ NormalizedBeat                         <- ArrangementSet.normalizedInput element
 
 TabError                                  <- thrown by generate_arrangements (JS: generateArrangements)
     kind: "parse"                      + errors: ParseError[]
+    kind: "inputTooManyLines"          + max: number
     kind: "numFretsTooHigh"            + numFrets: number, max: number
     kind: "capoTooHigh"                + capo: number, max: number
     kind: "capoExceedsFrets"           + capo: number, numFrets: number

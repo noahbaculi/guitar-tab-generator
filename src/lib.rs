@@ -280,7 +280,8 @@ impl ArrangementSet {
 ///
 /// - Input-shape validation: [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
 ///   [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], [`TabError::CapoExceedsFrets`].
-/// - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring).
+/// - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring),
+///   [`TabError::InputTooManyLines`] (input exceeds the 65,535-line cap).
 /// - Pathfinding: [`TabError::UnplayablePitches`] (one or more pitches reach no string),
 ///   [`TabError::NoArrangementsFound`] (every pitch reaches the guitar but no valid combination exists,
 ///   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).
@@ -310,13 +311,7 @@ impl ArrangementSet {
 pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
-    let input_lines = parser::parse_lines(tab_input.input.clone()).map_err(|errors| {
-        debug_assert!(
-            !errors.is_empty(),
-            "parser must not return Err with empty error list"
-        );
-        TabError::Parse { errors }
-    })?;
+    let input_lines = parser::parse_lines(tab_input.input.clone())?;
 
     let first_playable_index = arrangement::first_playable_index(&input_lines);
 

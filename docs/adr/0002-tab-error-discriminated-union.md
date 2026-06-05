@@ -4,9 +4,9 @@ Status: Superseded by ADR-0007
 Date: 2026-05-20
 
 > Superseded by [ADR-0007](0007-flat-taberror-variants.md): the three umbrella variants
-> described below (`guitar`, `arrangement`, `invalidInput`) were flattened into 12 specific
-> variants, while `parse` was retained, for 13 kinds total. This record is kept for historical
-> context.
+> described below (`guitar`, `arrangement`, `invalidInput`) were flattened into specific
+> variants, while `parse` was retained. See [ADR-0007](0007-flat-taberror-variants.md) for the
+> current variant set. This record is kept for historical context.
 
 In 2.0.0, errors crossing the WASM boundary are typed: `generate_arrangements` and the `ArrangementSet` methods throw a `TabError` whose `kind` field discriminates between four variants (`parse`, `guitar`, `arrangement`, `invalidInput`). The enum is `#[non_exhaustive]` and serialized with `#[serde(tag = "kind", rename_all = "camelCase")]`, so JS callers `switch (err.kind)` instead of parsing message strings.
 

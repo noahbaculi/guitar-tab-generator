@@ -65,6 +65,12 @@ pub enum TabError {
     Parse {
         errors: Vec<ParseError>,
     },
+    /// The input has more lines than the pathfinding graph can index. `max` is the inclusive
+    /// line limit (`u16::MAX`). Distinct from [`TabError::Parse`] because no single line is at
+    /// fault, so there is no `ParseError` line or text to report.
+    InputTooManyLines {
+        max: u32,
+    },
     NumFretsTooHigh {
         num_frets: u8,
         max: u8,
@@ -128,6 +134,9 @@ impl std::fmt::Display for TabError {
                     .collect::<Vec<_>>()
                     .join("\n");
                 write!(f, "{joined}")
+            }
+            TabError::InputTooManyLines { max } => {
+                write!(f, "The input is too large. The maximum is {max} lines.")
             }
             TabError::NumFretsTooHigh { num_frets, max } => {
                 write!(f, "Too many frets ({num_frets}). The maximum is {max}.")
@@ -276,6 +285,15 @@ mod test_tab_error_display {
 #[cfg(test)]
 mod test_new_variant_display {
     use super::*;
+
+    #[test]
+    fn input_too_many_lines() {
+        let err = TabError::InputTooManyLines { max: 65535 };
+        assert_eq!(
+            err.to_string(),
+            "The input is too large. The maximum is 65535 lines."
+        );
+    }
 
     #[test]
     fn num_frets_too_high() {

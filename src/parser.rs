@@ -212,20 +212,19 @@ const MAX_INPUT_LINES: usize = u16::MAX as usize;
 ///
 /// # Errors
 ///
-/// Returns an error listing every unparseable substring with its 1-indexed line number,
-/// or a single over-limit error when the input exceeds `MAX_INPUT_LINES` lines.
+/// Returns [`crate::error::TabError::Parse`] listing every unparseable substring with its
+/// 1-indexed line number, or [`crate::error::TabError::InputTooManyLines`] when the input
+/// exceeds `MAX_INPUT_LINES` lines.
 #[memoize(Capacity: 10)]
-pub fn parse_lines(
-    input: String,
-) -> Result<Vec<Line<BeatVec<Pitch>>>, Vec<crate::error::ParseError>> {
+pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, crate::error::TabError> {
     // Reject pathological input up front so every beat index stays within the u16 range
     // used by the pathfinding graph. `take` short-circuits, so an enormous paste is not
-    // fully scanned. A real transcription is far below this bound.
+    // fully scanned. A real transcription is far below this bound. The cap is its own
+    // variant rather than a Parse error because no single line is at fault.
     if input.lines().take(MAX_INPUT_LINES + 1).count() > MAX_INPUT_LINES {
-        return Err(vec![crate::error::ParseError {
-            line: (MAX_INPUT_LINES + 1) as u32,
-            text: format!("input exceeds the maximum of {MAX_INPUT_LINES} lines"),
-        }]);
+        return Err(crate::error::TabError::InputTooManyLines {
+            max: MAX_INPUT_LINES as u32,
+        });
     }
 
     let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
@@ -247,7 +246,9 @@ pub fn parse_lines(
 
     let flat_errors: Vec<crate::error::ParseError> = errors.into_iter().flatten().collect();
     if !flat_errors.is_empty() {
-        return Err(flat_errors);
+        return Err(crate::error::TabError::Parse {
+            errors: flat_errors,
+        });
     }
 
     Ok(parsed_lines)
@@ -273,34 +274,35 @@ mod test_parse_lines {
     fn reports_line_and_content_for_unparseable_input() {
         let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
 
-        let errors = parse_lines(input).unwrap_err();
+        let err = parse_lines(input).unwrap_err();
         assert_eq!(
-            errors,
-            vec![
-                crate::error::ParseError {
-                    line: 1,
-                    text: "xyz".to_owned()
-                },
-                crate::error::ParseError {
-                    line: 4,
-                    text: "BB.2".to_owned()
-                },
-            ],
+            err,
+            crate::error::TabError::Parse {
+                errors: vec![
+                    crate::error::ParseError {
+                        line: 1,
+                        text: "xyz".to_owned()
+                    },
+                    crate::error::ParseError {
+                        line: 4,
+                        text: "BB.2".to_owned()
+                    },
+                ],
+            },
         );
     }
     #[test]
     fn rejects_input_beyond_max_lines() {
-        // One line past the cap fails fast with a single error marking the limit, instead
-        // of letting the beat count overflow the u16 pathfinding index.
+        // One line past the cap fails fast as InputTooManyLines, instead of letting the beat
+        // count overflow the u16 pathfinding index.
         let input = "A2\n".repeat(MAX_INPUT_LINES + 1);
 
-        let errors = parse_lines(input).unwrap_err();
-        assert_eq!(errors.len(), 1);
-        assert_eq!(errors[0].line, (MAX_INPUT_LINES + 1) as u32);
-        assert!(
-            errors[0].text.contains("exceeds the maximum"),
-            "got {:?}",
-            errors[0].text
+        let err = parse_lines(input).unwrap_err();
+        assert_eq!(
+            err,
+            crate::error::TabError::InputTooManyLines {
+                max: MAX_INPUT_LINES as u32,
+            }
         );
     }
 }

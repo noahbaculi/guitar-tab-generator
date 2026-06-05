@@ -64,7 +64,7 @@ export interface ParseError {
 /**
  * Top-level error variant for the WASM boundary.
  */
-export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "numFretsTooHigh"; numFrets: number; max: number } | { kind: "capoTooHigh"; capo: number; max: number } | { kind: "capoExceedsFrets"; capo: number; numFrets: number } | { kind: "stringNumberOutOfRange"; value: number; max: number } | { kind: "openPitchOutOfRange"; string: number; semitones: number } | { kind: "fretRangeExceedsPitchRange"; openPitch: string; playableFrets: number } | { kind: "unplayablePitches"; pitches: UnplayablePitch[] } | { kind: "noArrangementsFound" } | { kind: "numArrangementsOutOfRange"; value: number; max: number } | { kind: "tuningNameUnknown"; value: string } | { kind: "indexOutOfBounds"; index: number; len: number } | { kind: "renderWidthTooSmall"; width: number; min: number };
+export type TabError = { kind: "parse"; errors: ParseError[] } | { kind: "inputTooManyLines"; max: number } | { kind: "numFretsTooHigh"; numFrets: number; max: number } | { kind: "capoTooHigh"; capo: number; max: number } | { kind: "capoExceedsFrets"; capo: number; numFrets: number } | { kind: "stringNumberOutOfRange"; value: number; max: number } | { kind: "openPitchOutOfRange"; string: number; semitones: number } | { kind: "fretRangeExceedsPitchRange"; openPitch: string; playableFrets: number } | { kind: "unplayablePitches"; pitches: UnplayablePitch[] } | { kind: "noArrangementsFound" } | { kind: "numArrangementsOutOfRange"; value: number; max: number } | { kind: "tuningNameUnknown"; value: string } | { kind: "indexOutOfBounds"; index: number; len: number } | { kind: "renderWidthTooSmall"; width: number; min: number };
 
 
 /**
@@ -136,7 +136,8 @@ export class ArrangementSet {
  *
  * - Input-shape validation: [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
  *   [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], [`TabError::CapoExceedsFrets`].
- * - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring).
+ * - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring),
+ *   [`TabError::InputTooManyLines`] (input exceeds the 65,535-line cap).
  * - Pathfinding: [`TabError::UnplayablePitches`] (one or more pitches reach no string),
  *   [`TabError::NoArrangementsFound`] (every pitch reaches the guitar but no valid combination exists,
  *   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).

@@ -25,10 +25,9 @@ fn main() -> Result<(), TabError> {
         A3"
     .to_string();
 
-    // `parse_lines` hands back the structured parse errors; wrap them in `TabError::Parse`
-    // exactly as `generate_arrangements` does at the boundary.
-    let lines: Vec<Line<Vec<Pitch>>> =
-        parse_lines(input).map_err(|errors| TabError::Parse { errors })?;
+    // `parse_lines` returns the typed `TabError` (a `Parse` error per unparseable substring,
+    // or `InputTooManyLines` when the input is too large), so it propagates with `?`.
+    let lines: Vec<Line<Vec<Pitch>>> = parse_lines(input)?;
 
     let tuning = create_string_tuning(&[
         Pitch::E4,

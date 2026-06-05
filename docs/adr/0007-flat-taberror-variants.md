@@ -22,11 +22,12 @@ to flatten was now.
 
 `TabError` is a flat tagged union. Each concrete failure mode is its own
 variant with a structured payload. The umbrella variants are removed.
-The variant set (thirteen kinds, including the unchanged `Parse`)
+The variant set (fourteen kinds, including the unchanged `Parse`)
 captures every error path currently reachable from `generate_arrangements`
 and the public Rust API:
 
 - `Parse { errors: Vec<ParseError> }`
+- `InputTooManyLines { max }`
 - `NumFretsTooHigh { num_frets, max }`
 - `CapoTooHigh { capo, max }`
 - `CapoExceedsFrets { capo, num_frets }`
