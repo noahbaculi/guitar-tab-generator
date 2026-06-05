@@ -152,10 +152,15 @@ export class ArrangementSet {
  *
  * # Validation order
  *
- * Input-shape errors (currently `numArrangements` range) are reported before `parse_lines` runs.
- * The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors depend on
- * the full input. When both are present the shape error wins because the parser's output would be
- * discarded anyway.
+ * Input-shape errors (currently `numArrangements` range) are reported before `parse_lines`
+ * runs. The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors
+ * depend on the full input. When both are present the shape error wins because the parser's
+ * output would be discarded anyway.
+ *
+ * Guitar-configuration errors (`TuningNameUnknown`, `NumFretsTooHigh`, `CapoTooHigh`,
+ * `CapoExceedsFrets`) are checked before the normalized input is built, so an invalid guitar
+ * config does not pay for the per-beat allocation. `parse_lines` still runs first, so a `Parse`
+ * error outranks a guitar-config error.
  *
  * # Performance
  *

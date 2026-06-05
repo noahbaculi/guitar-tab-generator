@@ -395,6 +395,18 @@ mod boundary_variant_smoke {
     }
 
     #[test]
+    fn bad_tuning_on_valid_multibeat_input_reports_tuning_name_unknown() {
+        // Guards the generate_arrangements ordering: the guitar config is validated before
+        // the normalized-input vector is built, but parse_lines still runs first. A valid
+        // multi-beat pitch list with an unknown tuning must still surface TuningNameUnknown.
+        let err = generate_arrangements(input(18, 0, 1, "openZ", "E2\nA2\nD3")).unwrap_err();
+        match err {
+            TabError::TuningNameUnknown { value } => assert_eq!(value, "openZ"),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
+        }
+    }
+
+    #[test]
     fn parse_error() {
         let err = generate_arrangements(input(18, 0, 1, "standard", "E2\n???")).unwrap_err();
         match err {

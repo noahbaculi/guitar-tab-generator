@@ -296,10 +296,15 @@ impl ArrangementSet {
 ///
 /// # Validation order
 ///
-/// Input-shape errors (currently `numArrangements` range) are reported before `parse_lines` runs.
-/// The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors depend on
-/// the full input. When both are present the shape error wins because the parser's output would be
-/// discarded anyway.
+/// Input-shape errors (currently `numArrangements` range) are reported before `parse_lines`
+/// runs. The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors
+/// depend on the full input. When both are present the shape error wins because the parser's
+/// output would be discarded anyway.
+///
+/// Guitar-configuration errors (`TuningNameUnknown`, `NumFretsTooHigh`, `CapoTooHigh`,
+/// `CapoExceedsFrets`) are checked before the normalized input is built, so an invalid guitar
+/// config does not pay for the per-beat allocation. `parse_lines` still runs first, so a `Parse`
+/// error outranks a guitar-config error.
 ///
 /// # Performance
 ///
@@ -312,6 +317,13 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
 
     let input_lines = parser::parse_lines(tab_input.input.clone())?;
+
+    // Validate the guitar configuration before materializing the normalized input, so a
+    // request with a valid pitch list but a bad tuning name or out-of-range fret/capo fails
+    // before allocating the per-beat `normalized_input` vector. `parse_lines` still runs
+    // first, so a `Parse` error keeps precedence over a guitar-config error.
+    let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tab_input.tuning_name)?);
+    let guitar = Guitar::new(tuning, tab_input.guitar_num_frets, tab_input.guitar_capo)?;
 
     let first_playable_index = arrangement::first_playable_index(&input_lines);
 
@@ -326,9 +338,6 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
             arrangement::Line::MeasureBreak => NormalizedBeat::MeasureBreak,
         })
         .collect();
-
-    let tuning = parser::create_string_tuning_offset(parser::parse_tuning(&tab_input.tuning_name)?);
-    let guitar = Guitar::new(tuning, tab_input.guitar_num_frets, tab_input.guitar_capo)?;
 
     let arrangements = arrangement::create_arrangements(
         guitar.clone(),
