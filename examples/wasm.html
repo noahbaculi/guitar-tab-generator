@@ -614,6 +614,12 @@ C4`,
                     clearTab();
                     return;
                 }
+                case "inputTooManyLines": {
+                    document.getElementById("parse-errors").textContent =
+                        `The input is too large. The maximum is ${err.max} lines.`;
+                    clearTab();
+                    return;
+                }
                 // These three lower-level variants are part of the TabError enum but are not
                 // reachable from generateArrangements with preset tunings and 1..6 string numbers;
                 // they fire only on the lower-level Rust API. Handled here so a future boundary that
