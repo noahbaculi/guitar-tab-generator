@@ -335,14 +335,14 @@ create_arrangements(guitar, lines, n, None)?;
 
 See [ADR-0005](docs/adr/0005-num-arrangements-newtype.md).
 
-### `build_arrangement_set` is renamed to `generate_arrangements`
+### `wrapper_create_arrangements` is renamed to `generate_arrangements`
 
-The Rust function name now matches the JS function name. The signature and behaviour are unchanged.
+The Rust function name now matches the JS function name (`generateArrangements`). The 1.x `wrapper_create_arrangements` took a `CompositionInput`; the 2.0 `generate_arrangements` takes a `TabInput`. The [Rust-facing renames](#rust-facing-renames) table covers both the function rename and the `CompositionInput` -> `TabInput` change.
 
 ```rust
 // Before:
-use guitar_tab_generator::build_arrangement_set;
-let set = build_arrangement_set(TabInput::new(/* ... */))?;
+use guitar_tab_generator::wrapper_create_arrangements;
+let set = wrapper_create_arrangements(/* CompositionInput */)?;
 
 // After:
 use guitar_tab_generator::generate_arrangements;
@@ -426,7 +426,7 @@ As of the additional 2.0.0 changes it is also re-exported from the crate root, s
 
 ### Input is capped at 65,535 lines
 
-Input longer than 65,535 lines now returns `TabError::Parse` whose first `ParseError.line` marks the first line past the limit, instead of overflowing the internal `u16` beat index. This surfaces through the existing `parse` arm, so callers that already handle `TabError::Parse` need no new branch. A real transcription stays far below this bound; only pathological input is rejected.
+Input longer than 65,535 lines now returns `TabError::InputTooManyLines { max }` (where `max` is the inclusive limit, 65,535), instead of overflowing the internal `u16` beat index. This is a new `kind` (`inputTooManyLines` on the wire), so a `switch (err.kind)` without that case falls through to its default arm. A real transcription stays far below this bound; only pathological input is rejected.
 
 ## See also
 
