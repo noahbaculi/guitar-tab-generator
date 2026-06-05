@@ -197,6 +197,7 @@ try {
         showLineMarker(line, text);
       }
       break;
+    case "inputTooManyLines":
     case "numFretsTooHigh":
     case "capoTooHigh":
     case "capoExceedsFrets":
@@ -387,6 +388,7 @@ switch (err.kind) {
 // After:
 switch (err.kind) {
   case "parse": ...; break;
+  case "inputTooManyLines": showLineLimit(err.max); break;
   case "numFretsTooHigh": showFretLimit(err.numFrets, err.max); break;
   case "capoTooHigh": showCapoLimit(err.capo, err.max); break;
   case "capoExceedsFrets": showCapoVsFrets(err.capo, err.numFrets); break;

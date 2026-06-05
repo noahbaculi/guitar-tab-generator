@@ -95,7 +95,7 @@ TabError                                  <- thrown by generate_arrangements (JS
     kind: "numArrangementsOutOfRange"  + value: number, max: number
     kind: "tuningNameUnknown"          + value: string
     kind: "indexOutOfBounds"           + index: number, len: number
-    kind: "renderWidthTooSmall"        + width: number, min: number
+    kind: "renderWidthTooSmall"        + width: number, min: number          (thrown by ArrangementSet.render, not generateArrangements)
 
 ParseError
     line: number
