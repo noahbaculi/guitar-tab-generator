@@ -21,7 +21,7 @@ The rendered ASCII tab string produced for one [[Arrangement]] at a chosen `(wid
 _Avoid_: Composition (former name, renamed in 2.0.0 to avoid clash with the musical sense), Tab (ambiguous between the rendered string and the larger artifact), Output
 
 **Beat**:
-A single rhythmic position in the input — one moment in time, either sounding or silent. Beats are the unit the pathfinder, difficulty calculation, and playback indicator reason about. Every beat is also a [[Line]], but not every line is a beat (specifically: `MeasureBreak` is not).
+A single rhythmic position in the input, one moment in time, either sounding or silent. Beats are the unit the pathfinder, difficulty calculation, and playback indicator reason about. Every beat is also a [[Line]], but not every line is a beat (specifically: `MeasureBreak` is not).
 _Avoid_: Step, position, moment, sonorous (a stale synonym; "sonorous beat" wrongly implies non-rest)
 
 **Line**:
@@ -29,11 +29,11 @@ One row of the user's input text and (after rendering) one logical row of the ou
 _Avoid_: Row, entry
 
 **MeasureBreak**:
-A non-[[Beat]] [[Line]] — a bar line drawn in the rendered tab. Filtered out before pathfinding and re-injected for rendering. Carries no rhythmic or musical content; it is a structural divider only.
+A non-[[Beat]] [[Line]], a bar line drawn in the rendered tab. Filtered out before pathfinding and re-injected for rendering. Carries no rhythmic or musical content; it is a structural divider only.
 _Avoid_: Bar, measure (there is no real measure / time-signature concept in this project)
 
 **Difficulty**:
-The score being minimized. The canonical word at every layer: the per-[[Beat]] features fed to scoring (the difficulty features), the score on each pathfinding edge (transition difficulty, the cost of moving from one [[Beat]]'s fingering to the next), and the sum along the chosen path (`Arrangement.difficulty`). `pathfinding::yen` internally calls its edge values "weight" — that's a library detail, not domain vocabulary.
+The score being minimized. The canonical word at every layer: the per-[[Beat]] features fed to scoring (the difficulty features), the score on each pathfinding edge (transition difficulty, the cost of moving from one [[Beat]]'s fingering to the next), and the sum along the chosen path (`Arrangement.difficulty`). `pathfinding::yen` internally calls its edge values "weight", a library detail, not domain vocabulary.
 _Avoid_: Cost, weight, score
 
 **Difficulty features**:
@@ -53,11 +53,11 @@ The placement of one pitch on one specific (string, fret). The atomic unit of fi
 _Avoid_: Note position, finger placement
 
 **Pitch fingering candidates**:
-All the valid [[Pitch fingering]]s for a single pitch on a given guitar — one per string the pitch is reachable on. The set the arranger picks from.
+All the valid [[Pitch fingering]]s for a single pitch on a given guitar, one per string the pitch is reachable on. The set the arranger picks from.
 _Avoid_: Pitch fingering options, pitch fingering group
 
 **Beat fingering**:
-The chosen [[Pitch fingering]]s for one [[Beat]] — one per pitch in the beat, with no two pitches landing on the same string. The cartesian product of [[Pitch fingering candidates]] across the beat's pitches, filtered for string collisions. When decorated with [[Difficulty features]], it is held as `ScoredBeatFingering`.
+The chosen [[Pitch fingering]]s for one [[Beat]], one per pitch in the beat, with no two pitches landing on the same string. The cartesian product of [[Pitch fingering candidates]] across the beat's pitches, filtered for string collisions. When decorated with [[Difficulty features]], it is held as `ScoredBeatFingering`.
 _Avoid_: Beat fingering combo (the type name is current shorthand; "combo" suggests "one of many" but the chosen one is just *the* beat fingering), fingering combination
 
 **Guitar**:
@@ -65,20 +65,20 @@ The configured instrument the arranger targets: a [[Tuning]] over its strings, a
 _Avoid_: Instrument (the canonical word is "guitar")
 
 **Tuning**:
-The assignment of open-string pitches to a guitar's strings — a map from `StringNumber` to `Pitch`. There is one canonical form (the map); the public API also accepts a **tuning preset** (the `TuningName` enum + the string `"standard"`) which resolves through a fixed table of semitone offsets relative to standard 6-string tuning. The offset array (`[i8; 6]`) is a parsing waypoint, not a separate domain concept.
+The assignment of open-string pitches to a guitar's strings, a map from `StringNumber` to `Pitch`. There is one canonical form (the map); the public API also accepts a **tuning preset** (the `TuningName` enum + the string `"standard"`) which resolves through a fixed table of semitone offsets relative to standard 6-string tuning. The offset array (`[i8; 6]`) is a parsing waypoint, not a separate domain concept.
 _Avoid_: Tuning offsets / tuning array as standalone terms (they're encodings of a tuning, not tunings in their own right)
 
 **Fret count**:
-The number of physical frets on the instrument — what the caller supplies (`TabInput.guitar_num_frets`). A property of the guitar hardware, independent of capo placement.
+The number of physical frets on the instrument, what the caller supplies (`TabInput.guitar_num_frets`). A property of the guitar hardware, independent of capo placement.
 _Avoid_: num_frets as a freestanding term (the bare name is currently overloaded with [[Playable fret count]])
 
 **Playable fret count**:
-The number of frets above the capo — what `Guitar.playable_frets` holds after construction. Equal to [[Fret count]] minus capo position. The number that bounds fingering search.
+The number of frets above the capo, what `Guitar.playable_frets` holds after construction. Equal to [[Fret count]] minus capo position. The number that bounds fingering search.
 _Avoid_: Effective frets, available frets
 
 **Normalized input**:
 The input echoed back per-[[Beat]] for the WASM consumer, held once on the [[ArrangementSet]] (not per-[[Arrangement]]) since every arrangement of one [[TabInput]] shares it. A sequence of [[NormalizedBeat]]s. Exists so a UI can align playback or highlights against the rendered tab without re-parsing.
-_Avoid_: Pitches (former field name was `pitches` — misleading because the sequence also carries rests and measure breaks; renamed in 2.0.0), input pitches
+_Avoid_: Pitches (former field name was `pitches`, misleading because the sequence also carries rests and measure breaks; renamed in 2.0.0), input pitches
 
 **NormalizedBeat**:
 One entry in the [[Normalized input]]. A tagged variant: `{ kind: "playable", pitches: [...] }`, `{ kind: "rest" }`, or `{ kind: "measureBreak" }`. Replaces the legacy `["REST"]` / `["MEASURE_BREAK"]` string sentinels with a discriminated union so JS consumers can switch on `.kind` instead of string equality.
@@ -98,8 +98,8 @@ _None currently._
 
 ## Example dialogue
 
-> **Dev:** "We're returning ten rendered tabs for that input — is that the right cap?"
+> **Dev:** "We're returning ten rendered tabs for that input. Is that the right cap?"
 >
-> **Domain expert:** "Ten *arrangements*, held in one [[ArrangementSet]]. The set carries the shared normalized input; each arrangement has its own difficulty and max fret span. A rendered tab is just the ASCII string for one arrangement at a chosen width and padding — the demo can call `set.render(i, width, padding, playback)` as many times as it wants without re-pathfinding."
+> **Domain expert:** "Ten *arrangements*, held in one [[ArrangementSet]]. The set carries the shared normalized input; each arrangement has its own difficulty and max fret span. A rendered tab is just the ASCII string for one arrangement at a chosen width and padding. The demo can call `set.render(i, width, padding, playback)` as many times as it wants without re-pathfinding."
 >
-> **Dev:** "Right — the cap is on arrangements, not on renders. Width changes are cheap."
+> **Dev:** "Right, the cap is on arrangements, not on renders. Width changes are cheap."

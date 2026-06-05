@@ -54,9 +54,9 @@ Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Opt
                          set.difficulty(i) -> i32
 ```
 
-> `parse_lines`, `parse_tuning`, and `create_string_tuning_offset` are crate-internal stages,
-> not part of the stable public API. They are surfaced only through the `#[doc(hidden)]`
-> `__bench_internals` module, for benchmarks.
+> `parse_lines` is a public re-export from the crate root. `parse_tuning` and
+> `create_string_tuning_offset` are crate-internal stages, not part of the stable public API;
+> they are surfaced only through the `#[doc(hidden)]` `__bench_internals` module, for benchmarks.
 
 ## Types Up Close
 

@@ -10,9 +10,9 @@ The 2.0.0 preview surface kept three umbrella `TabError` variants from the
 original 1.x shape: `Guitar { message }`, `Arrangement { message }`, and
 `InvalidInput { field, message }`. The `message` field was prose, not a
 typed wire field, which forced JS callers to fall back to string
-inspection for anything more granular than the umbrella kind.
-`error.rs:41` documented this explicitly: "treat it like UI strings, not
-like a stable wire field."
+inspection for anything more granular than the umbrella kind. A doc
+comment on those variants described `message` as a UI string, not a stable
+wire field.
 
 With 2.0.0 about to ship, the umbrella shape would have to be removed
 behind a major bump if structured payloads were added later. The window
@@ -67,9 +67,10 @@ state with valid-looking random input, so it is not a panic-worthy BUG.
 `RenderWidthTooSmall` was added during the 2.0.0 final-pass audit. `ArrangementSet::render`
 previously handed an unvalidated `width` to the renderer, where a value below the minimum
 underflowed the column arithmetic (debug panic, release allocation blow-up) for the smallest
-widths and stalled the wrap loop for the rest. The minimum is `2 * padding + 3`, not
-`padding + 3`: each beat column reserves a `padding`-wide margin on both sides, so the loop
-makes progress only when `width > 2 * padding + 2`. Validating at the boundary and returning a
+widths and stalled the wrap loop for the rest. The minimum is `min_render_width(padding)`, not
+`padding + 3`: each beat column reserves a `padding`-wide margin on both sides (hence the
+doubled `padding`), so the loop makes progress only once the width clears both margins plus a
+fret column. Validating at the boundary and returning a
 typed variant matches the "structured throw, not trap" rule the indexed accessors already
 follow (`IndexOutOfBounds`); the renderer also floors its column math with `saturating_sub`
 plus a one-beat-per-row progress floor so the lower-level `render_tab` stays total.
@@ -91,8 +92,8 @@ plus a one-beat-per-row progress floor so the lower-level `render_tab` stays tot
   roadmap item adds a field to a specific existing variant. The trade-off
   is that variant field types must be chosen for the long run up front.
   `OpenPitchOutOfRange.semitones` is `i16` rather than `u8` for exactly
-  this reason (`error.rs:83`): it reserves room for negative tuning
-  offsets so the planned custom-tuning feature lands without a 3.0. This
+  this reason: it reserves room for negative tuning offsets so the planned
+  custom-tuning feature lands without a 3.0. This
   envelope was first recorded in
   [ADR-0002](0002-tab-error-discriminated-union.md) and is restated here
   because that record's worked example referenced the now-removed umbrella
