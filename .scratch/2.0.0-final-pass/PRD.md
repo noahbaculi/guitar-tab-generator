@@ -32,7 +32,7 @@ In parallel, three smaller issues should ride with the same release:
 
 ### Out of scope
 
-- Public-surface trim. `parse_lines`, `render_tab`, `create_arrangements`, `create_string_tuning`, `Line`, `BeatVec`, `PitchVec` stay re-exported from the crate root. The advanced Rust path is preserved.
+- Public-surface trim. `parse_lines`, `render_tab`, `create_arrangements`, `create_string_tuning`, `Line`, and `BeatVec` stay re-exported from the crate root. The advanced Rust path is preserved.
 - Performance work. Covered by `.scratch/post-2.0.0-internals/PRD.md`.
 - Custom tuning over the WASM boundary. Additive, deferred to 2.x.
 - Algorithm changes (difficulty function, fret-span weighting).
