@@ -190,12 +190,15 @@ impl std::fmt::Display for TabError {
                 write!(f, "No arrangements could be calculated.")
             }
             TabError::NumArrangementsOutOfRange { value, max } => {
-                write!(f, "must be between 1 and {max} inclusive, got {value}")
+                write!(
+                    f,
+                    "The number of arrangements ({value}) must be between 1 and {max}."
+                )
             }
             TabError::TuningNameUnknown { value } => {
                 write!(
                     f,
-                    "must be \"standard\" or one of the supported TuningName variants, got {value:?}"
+                    "The tuning name ({value:?}) is not recognized. Use \"standard\" or a supported TuningName variant."
                 )
             }
             TabError::IndexOutOfBounds { index, len } => {
@@ -251,6 +254,21 @@ mod test_tab_error_display {
         assert_eq!(
             err.to_string(),
             "Input 'xyz' on line 1 could not be parsed into a pitch.\nInput 'BB.2' on line 4 could not be parsed into a pitch."
+        );
+    }
+
+    #[test]
+    fn parse_variant_with_empty_errors_falls_back_to_a_message() {
+        let err = TabError::Parse { errors: vec![] };
+        assert_eq!(err.to_string(), "Input could not be parsed.");
+    }
+
+    #[test]
+    fn unplayable_pitches_with_empty_vec_falls_back_to_a_message() {
+        let err = TabError::UnplayablePitches { pitches: vec![] };
+        assert_eq!(
+            err.to_string(),
+            "Some pitches could not be played on the configured guitar."
         );
     }
 }
@@ -378,7 +396,7 @@ mod test_new_variant_display {
         let err = TabError::NumArrangementsOutOfRange { value: 21, max: 20 };
         assert_eq!(
             err.to_string(),
-            "must be between 1 and 20 inclusive, got 21"
+            "The number of arrangements (21) must be between 1 and 20."
         );
     }
 
@@ -389,7 +407,7 @@ mod test_new_variant_display {
         };
         assert_eq!(
             err.to_string(),
-            "must be \"standard\" or one of the supported TuningName variants, got \"openZ\""
+            "The tuning name (\"openZ\") is not recognized. Use \"standard\" or a supported TuningName variant."
         );
     }
 
