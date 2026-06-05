@@ -511,8 +511,12 @@ fn parse_pitch(
         let errors: Vec<crate::error::ParseError> = consecutive_indices
             .into_iter()
             .map(|unmatched_input_indices| {
-                let first_idx = *unmatched_input_indices.first().unwrap();
-                let last_idx = *unmatched_input_indices.last().unwrap();
+                let first_idx = *unmatched_input_indices
+                    .first()
+                    .expect("BUG: consecutive_slices never yields an empty group");
+                let last_idx = *unmatched_input_indices
+                    .last()
+                    .expect("BUG: consecutive_slices never yields an empty group");
                 // Collect by char so the unmatched run can never slice across a UTF-8
                 // boundary: `matched_mask` is byte-indexed, so `input_line[first..=last]`
                 // could panic on a non-boundary index.
@@ -629,11 +633,7 @@ mod test_parse_pitch {
     }
 }
 
-/// Returns a vector of consecutive slices of the input numbers.
-///
-/// This function does not sort the input vector and the consecutive slices are grouped together based
-/// on the order of the input numbers as received.
-/// Each returned slice is a reference to a subarray of `usize` elements from the original data array.
+/// Splits `numbers` into runs of consecutive values, preserving input order (no sorting).
 fn consecutive_slices(numbers: &[usize]) -> Vec<&[usize]> {
     let mut slice_start = 0;
     let mut result = Vec::with_capacity(numbers.len());
