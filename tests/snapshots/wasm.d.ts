@@ -102,9 +102,8 @@ export class ArrangementSet {
      * # Errors
      *
      * Returns [`TabError::RenderWidthTooSmall`] when `width` is below the minimum needed to
-     * lay out one beat at the given `padding` (`min_render_width(padding)`, currently
-     * `2 * padding + 3`), in addition to the [`TabError::IndexOutOfBounds`] shared by every
-     * indexed accessor.
+     * lay out one beat at the given `padding` (`min_render_width(padding)`), in addition to the
+     * [`TabError::IndexOutOfBounds`] shared by every indexed accessor.
      */
     render(index: number, width: number, padding: number, playback?: number | null): string;
     /**
