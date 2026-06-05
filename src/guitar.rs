@@ -84,11 +84,12 @@ pub fn create_string_tuning(
         .iter()
         .enumerate()
         .map(|(i, p)| {
-            let string_number =
-                u8::try_from(i + 1).map_err(|_| TabError::StringNumberOutOfRange {
-                    value: u8::MAX,
-                    max: StringNumber::MAX,
-                })?;
+            // `i + 1` is the 1-indexed string number. `StringNumber::new` owns the upper
+            // bound and reports the offending number, so route every too-high case through
+            // it. A slice longer than u8::MAX saturates to u8::MAX, which `new` still
+            // rejects; in practice the collect short-circuits at string 13 (StringNumber::MAX
+            // is 12) long before the cast could overflow.
+            let string_number = u8::try_from(i + 1).unwrap_or(u8::MAX);
             StringNumber::new(string_number).map(|sn| (sn, *p))
         })
         .collect()
