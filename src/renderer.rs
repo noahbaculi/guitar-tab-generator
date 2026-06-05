@@ -12,6 +12,10 @@ use std::fmt::Write;
 /// would break the `min_render_width` slack below.
 pub(crate) const MAX_FRET_RENDER_WIDTH: usize = 2;
 
+/// Holds the two-digit assumption above to a compile-time check: a `MAX_NUM_FRETS` of 100 or
+/// more would render three-digit frets and silently misalign the `min_render_width` slack.
+const _: () = assert!(Guitar::MAX_NUM_FRETS < 100);
+
 /// Minimum `width` [`render_tab`] needs to lay out one beat at the given `padding`.
 ///
 /// A row carries a `padding`-wide dash margin on each side plus `MAX_FRET_RENDER_WIDTH`
@@ -782,10 +786,13 @@ fn render_string_output(
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
     let num_strings = rows_by_string.len();
-    let num_row_groups = rows_by_string[0].len();
+    let first_string_rows = rows_by_string
+        .first()
+        .expect("BUG: every arrangement has at least one string");
+    let num_row_groups = first_string_rows.len();
     let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
-    for (row_group_index, _) in rows_by_string[0].iter().enumerate() {
+    for (row_group_index, _) in first_string_rows.iter().enumerate() {
         let playback_line = |symbol: &str| -> String {
             match playback_indicator_position {
                 Some(ref pos) if row_group_index == pos.row_group_index => {
