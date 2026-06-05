@@ -459,7 +459,7 @@ impl Pitch {
     /// or `None` if the result would fall outside the supported `Pitch` range.
     #[must_use]
     pub fn plus_offset(&self, offset: i16) -> Option<Pitch> {
-        let new_index = self.index() as i16 + offset;
+        let new_index = i32::from(self.index()) + i32::from(offset);
         if new_index < 0 {
             return None;
         }
@@ -509,6 +509,15 @@ mod test_pitch_plus_offset {
     fn positive_overflow_returns_none() {
         assert_eq!(Pitch::B9.plus_offset(1), None);
         assert_eq!(Pitch::ASharpBFlat9.plus_offset(2), None);
+    }
+
+    #[test]
+    fn extreme_offset_returns_none_without_overflow() {
+        // The intermediate index must not overflow before the range check. A near-`i16::MAX`
+        // positive offset previously overflowed the `i16` addition (debug panic) instead of
+        // returning `None`.
+        assert_eq!(Pitch::B9.plus_offset(i16::MAX), None);
+        assert_eq!(Pitch::C0.plus_offset(i16::MIN), None);
     }
 }
 
