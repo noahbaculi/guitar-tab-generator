@@ -398,6 +398,11 @@ mod test_render_line {
 
 /// Creates a string with the fret number padded with dashes to match the maximum width.
 ///
+/// Through the public render path `fret <= Guitar::MAX_NUM_FRETS`, which the file-level
+/// `assert!(Guitar::MAX_NUM_FRETS < 100)` keeps under 100, so the three-digit branch and the
+/// panic below are unreachable there. The function stays total for any `u8`, so direct callers
+/// and the unit tests can still exercise wider inputs.
+///
 /// # Panics
 ///
 /// Panics if the width of the fret string representation is greater than `fret_width_max`.

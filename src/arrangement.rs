@@ -1313,6 +1313,9 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDiffi
         _ => 0.0,
     };
 
+    // The cast to i32 (NodeDifficulty) cannot overflow: every fret term is bounded by
+    // Guitar::MAX_NUM_FRETS (30), so the weighted sum stays far inside i32, and the inputs are
+    // finite because calc_avg_non_zero_fret yields None (scored as 0.0) for an all-open beat.
     ((avg_fret_difference * 100.0)
         + (next_fret_span * 10.0)
         + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner()) as NodeDifficulty
