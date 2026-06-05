@@ -290,7 +290,8 @@ mod test_max_fret_span {
 /// # Errors
 ///
 /// Returns an error if any input line cannot be fingered on the supplied `guitar`
-/// (out-of-range pitches). `num_arrangements` is range-checked by
+/// (out-of-range pitches), or [`crate::error::TabError::InputTooManyLines`] when
+/// `input_lines` exceeds `MAX_INPUT_LINES`. `num_arrangements` is range-checked by
 /// [`crate::NumArrangements::try_new`] at construction.
 ///
 /// # Panics
@@ -305,6 +306,15 @@ pub fn create_arrangements(
     num_arrangements: crate::NumArrangements,
     max_fret_span_filter: Option<u8>,
 ) -> Result<Vec<Arrangement>, TabError> {
+    // Reject input past the cap up front: each beat's line index is cast to `u16` below, so a
+    // longer sequence would silently wrap. `parse_lines` enforces the same bound, so this only
+    // fires for a direct caller that skips it.
+    if input_lines.len() > crate::parser::MAX_INPUT_LINES {
+        return Err(TabError::InputTooManyLines {
+            max: crate::parser::MAX_INPUT_LINES as u32,
+        });
+    }
+
     let input_playable_lines = input_lines
         .iter()
         .filter(|line| matches!(line, Line::Playable(_)))
@@ -345,8 +355,8 @@ pub fn create_arrangements(
         .enumerate()
         .map(|(line_index, line_candidate)| match line_candidate {
             MeasureBreak => unreachable!("Measure breaks should have been filtered out."),
-            // `line_index as u16` cannot truncate: `parse_lines` caps input at u16::MAX
-            // lines, so the beat index always fits.
+            // `line_index as u16` cannot truncate: the guard above caps input at
+            // `MAX_INPUT_LINES` (`u16::MAX`), so the beat index always fits.
             Rest => vec![Node::Rest {
                 line_index: line_index as u16,
             }],
@@ -539,6 +549,27 @@ mod test_create_arrangements {
         .unwrap_err();
 
         assert!(matches!(err, TabError::NoArrangementsFound), "got {err:?}");
+    }
+    #[test]
+    fn input_beyond_max_lines_returns_input_too_many_lines() {
+        // `create_arrangements` casts each beat's line index to `u16`, so it must reject input
+        // past the cap itself rather than trusting every caller to pre-cap. All-rest input
+        // exceeds the cap without driving pathfinding, so the guard is cheap to exercise.
+        let input_pitches = vec![Line::Rest; crate::parser::MAX_INPUT_LINES + 1];
+
+        let result = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(1).unwrap(),
+            None,
+        );
+
+        match result {
+            Err(TabError::InputTooManyLines { max }) => {
+                assert_eq!(max, crate::parser::MAX_INPUT_LINES as u32);
+            }
+            other => panic!("expected Err(InputTooManyLines), got {other:?}"),
+        }
     }
     #[test]
     fn empty_input() {
@@ -1112,8 +1143,9 @@ type NodeDifficulty = i32;
 fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, NodeDifficulty)> {
     let next_node_index = match current_node {
         Node::Start => 0,
-        // `parse_lines` caps accepted input at `MAX_INPUT_LINES` (`u16::MAX`), so the largest
-        // `line_index` is `u16::MAX - 1` and this `+ 1` reaches at most `u16::MAX`: no overflow.
+        // `create_arrangements` caps accepted input at `MAX_INPUT_LINES` (`u16::MAX`), so the
+        // largest `line_index` is `u16::MAX - 1` and this `+ 1` reaches at most `u16::MAX`: no
+        // overflow.
         Node::Rest { line_index } | Node::Playable { line_index, .. } => line_index + 1,
     };
 

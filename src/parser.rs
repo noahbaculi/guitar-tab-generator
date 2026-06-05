@@ -202,7 +202,7 @@ mod test_create_string_tuning_offset {
 
 /// Upper bound on input lines. Ties to `u16::MAX` so the pathfinding graph's
 /// `Node::line_index` (`u16`) can address every beat without truncating.
-const MAX_INPUT_LINES: usize = u16::MAX as usize;
+pub(crate) const MAX_INPUT_LINES: usize = u16::MAX as usize;
 
 /// Parses a newline-delimited input string into a sequence of `Line` values.
 ///
