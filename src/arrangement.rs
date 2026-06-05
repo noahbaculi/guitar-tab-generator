@@ -428,6 +428,24 @@ mod test_create_arrangements {
     }
 
     #[test]
+    fn empty_playable_beat_yields_no_arrangements() {
+        // A structurally valid but degenerate input: a beat with no pitches. This previously
+        // tripped an `assert!` in `generate_beat_fingerings` and panicked; it now reports
+        // `NoArrangementsFound`, like any other beat with zero candidate fingerings.
+        let input_pitches = vec![Line::Playable(vec![])];
+
+        let err = create_arrangements(
+            Guitar::default(),
+            input_pitches,
+            NumArrangements::try_new(1).unwrap(),
+            None,
+        )
+        .unwrap_err();
+
+        assert!(matches!(err, TabError::NoArrangementsFound), "got {err:?}");
+    }
+
+    #[test]
     fn single_line_single_pitch() {
         let input_pitches: Vec<Line<BeatVec<Pitch>>> = vec![Line::Playable(vec![Pitch::E4])];
         let expected_arrangements: Vec<Arrangement> = vec![Arrangement {
@@ -874,13 +892,17 @@ mod test_validate_fingerings {
 }
 
 /// Generates all playable combinations of fingerings for all the pitches in a beat.
+/// An empty beat yields no combinations.
 fn generate_beat_fingerings(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
 ) -> Vec<BeatVec<PitchFingering>> {
-    assert!(
-        !beat_fingerings_per_pitch.is_empty(),
-        "BUG: generate_beat_fingerings called with empty input"
-    );
+    // No pitches means no combinations. Returning early avoids relying on
+    // `multi_cartesian_product`'s ambiguous empty-input result; the empty candidate set
+    // then flows to `NoArrangementsFound` through pathfinding, like a beat whose fingerings
+    // are all dropped by `no_duplicate_strings`.
+    if beat_fingerings_per_pitch.is_empty() {
+        return Vec::new();
+    }
 
     beat_fingerings_per_pitch
         .iter()
@@ -959,9 +981,11 @@ mod test_generate_beat_fingerings {
     }
 
     #[test]
-    #[should_panic(expected = "BUG: generate_beat_fingerings called with empty input")]
-    fn empty_input_panics() {
-        let _ = generate_beat_fingerings(&[]);
+    fn empty_input_returns_no_combinations() {
+        assert_eq!(
+            generate_beat_fingerings(&[]),
+            Vec::<BeatVec<PitchFingering>>::new()
+        );
     }
 }
 
