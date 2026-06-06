@@ -137,7 +137,7 @@ fn invalid_input_errors_are_equal_for_equal_inputs() {
     let err_b = generate_arrangements(fixture(0)).expect_err("0 must be rejected");
     assert_eq!(err_a, err_b, "TabError must derive structural equality");
     let err_high = generate_arrangements(fixture(99)).expect_err("99 must be rejected");
-    assert_ne!(err_a, err_high, "different messages must not compare equal");
+    assert_ne!(err_a, err_high, "different errors must not compare equal");
 }
 
 #[test]
