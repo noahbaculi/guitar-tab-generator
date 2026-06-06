@@ -1,5 +1,7 @@
 # Guitar Tab Generator
 
+[![Crates.io](https://img.shields.io/crates/v/guitar-tab-generator.svg)](https://crates.io/crates/guitar-tab-generator)
+[![Docs.rs](https://docs.rs/guitar-tab-generator/badge.svg)](https://docs.rs/guitar-tab-generator)
 [![Build + Test](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust_build_and_test.yml/badge.svg)](https://github.com/noahbaculi/guitar-tab-generator/actions/workflows/rust_build_and_test.yml)
 [![Coverage](https://codecov.io/gh/noahbaculi/guitar-tab-generator/branch/main/graph/badge.svg?token=BB01PPL4LF)](https://codecov.io/gh/noahbaculi/guitar-tab-generator)
 
