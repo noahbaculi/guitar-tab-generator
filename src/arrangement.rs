@@ -376,11 +376,9 @@ pub fn create_arrangements(
 
     let num_path_node_groups = path_node_groups.len();
 
-    let path_nodes: Vec<Node> = path_node_groups.into_iter().flatten().collect_vec();
-
     let path_results: Vec<(Vec<Node>, i32)> = yen(
         &Node::Start,
-        |current_node| calc_next_nodes(current_node, &path_nodes),
+        |current_node| calc_next_nodes(current_node, &path_node_groups),
         |current_node| match current_node {
             Node::Start => false,
             Node::Rest { line_index } | Node::Playable { line_index, .. } => {
@@ -1160,11 +1158,14 @@ mod test_calc_fret_span {
 type NodeDifficulty = i32;
 
 /// Calculates the next nodes and their transition difficulties based on the current node
-/// and a list of all path nodes.
+/// and the per-beat node groups.
 ///
 /// Returns a vector of tuples, where each tuple contains a `Node` and the `NodeDifficulty`
 /// of moving to that node.
-fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, NodeDifficulty)> {
+fn calc_next_nodes(
+    current_node: &Node,
+    path_node_groups: &[BeatVec<Node>],
+) -> Vec<(Node, NodeDifficulty)> {
     let next_node_index = match current_node {
         Node::Start => 0,
         // `create_arrangements` caps accepted input at `MAX_INPUT_LINES` (`u16::MAX`), so the
@@ -1173,73 +1174,76 @@ fn calc_next_nodes(current_node: &Node, path_nodes: &[Node]) -> Vec<(Node, NodeD
         Node::Rest { line_index } | Node::Playable { line_index, .. } => line_index + 1,
     };
 
-    let next_nodes: Vec<(Node, NodeDifficulty)> = path_nodes
-        .iter()
-        .filter(|&node| {
-            next_node_index
-                == match node {
-                    Node::Start => unreachable!("Start should never be a future node."),
-                    Node::Rest { line_index } | Node::Playable { line_index, .. } => *line_index,
-                }
+    // The graph is layered and a group's position equals its `line_index`, so every successor
+    // is exactly one contiguous group. `.get()` returns `None` past the last layer, where the
+    // old full-list filter naturally returned empty.
+    path_node_groups
+        .get(next_node_index as usize)
+        .map(|group| {
+            group
+                .iter()
+                .map(|next_node| {
+                    (
+                        next_node.clone(),
+                        calculate_node_difficulty(current_node, next_node),
+                    )
+                })
+                .collect_vec()
         })
-        .map(|next_node| {
-            (
-                next_node.clone(),
-                calculate_node_difficulty(current_node, next_node),
-            )
-        })
-        .collect_vec();
-
-    next_nodes
+        .unwrap_or_default()
 }
 #[cfg(test)]
 mod test_calc_next_nodes {
     use super::*;
 
-    fn create_test_path_nodes() -> [Node; 7] {
-        [
-            Node::Playable {
-                line_index: 0,
-                scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    beat_fingering: vec![],
-                    avg_non_zero_fret: Some(OrderedFloat(0.1)),
-                    non_zero_fret_span: 0,
-                }),
-            },
-            Node::Playable {
-                line_index: 0,
-                scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    beat_fingering: vec![],
-                    avg_non_zero_fret: Some(OrderedFloat(0.2)),
-                    non_zero_fret_span: 0,
-                }),
-            },
-            Node::Playable {
+    fn create_test_path_node_groups() -> Vec<BeatVec<Node>> {
+        vec![
+            vec![
+                Node::Playable {
+                    line_index: 0,
+                    scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                        beat_fingering: vec![],
+                        avg_non_zero_fret: Some(OrderedFloat(0.1)),
+                        non_zero_fret_span: 0,
+                    }),
+                },
+                Node::Playable {
+                    line_index: 0,
+                    scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                        beat_fingering: vec![],
+                        avg_non_zero_fret: Some(OrderedFloat(0.2)),
+                        non_zero_fret_span: 0,
+                    }),
+                },
+            ],
+            vec![Node::Playable {
                 line_index: 1,
                 scored_beat_fingering: Rc::new(ScoredBeatFingering {
                     beat_fingering: vec![],
                     avg_non_zero_fret: Some(OrderedFloat(1.1)),
                     non_zero_fret_span: 1,
                 }),
-            },
-            Node::Rest { line_index: 2 },
-            Node::Rest { line_index: 3 },
-            Node::Playable {
-                line_index: 4,
-                scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    beat_fingering: vec![],
-                    avg_non_zero_fret: Some(OrderedFloat(4.1)),
-                    non_zero_fret_span: 4,
-                }),
-            },
-            Node::Playable {
-                line_index: 4,
-                scored_beat_fingering: Rc::new(ScoredBeatFingering {
-                    beat_fingering: vec![],
-                    avg_non_zero_fret: Some(OrderedFloat(4.1)),
-                    non_zero_fret_span: 4,
-                }),
-            },
+            }],
+            vec![Node::Rest { line_index: 2 }],
+            vec![Node::Rest { line_index: 3 }],
+            vec![
+                Node::Playable {
+                    line_index: 4,
+                    scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                        beat_fingering: vec![],
+                        avg_non_zero_fret: Some(OrderedFloat(4.1)),
+                        non_zero_fret_span: 4,
+                    }),
+                },
+                Node::Playable {
+                    line_index: 4,
+                    scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                        beat_fingering: vec![],
+                        avg_non_zero_fret: Some(OrderedFloat(4.1)),
+                        non_zero_fret_span: 4,
+                    }),
+                },
+            ],
         ]
     }
 
@@ -1270,7 +1274,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_node_groups()),
             expected_nodes_and_costs
         );
     }
@@ -1298,7 +1302,7 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_node_groups()),
             expected_nodes_and_costs
         );
     }
@@ -1319,7 +1323,7 @@ mod test_calc_next_nodes {
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_node_groups()),
             expected_nodes_and_costs
         );
     }
@@ -1333,7 +1337,7 @@ mod test_calc_next_nodes {
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_node_groups()),
             expected_nodes_and_costs
         );
     }
@@ -1364,17 +1368,8 @@ mod test_calc_next_nodes {
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_nodes()),
+            calc_next_nodes(&current_node, &create_test_path_node_groups()),
             expected_nodes_and_costs
-        );
-    }
-
-    #[test]
-    #[should_panic]
-    fn to_start() {
-        calc_next_nodes(
-            &Node::Rest { line_index: 3 },
-            &[Node::Rest { line_index: 4 }, Node::Start],
         );
     }
 }
@@ -1569,6 +1564,15 @@ mod test_calculate_node_difficulty {
         };
 
         assert_eq!(calculate_node_difficulty(&current_node, &next_node), 410);
+    }
+
+    #[test]
+    #[should_panic]
+    fn next_node_start_panics() {
+        // `Node::Start` is only ever the pathfinding source, never a successor. The guard
+        // used to also live in `calc_next_nodes`; after the group-indexing rewrite this is
+        // the only copy, so it is pinned here.
+        calculate_node_difficulty(&Node::Rest { line_index: 0 }, &Node::Start);
     }
 }
 
