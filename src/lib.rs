@@ -1,5 +1,86 @@
 #![deny(clippy::correctness)]
-#![doc = include_str!("../README.md")]
+//! Generate fingerstyle guitar tabs, ranked from easiest to hardest to play.
+//!
+//! Given a list of pitches, the crate finds every fret-and-string fingering for each
+//! pitch, builds a weighted directed graph of how hard it is to move between them, and
+//! runs Yen's k-shortest-paths search to return whole arrangements ordered by difficulty.
+//! It is built for compilation to WebAssembly, but the same API works for native Rust.
+//!
+//! # Quick start
+//!
+//! ```
+//! use guitar_tab_generator::{generate_arrangements, TabInput};
+//!
+//! // Newline-separated pitches. A blank line is a rest. A line like "D4G4" is a chord.
+//! let input = TabInput::new("E2\nA2\nD3", "standard", 18, 0, 1);
+//!
+//! // Arrangements come back ranked by difficulty, easiest first.
+//! let set = generate_arrangements(input).expect("input is valid");
+//!
+//! // render(index, width, padding, playback) is cheap to call repeatedly.
+//! println!("{}", set.render(0, 30, 2, None).expect("arrangement 0 exists"));
+//! ```
+//!
+//! # API at a glance
+//!
+//! Most callers want the high-level path:
+//!
+//! 1. Build a [`TabInput`] with [`TabInput::new`] (optionally
+//!    [`TabInput::with_max_fret_span_filter`]).
+//! 2. Call [`generate_arrangements`] to get an [`ArrangementSet`].
+//! 3. Read the set by index: [`ArrangementSet::render`], [`ArrangementSet::difficulty`],
+//!    [`ArrangementSet::max_fret_span`], and [`ArrangementSet::normalized_input`].
+//!
+//! For finer control, the building blocks behind that entry point are public too:
+//! [`parse_lines`] turns text into [`Line`]s, [`Guitar::new`] (with [`create_string_tuning`]
+//! and the [`TuningName`] presets from [`get_tuning_names`]) describes the instrument,
+//! [`create_arrangements`] runs the search, and [`render_tab`] formats one arrangement.
+//!
+//! Every fallible call returns a typed [`TabError`]. Parser failures carry [`ParseError`],
+//! and pitches that reach no string carry [`UnplayablePitch`].
+//!
+//! # Typed input
+//!
+//! Rust callers can skip the string parser and build the input from [`Pitch`] and [`Line`]
+//! values directly, then call [`create_arrangements`]. It returns a `Vec` of [`Arrangement`],
+//! and each one renders through [`render_tab`].
+//!
+//! ```
+//! use guitar_tab_generator::{
+//!     create_arrangements, render_tab, Guitar, Line, NumArrangements, Pitch,
+//! };
+//!
+//! // A standard 18-fret 6-string guitar.
+//! let guitar = Guitar::default();
+//!
+//! // Build the input from Pitch values instead of parsing strings.
+//! let lines = vec![
+//!     Line::Playable(vec![Pitch::E2]),
+//!     Line::Playable(vec![Pitch::A2]),
+//!     Line::Playable(vec![Pitch::D3, Pitch::G3]), // a chord
+//! ];
+//!
+//! // create_arrangements takes the guitar by value (the call is memoized), so pass a clone.
+//! let arrangements = create_arrangements(
+//!     guitar.clone(),
+//!     lines,
+//!     NumArrangements::try_new(1).expect("1 is in range"),
+//!     None,
+//! )
+//! .expect("input is playable");
+//!
+//! // Read metadata and render from the typed Arrangement.
+//! let best = &arrangements[0];
+//! println!("difficulty {}", best.difficulty());
+//! println!("{}", render_tab(best.lines(), &guitar, 30, 2, None));
+//! ```
+//!
+//! # More
+//!
+//! The [project README][readme] has the full algorithm walkthrough (with diagrams) and a
+//! link to the live web demo.
+//!
+//! [readme]: https://github.com/noahbaculi/guitar-tab-generator#readme
 
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU8;
