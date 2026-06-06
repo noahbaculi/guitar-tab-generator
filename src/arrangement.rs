@@ -1570,6 +1570,15 @@ mod test_calculate_node_difficulty {
 
         assert_eq!(calculate_node_difficulty(&current_node, &next_node), 410);
     }
+
+    #[test]
+    #[should_panic]
+    fn next_node_start_panics() {
+        // `Node::Start` is only ever the pathfinding source, never a successor. The guard
+        // used to also live in `calc_next_nodes`; after the group-indexing rewrite this is
+        // the only copy, so it is pinned here.
+        calculate_node_difficulty(&Node::Rest { line_index: 0 }, &Node::Start);
+    }
 }
 
 fn process_path(
