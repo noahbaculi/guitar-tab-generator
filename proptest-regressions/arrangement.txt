@@ -1,0 +1,12 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 146a32650c4b040caa4d5153c01529d42696e1d8562fd686dc4eb3d09aa4bb14 # shrinks to case = ArrangementCase { input_lines: [Playable([E2, E2])], num_arrangements: NumArrangements(1), measure_break_positions: [], rest_positions: [], playable_pitches_per_line: [[E2, E2]] }
+cc 424aa5e778cea2c9f93c093c9200dc2aa99a70b1c785ef69d2bc560b7ae1b9a3 # shrinks to case = ArrangementCase { input_lines: [Playable([E2, E2])], num_arrangements: NumArrangements(1), measure_break_positions: [], rest_positions: [], playable_pitches_per_line: [[E2, E2]] }
+cc 9e7b808d56148260a2eb395041e7cd15b1141036c5236a7dd537bb0bf909e77e # shrinks to case = ArrangementCase { input_lines: [Playable([FSharpGFlat5, FSharpGFlat5])], num_arrangements: NumArrangements(1), measure_break_positions: [], rest_positions: [], playable_pitches_per_line: [[FSharpGFlat5, FSharpGFlat5]] }
+cc d98894072d61d0026f7add5a9f62396cf40018f0ee277ba0b018c1e9d6f20095 # shrinks to case = ArrangementCase { input_lines: [Playable([FSharpGFlat5, FSharpGFlat5])], num_arrangements: NumArrangements(1), measure_break_positions: [], rest_positions: [], playable_pitches_per_line: [[FSharpGFlat5, FSharpGFlat5]] }
+cc e3a0279dc8a7de21bc88a1c8174391e831e3995cda22b432d2a0e68fa3af2cfa # shrinks to case = ArrangementCase { input_lines: [Playable([E2, E2])], num_arrangements: NumArrangements(1), measure_break_positions: [], rest_positions: [], playable_pitches_per_line: [[E2, E2]] }
+cc 6f28c48330fe4471688de44fabcd48e34631ed4818e53188f13335ba16013578 # shrinks to case = ArrangementCase { input_lines: [Playable([D5, D5, D5])], num_arrangements: NumArrangements(1), measure_break_positions: [], rest_positions: [], playable_pitches_per_line: [[D5, D5, D5]] }

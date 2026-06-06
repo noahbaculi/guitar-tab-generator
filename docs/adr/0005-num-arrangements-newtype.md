@@ -1,0 +1,19 @@
+# NumArrangements newtype enforces the 1..=20 range in one place
+
+Status: accepted
+Date: 2026-05-20
+
+In 2.0.0, `create_arrangements` accepts a `NumArrangements` newtype (`NumArrangements(NonZeroU8)` with a `MAX` constant and a `try_new` constructor) instead of a raw `u8`. `TabInput` keeps a plain `u8` so the JS wire stays a plain JSON number; `generate_arrangements` validates and lifts the value to the newtype at the boundary.
+
+## Considered Options
+
+- **Duplicate the range check at each call site.** The 1.x shape: both the WASM wrapper and `create_arrangements` checked `1..=20`. Rejected: the duplication drifts (one site updates `MAX`, the other doesn't) and the invariant lives in zero canonical places.
+- **Validate once and pass raw `u8`.** Slightly better but `create_arrangements`'s signature still lies: a function taking `u8` accepts `0` and `255`.
+- **`NumArrangements(NonZeroU8)` with `try_new`.** The type guarantees the invariant; `create_arrangements` cannot be called with an invalid count without going through the constructor. `NonZeroU8` gives niche optimization for free. Picked.
+
+## Consequences
+
+- The `1..=NumArrangements::MAX` invariant is enforced in `try_new` and nowhere else.
+- `try_new` returns `TabError::NumArrangementsOutOfRange { value, max }` (with `max` = 20), so direct Rust callers and WASM callers share one variant. Its `Display` reads "The number of arrangements ({value}) must be between 1 and {max}."
+- `TabInput.num_arrangements: u8` stays a plain number on the wire so JS sees a primitive; the lift to `NumArrangements` happens inside `generate_arrangements`.
+- Direct Rust callers construct via `NumArrangements::try_new(n)?`.

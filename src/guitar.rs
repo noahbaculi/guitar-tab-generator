@@ -1,9 +1,5 @@
-use crate::{arrangement::PitchVec, pitch::Pitch, string_number::StringNumber};
-use anyhow::{anyhow, Context, Result};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
-};
+use crate::{arrangement::PitchVec, error::TabError, pitch::Pitch, string_number::StringNumber};
+use std::{collections::BTreeMap, fmt};
 use strum::IntoEnumIterator;
 
 /// The assignment of a single `Pitch` to a specific `StringNumber` and `fret` position.
@@ -14,6 +10,28 @@ pub struct PitchFingering {
     pub(crate) string_number: StringNumber,
     pub(crate) fret: u8,
     pub(crate) pitch: Pitch,
+}
+impl PitchFingering {
+    /// The guitar string the pitch is fretted on.
+    #[inline]
+    #[must_use]
+    pub fn string_number(&self) -> StringNumber {
+        self.string_number
+    }
+
+    /// The fret position, `0` for an open string.
+    #[inline]
+    #[must_use]
+    pub fn fret(&self) -> u8 {
+        self.fret
+    }
+
+    /// The sounding pitch.
+    #[inline]
+    #[must_use]
+    pub fn pitch(&self) -> Pitch {
+        self.pitch
+    }
 }
 impl fmt::Debug for PitchFingering {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -41,7 +59,7 @@ mod test_pitch_fingering_debug {
 
 /// Open-string pitches for the standard 6-string guitar tuning, from string 1 (highest, E4)
 /// to string 6 (lowest, E2).
-pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
+pub(crate) const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
     Pitch::E4,
     Pitch::B3,
     Pitch::G3,
@@ -56,23 +74,32 @@ pub const STD_6_STRING_TUNING_OPEN_PITCHES: [Pitch; 6] = [
 ///
 /// Returns an error if the input slice is longer than the maximum supported string count
 /// (12), which would cause `StringNumber::new` to reject the generated numbers.
-pub fn create_string_tuning(open_string_pitches: &[Pitch]) -> Result<BTreeMap<StringNumber, Pitch>> {
+pub fn create_string_tuning(
+    open_string_pitches: &[Pitch],
+) -> Result<BTreeMap<StringNumber, Pitch>, TabError> {
     open_string_pitches
         .iter()
         .enumerate()
-        .map(|(i, p)| StringNumber::new((i + 1) as u8).map(|sn| (sn, *p)))
+        .map(|(i, p)| {
+            // `i + 1` is the 1-indexed string number. `StringNumber::new` owns the upper
+            // bound and reports the offending number, so route every too-high case through
+            // it. A slice longer than u8::MAX saturates to u8::MAX, which `new` still
+            // rejects; in practice the collect short-circuits at string 13 (StringNumber::MAX
+            // is 12) long before the cast could overflow.
+            let string_number = u8::try_from(i + 1).unwrap_or(u8::MAX);
+            StringNumber::new(string_number).map(|sn| (sn, *p))
+        })
         .collect()
 }
 
-/// A guitar configuration: tuning, fret count, effective pitch range, and per-string ranges.
+/// A guitar configuration: the playable fret count above the capo and the reachable pitch
+/// range for each string.
 ///
 /// Construct with `Guitar::new` for validated input or `Guitar::default` for a standard
 /// 18-fret 6-string instrument.
 #[derive(Debug, PartialEq, Eq, Clone, Hash)]
 pub struct Guitar {
-    pub(crate) tuning: BTreeMap<StringNumber, Pitch>,
     pub(crate) playable_frets: u8,
-    pub(crate) range: BTreeSet<Pitch>,
     pub(crate) string_ranges: BTreeMap<StringNumber, Box<[Pitch]>>,
 }
 impl Default for Guitar {
@@ -83,6 +110,11 @@ impl Default for Guitar {
     }
 }
 impl Guitar {
+    /// Upper bound on the fret count accepted by [`Guitar::new`].
+    pub const MAX_NUM_FRETS: u8 = 30;
+    /// Upper bound on the capo position accepted by [`Guitar::new`].
+    pub const MAX_CAPO: u8 = 8;
+
     /// Constructs a validated `Guitar` from a tuning map, fret count, and capo position.
     ///
     /// The capo shifts every open-string pitch up by `capo` semitones and reduces the
@@ -90,24 +122,33 @@ impl Guitar {
     ///
     /// # Errors
     ///
-    /// Returns an error if:
-    /// - `num_frets` is outside the supported range,
-    /// - `capo` is outside the supported range,
-    /// - or the capo shift pushes any open-string pitch out of the `Pitch` range.
-    pub fn new(tuning: BTreeMap<StringNumber, Pitch>, num_frets: u8, capo: u8) -> Result<Self> {
+    /// Returns a [`TabError`] variant for any of: fret count above [`Guitar::MAX_NUM_FRETS`],
+    /// capo above [`Guitar::MAX_CAPO`], `capo > num_frets`, an open-string pitch shifted out
+    /// of the supported `Pitch` range, or a string range that exceeds the highest pitch (`B9`).
+    pub fn new(
+        tuning: BTreeMap<StringNumber, Pitch>,
+        num_frets: u8,
+        capo: u8,
+    ) -> Result<Self, TabError> {
         check_fret_number(num_frets)?;
-
         check_capo_number(capo)?;
+        if capo > num_frets {
+            return Err(TabError::CapoExceedsFrets { capo, num_frets });
+        }
         let playable_frets = num_frets - capo;
         let adjusted_tuning = tuning
             .into_iter()
-            .map(|(string_num, pitch)| -> Result<_> {
-                let adjusted = pitch
-                    .plus_offset(capo as i16)
-                    .context("capo adjustment pushed pitch out of range")?;
+            .map(|(string_num, pitch)| -> Result<_, TabError> {
+                let adjusted =
+                    pitch
+                        .plus_offset(capo as i16)
+                        .ok_or(TabError::OpenPitchOutOfRange {
+                            string: string_num.get(),
+                            semitones: capo as i16,
+                        })?;
                 Ok((string_num, adjusted))
             })
-            .collect::<Result<BTreeMap<_, _>>>()?;
+            .collect::<Result<BTreeMap<_, _>, TabError>>()?;
 
         let mut string_ranges: BTreeMap<StringNumber, Box<[Pitch]>> = BTreeMap::new();
         for (string_number, string_open_pitch) in adjusted_tuning.iter() {
@@ -117,18 +158,8 @@ impl Guitar {
             );
         }
 
-        let range =
-            string_ranges
-                .iter()
-                .fold(BTreeSet::new(), |mut all_pitches, string_pitches| {
-                    all_pitches.extend(string_pitches.1);
-                    all_pitches
-                });
-
         Ok(Guitar {
-            tuning: adjusted_tuning,
             playable_frets,
-            range,
             string_ranges,
         })
     }
@@ -138,40 +169,13 @@ mod test_create_guitar {
     use super::*;
 
     #[test]
-    fn valid_simple() -> Result<()> {
+    fn valid_simple() -> Result<(), TabError> {
         let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)?;
 
         const NUM_FRETS: u8 = 3;
 
         let expected_guitar = Guitar {
-            tuning: tuning.clone(),
             playable_frets: NUM_FRETS,
-            range: BTreeSet::from([
-                Pitch::E2,
-                Pitch::F2,
-                Pitch::FSharpGFlat2,
-                Pitch::G2,
-                Pitch::A2,
-                Pitch::ASharpBFlat2,
-                Pitch::B2,
-                Pitch::C3,
-                Pitch::D3,
-                Pitch::DSharpEFlat3,
-                Pitch::E3,
-                Pitch::F3,
-                Pitch::G3,
-                Pitch::GSharpAFlat3,
-                Pitch::A3,
-                Pitch::ASharpBFlat3,
-                Pitch::B3,
-                Pitch::C4,
-                Pitch::CSharpDFlat4,
-                Pitch::D4,
-                Pitch::E4,
-                Pitch::F4,
-                Pitch::FSharpGFlat4,
-                Pitch::G4,
-            ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
@@ -210,41 +214,14 @@ mod test_create_guitar {
         Ok(())
     }
     #[test]
-    fn valid_simple_capo() -> Result<()> {
+    fn valid_simple_capo() -> Result<(), TabError> {
         let tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3])?;
 
         const NUM_FRETS: u8 = 18;
         const CAPO: u8 = 4;
 
         let expected_guitar = Guitar {
-            tuning: create_string_tuning(&[Pitch::GSharpAFlat4, Pitch::DSharpEFlat4, Pitch::B3])?,
             playable_frets: NUM_FRETS - CAPO,
-            range: BTreeSet::from([
-                Pitch::G5,
-                Pitch::D4,
-                Pitch::A5,
-                Pitch::CSharpDFlat5,
-                Pitch::ASharpBFlat4,
-                Pitch::B4,
-                Pitch::GSharpAFlat4,
-                Pitch::D5,
-                Pitch::E4,
-                Pitch::E5,
-                Pitch::C5,
-                Pitch::DSharpEFlat5,
-                Pitch::DSharpEFlat4,
-                Pitch::F4,
-                Pitch::GSharpAFlat5,
-                Pitch::G4,
-                Pitch::C4,
-                Pitch::ASharpBFlat5,
-                Pitch::CSharpDFlat4,
-                Pitch::B3,
-                Pitch::FSharpGFlat4,
-                Pitch::F5,
-                Pitch::A4,
-                Pitch::FSharpGFlat5,
-            ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
@@ -314,59 +291,13 @@ mod test_create_guitar {
         Ok(())
     }
     #[test]
-    fn valid_normal() -> Result<()> {
+    fn valid_normal() -> Result<(), TabError> {
         let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES)?;
 
         const NUM_FRETS: u8 = 18;
 
         let expected_guitar = Guitar {
-            tuning: tuning.clone(),
             playable_frets: NUM_FRETS,
-            range: BTreeSet::from([
-                Pitch::E2,
-                Pitch::F2,
-                Pitch::FSharpGFlat2,
-                Pitch::G2,
-                Pitch::GSharpAFlat2,
-                Pitch::A2,
-                Pitch::ASharpBFlat2,
-                Pitch::B2,
-                Pitch::C3,
-                Pitch::CSharpDFlat3,
-                Pitch::D3,
-                Pitch::DSharpEFlat3,
-                Pitch::E3,
-                Pitch::F3,
-                Pitch::FSharpGFlat3,
-                Pitch::G3,
-                Pitch::GSharpAFlat3,
-                Pitch::A3,
-                Pitch::ASharpBFlat3,
-                Pitch::B3,
-                Pitch::C4,
-                Pitch::CSharpDFlat4,
-                Pitch::D4,
-                Pitch::DSharpEFlat4,
-                Pitch::E4,
-                Pitch::F4,
-                Pitch::FSharpGFlat4,
-                Pitch::G4,
-                Pitch::GSharpAFlat4,
-                Pitch::A4,
-                Pitch::ASharpBFlat4,
-                Pitch::B4,
-                Pitch::C5,
-                Pitch::CSharpDFlat5,
-                Pitch::D5,
-                Pitch::DSharpEFlat5,
-                Pitch::E5,
-                Pitch::F5,
-                Pitch::FSharpGFlat5,
-                Pitch::G5,
-                Pitch::GSharpAFlat5,
-                Pitch::A5,
-                Pitch::ASharpBFlat5,
-            ]),
             string_ranges: BTreeMap::from([
                 (
                     StringNumber::new(1).unwrap(),
@@ -519,17 +450,44 @@ mod test_create_guitar {
 
         Ok(())
     }
-}
 
-/// Check if the number of frets is within a maximum limit and returns an error if it exceeds the limit.
-fn check_fret_number(num_frets: u8) -> Result<()> {
-    const MAX_NUM_FRETS: u8 = 30;
-    if num_frets > MAX_NUM_FRETS {
-        return Err(anyhow!(
-            "Too many frets ({num_frets}). The maximum is {MAX_NUM_FRETS}."
-        ));
+    #[test]
+    fn capo_exceeds_num_frets_returns_typed_error() {
+        let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+        let err = Guitar::new(tuning, 2, 4).unwrap_err();
+        match err {
+            TabError::CapoExceedsFrets { capo, num_frets } => {
+                assert_eq!(capo, 4);
+                assert_eq!(num_frets, 2);
+            }
+            other => panic!("expected CapoExceedsFrets, got {other:?}"),
+        }
     }
 
+    #[test]
+    fn open_pitch_out_of_range_returns_typed_error() {
+        // A single string tuned to the top of the pitch range (B9); any capo offset pushes
+        // the open pitch past B9, which `plus_offset` reports as `None`.
+        let tuning = create_string_tuning(&[Pitch::B9]).unwrap();
+        let err = Guitar::new(tuning, 8, 8).unwrap_err();
+        match err {
+            TabError::OpenPitchOutOfRange { string, semitones } => {
+                assert_eq!(string, 1);
+                assert_eq!(semitones, 8);
+            }
+            other => panic!("expected OpenPitchOutOfRange, got {other:?}"),
+        }
+    }
+}
+
+/// Validates that `num_frets` does not exceed [`Guitar::MAX_NUM_FRETS`].
+fn check_fret_number(num_frets: u8) -> Result<(), TabError> {
+    if num_frets > Guitar::MAX_NUM_FRETS {
+        return Err(TabError::NumFretsTooHigh {
+            num_frets,
+            max: Guitar::MAX_NUM_FRETS,
+        });
+    }
     Ok(())
 }
 #[cfg(test)]
@@ -549,15 +507,27 @@ mod test_check_fret_number {
         assert!(check_fret_number(31).is_err());
         assert!(check_fret_number(100).is_err());
     }
+
+    #[test]
+    fn invalid_returns_typed_error() {
+        let err = check_fret_number(31).unwrap_err();
+        match err {
+            TabError::NumFretsTooHigh { num_frets, max } => {
+                assert_eq!(num_frets, 31);
+                assert_eq!(max, 30);
+            }
+            other => panic!("expected NumFretsTooHigh, got {other:?}"),
+        }
+    }
 }
 
-/// Check if the capo fret number is within a maximum limit and returns an error if it exceeds the limit.
-fn check_capo_number(capo: u8) -> Result<()> {
-    const MAX_CAPO: u8 = 8;
-    if capo > MAX_CAPO {
-        return Err(anyhow!(
-            "The capo fret ({capo}) is too high. The maximum is {MAX_CAPO}."
-        ));
+/// Validates that `capo` does not exceed [`Guitar::MAX_CAPO`].
+fn check_capo_number(capo: u8) -> Result<(), TabError> {
+    if capo > Guitar::MAX_CAPO {
+        return Err(TabError::CapoTooHigh {
+            capo,
+            max: Guitar::MAX_CAPO,
+        });
     }
     Ok(())
 }
@@ -580,6 +550,18 @@ mod test_check_capo_number {
         assert!(check_capo_number(31).is_err());
         assert!(check_capo_number(100).is_err());
     }
+
+    #[test]
+    fn invalid_returns_typed_error() {
+        let err = check_capo_number(9).unwrap_err();
+        match err {
+            TabError::CapoTooHigh { capo, max } => {
+                assert_eq!(capo, 9);
+                assert_eq!(max, 8);
+            }
+            other => panic!("expected CapoTooHigh, got {other:?}"),
+        }
+    }
 }
 
 /// Generates a vector of pitches representing the range of the string.
@@ -588,11 +570,16 @@ mod test_check_capo_number {
 ///
 /// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
 ///   string.
-/// * `num_frets`: The `num_frets` parameter represents the number of
-///   subsequent number of half steps to include in the range.
-fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<Pitch>> {
-    let lowest_pitch_index = Pitch::iter().position(|x| &x == open_string_pitch).unwrap();
-    let needed = num_frets as usize + 1;
+/// * `playable_frets`: the playable fret count: the number of half steps above the open
+///   pitch to include.
+fn create_string_range(
+    open_string_pitch: &Pitch,
+    playable_frets: u8,
+) -> Result<Vec<Pitch>, TabError> {
+    let lowest_pitch_index = Pitch::iter()
+        .position(|x| &x == open_string_pitch)
+        .expect("BUG: every Pitch is produced by Pitch::iter()");
+    let needed = playable_frets as usize + 1;
 
     let string_range: Vec<Pitch> = Pitch::iter()
         .skip(lowest_pitch_index)
@@ -602,21 +589,17 @@ fn create_string_range(open_string_pitch: &Pitch, num_frets: u8) -> Result<Vec<P
     if string_range.len() == needed {
         Ok(string_range)
     } else {
-        let highest_pitch = Pitch::iter()
-            .next_back()
-            .expect("BUG: The Pitch enum should not be empty");
-        let highest_pitch_fret = highest_pitch.index() - open_string_pitch.index();
-        let err_msg = format!("Too many frets ({num_frets}) for string starting at pitch {open_string_pitch}. \
-            The highest pitch is {highest_pitch}, which would only exist at fret number {highest_pitch_fret}.");
-
-        Err(anyhow!(err_msg))
+        Err(TabError::FretRangeExceedsPitchRange {
+            open_pitch: open_string_pitch.to_string(),
+            playable_frets,
+        })
     }
 }
 #[cfg(test)]
 mod test_create_string_range {
     use super::*;
     #[test]
-    fn valid() -> Result<()> {
+    fn valid() -> Result<(), TabError> {
         assert_eq!(create_string_range(&Pitch::E2, 0)?, vec![Pitch::E2]);
         assert_eq!(
             create_string_range(&Pitch::E2, 3)?,
@@ -643,16 +626,30 @@ mod test_create_string_range {
         Ok(())
     }
     #[test]
-    fn invalid() {
-        let error = create_string_range(&Pitch::G9, 5).unwrap_err();
-        let error_msg = format!("{error}");
-        let expected_error_msg = "Too many frets (5) for string starting at pitch G9. The highest pitch is B9, which would only exist at fret number 4.";
-        assert_eq!(error_msg, expected_error_msg);
+    fn invalid_returns_typed_error() {
+        let err = create_string_range(&Pitch::G9, 5).unwrap_err();
+        match err {
+            TabError::FretRangeExceedsPitchRange {
+                open_pitch,
+                playable_frets,
+            } => {
+                assert_eq!(open_pitch, "G9");
+                assert_eq!(playable_frets, 5);
+            }
+            other => panic!("expected FretRangeExceedsPitchRange, got {other:?}"),
+        }
 
-        let error = create_string_range(&Pitch::E2, 100).unwrap_err();
-        let error_msg = format!("{error}");
-        let expected_error_msg = "Too many frets (100) for string starting at pitch E2. The highest pitch is B9, which would only exist at fret number 91.";
-        assert_eq!(error_msg, expected_error_msg);
+        let err = create_string_range(&Pitch::E2, 100).unwrap_err();
+        match err {
+            TabError::FretRangeExceedsPitchRange {
+                open_pitch,
+                playable_frets,
+            } => {
+                assert_eq!(open_pitch, "E2");
+                assert_eq!(playable_frets, 100);
+            }
+            other => panic!("expected FretRangeExceedsPitchRange, got {other:?}"),
+        }
     }
 }
 
@@ -660,7 +657,7 @@ mod test_create_string_range {
 ///
 /// An empty vector indicates the pitch cannot be played on any string of this guitar.
 #[must_use]
-pub fn generate_pitch_fingerings(
+pub(crate) fn generate_pitch_fingerings(
     string_ranges: &BTreeMap<StringNumber, Box<[Pitch]>>,
     pitch: &Pitch,
 ) -> PitchVec<PitchFingering> {
@@ -685,7 +682,7 @@ mod test_generate_pitch_fingering {
     use super::*;
 
     #[test]
-    fn valid_normal() -> Result<()> {
+    fn valid_normal() -> Result<(), TabError> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -766,7 +763,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn valid_simple() -> Result<()> {
+    fn valid_simple() -> Result<(), TabError> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -806,7 +803,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn valid_few_frets() -> Result<()> {
+    fn valid_few_frets() -> Result<(), TabError> {
         const NUM_FRETS: u8 = 2;
         let string_ranges = BTreeMap::from([
             (
@@ -847,7 +844,7 @@ mod test_generate_pitch_fingering {
     }
 
     #[test]
-    fn valid_impossible_pitch() -> Result<()> {
+    fn valid_impossible_pitch() -> Result<(), TabError> {
         const NUM_FRETS: u8 = 12;
         let string_ranges = BTreeMap::from([
             (
@@ -885,5 +882,22 @@ mod test_generate_pitch_fingering {
             vec![]
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test_create_string_tuning_bounds {
+    use super::*;
+
+    #[test]
+    fn over_long_slice_is_rejected() {
+        // 13 open strings exceeds StringNumber::MAX (12). The Result-collect short-circuits
+        // at the first over-max string number, so the function rejects rather than truncating.
+        let pitches = vec![Pitch::E2; 13];
+        let err = create_string_tuning(&pitches).unwrap_err();
+        assert!(
+            matches!(err, TabError::StringNumberOutOfRange { value: 13, max: 12 }),
+            "got {err:?}"
+        );
     }
 }

@@ -1,20 +1,22 @@
 use crate::{
     arrangement::{BeatVec, Line},
-    guitar::{create_string_tuning, STD_6_STRING_TUNING_OPEN_PITCHES},
+    guitar::{STD_6_STRING_TUNING_OPEN_PITCHES, create_string_tuning},
     pitch::Pitch,
     string_number::StringNumber,
 };
-use anyhow::{anyhow, Result};
 use itertools::Itertools;
+use memoize::memoize;
 use regex::{Regex, RegexBuilder};
-use std::{collections::BTreeMap, result::Result::Ok, sync::Arc};
+use serde::Serialize;
+use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
-use strum::VariantNames;
-use strum_macros::{EnumString, VariantNames};
+use strum::IntoEnumIterator;
+use strum_macros::{EnumIter, EnumString};
+use tsify_next::Tsify;
 use wasm_bindgen::prelude::*;
 
 const PITCH_PATTERN: &str =
-    r"(?P<three_char_pitch>[A-G][#|♯|b|♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
+    r"(?P<three_char_pitch>[A-G][#♯b♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
 
 #[cfg(test)]
 fn test_pitch_regex() -> Regex {
@@ -28,8 +30,10 @@ fn test_pitch_regex() -> Regex {
 ///
 /// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
 /// attribute requires external matches to include a wildcard arm.
-#[derive(Debug, EnumString, VariantNames)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, EnumIter, Serialize, Tsify)]
 #[strum(ascii_case_insensitive)]
+#[tsify(into_wasm_abi)]
+#[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub enum TuningName {
     OpenG,
@@ -44,64 +48,84 @@ pub enum TuningName {
     OpenE,
 }
 
-/// Returns the list of supported tuning names as serialized string values, for the WASM
-/// boundary.
-///
-/// # Errors
-///
-/// Returns an error if the tuning name list fails to serialize.
-#[wasm_bindgen]
-#[cfg(not(tarpaulin_include))]
-pub fn get_tuning_names() -> Result<JsValue, JsError> {
-    let tuning_names: Vec<String> = TuningName::VARIANTS.iter().map(|&x| x.into()).collect_vec();
-
-    Ok(serde_wasm_bindgen::to_value(&tuning_names)?)
+/// Returns the supported `TuningName` variants, typed for JS consumption via tsify.
+#[wasm_bindgen(js_name = "getTuningNames")]
+#[must_use]
+pub fn get_tuning_names() -> Vec<TuningName> {
+    TuningName::iter().collect()
 }
 
 /// Returns the 6-element semitone offsets for a named tuning, relative to standard 6-string
 /// tuning.
 ///
-/// Falls back to standard tuning (all zeroes) if `tuning_name` does not match any known
-/// tuning, including empty or unrecognized input.
-#[must_use]
-pub fn parse_tuning(tuning_name: &str) -> [i8; 6] {
+/// Accepts the case-insensitive literal `"standard"` as standard tuning (all-zero offsets).
+/// Returns `TabError::TuningNameUnknown { value }` for any string that does not match a
+/// `TuningName` variant or `"standard"`.
+pub fn parse_tuning(tuning_name: &str) -> Result<[i8; 6], crate::error::TabError> {
+    // Offsets are semitones per string relative to standard tuning, ordered string 1
+    // (highest) to string 6 (lowest).
     match TuningName::from_str(tuning_name) {
-        Ok(TuningName::OpenG) => [-2, 0, 0, 0, -2, -2],
-        Ok(TuningName::OpenD) => [-2, 0, 0, -1, -2, -2],
-        Ok(TuningName::C6) => [-4, 0, -2, 0, 1, 0],
-        Ok(TuningName::Dsus4) => [-2, 0, 0, 0, -2, -2],
-        Ok(TuningName::DropD) => [-2, 0, 0, 0, 0, 0],
-        Ok(TuningName::DropC) => [-4, -2, -2, -2, -2, -2],
-        Ok(TuningName::OpenC) => [-4, -2, -2, 0, 1, 0],
-        Ok(TuningName::DropB) => [-5, -3, -3, -3, -3, -3],
-        Ok(TuningName::OpenE) => [0, -2, -2, -2, 0, 0],
-        Err(_) => [0, 0, 0, 0, 0, 0],
+        Ok(TuningName::OpenG) => Ok([-2, 0, 0, 0, -2, -2]),
+        Ok(TuningName::OpenD) => Ok([-2, 0, 0, -1, -2, -2]),
+        Ok(TuningName::C6) => Ok([-4, 0, -2, 0, 1, 0]),
+        Ok(TuningName::Dsus4) => Ok([-2, 0, 0, 0, -2, -2]),
+        Ok(TuningName::DropD) => Ok([-2, 0, 0, 0, 0, 0]),
+        Ok(TuningName::DropC) => Ok([-4, -2, -2, -2, -2, -2]),
+        Ok(TuningName::OpenC) => Ok([-4, -2, -2, 0, 1, 0]),
+        Ok(TuningName::DropB) => Ok([-5, -3, -3, -3, -3, -3]),
+        Ok(TuningName::OpenE) => Ok([0, -2, -2, -2, 0, 0]),
+        Err(_) if tuning_name.eq_ignore_ascii_case("standard") => Ok([0; 6]),
+        Err(_) => Err(crate::error::TabError::TuningNameUnknown {
+            value: tuning_name.to_owned(),
+        }),
     }
 }
 #[cfg(test)]
 mod test_parse_tuning {
     use super::*;
+    use crate::error::TabError;
 
     #[test]
-    fn standard_tuning() {
-        assert_eq!(parse_tuning("standard"), [0, 0, 0, 0, 0, 0]);
+    fn standard_tuning_returns_zero_offsets() {
+        assert_eq!(parse_tuning("standard").unwrap(), [0, 0, 0, 0, 0, 0]);
     }
+
+    #[test]
+    fn standard_is_case_insensitive() {
+        assert_eq!(parse_tuning("STANDARD").unwrap(), [0, 0, 0, 0, 0, 0]);
+        assert_eq!(parse_tuning("Standard").unwrap(), [0, 0, 0, 0, 0, 0]);
+    }
+
+    #[test]
+    fn empty_string_returns_tuning_name_unknown() {
+        let err = parse_tuning("").unwrap_err();
+        match err {
+            TabError::TuningNameUnknown { value } => assert_eq!(value, ""),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
+        }
+    }
+
     #[test]
     fn non_standard_tunings() {
-        assert_eq!(parse_tuning("openg"), [-2, 0, 0, 0, -2, -2]);
-        assert_eq!(parse_tuning("opend"), [-2, 0, 0, -1, -2, -2]);
-        assert_eq!(parse_tuning("c6"), [-4, 0, -2, 0, 1, 0]);
-        assert_eq!(parse_tuning("dadgad"), [-2, 0, 0, 0, -2, -2]);
-        assert_eq!(parse_tuning("dsus4"), [-2, 0, 0, 0, -2, -2]);
-        assert_eq!(parse_tuning("dropd"), [-2, 0, 0, 0, 0, 0]);
-        assert_eq!(parse_tuning("dropc"), [-4, -2, -2, -2, -2, -2]);
-        assert_eq!(parse_tuning("openc"), [-4, -2, -2, 0, 1, 0]);
-        assert_eq!(parse_tuning("dropb"), [-5, -3, -3, -3, -3, -3]);
-        assert_eq!(parse_tuning("opene"), [0, -2, -2, -2, 0, 0]);
+        assert_eq!(parse_tuning("openg").unwrap(), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("opend").unwrap(), [-2, 0, 0, -1, -2, -2]);
+        assert_eq!(parse_tuning("c6").unwrap(), [-4, 0, -2, 0, 1, 0]);
+        assert_eq!(parse_tuning("dadgad").unwrap(), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("dsus4").unwrap(), [-2, 0, 0, 0, -2, -2]);
+        assert_eq!(parse_tuning("dropd").unwrap(), [-2, 0, 0, 0, 0, 0]);
+        assert_eq!(parse_tuning("dropc").unwrap(), [-4, -2, -2, -2, -2, -2]);
+        assert_eq!(parse_tuning("openc").unwrap(), [-4, -2, -2, 0, 1, 0]);
+        assert_eq!(parse_tuning("dropb").unwrap(), [-5, -3, -3, -3, -3, -3]);
+        assert_eq!(parse_tuning("opene").unwrap(), [0, -2, -2, -2, 0, 0]);
     }
+
     #[test]
-    fn unknown_tuning() {
-        assert_eq!(parse_tuning("unknown_tuning"), [0, 0, 0, 0, 0, 0]);
+    fn unrecognized_name_returns_tuning_name_unknown() {
+        let err = parse_tuning("opan G").unwrap_err();
+        match err {
+            TabError::TuningNameUnknown { value } => assert_eq!(value, "opan G"),
+            other => panic!("expected TuningNameUnknown, got {other:?}"),
+        }
     }
 }
 
@@ -176,7 +200,10 @@ mod test_create_string_tuning_offset {
     }
 }
 
-use memoize::memoize;
+/// Upper bound on input lines. Ties to `u16::MAX` so the pathfinding graph's
+/// `Node::line_index` (`u16`) can address every beat without truncating.
+pub(crate) const MAX_INPUT_LINES: usize = u16::MAX as usize;
+
 /// Parses a newline-delimited input string into a sequence of `Line` values.
 ///
 /// Each input line is classified as `Playable` (one or more pitches, e.g. `"A3"` or
@@ -185,25 +212,43 @@ use memoize::memoize;
 ///
 /// # Errors
 ///
-/// Returns an error listing every unparseable substring with its 1-indexed line number.
+/// Returns [`crate::error::TabError::Parse`] listing every unparseable substring with its
+/// 1-indexed line number, or [`crate::error::TabError::InputTooManyLines`] when the input
+/// exceeds `MAX_INPUT_LINES` lines.
 #[memoize(Capacity: 10)]
-pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, Arc<anyhow::Error>> {
+pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, crate::error::TabError> {
+    // Reject pathological input up front so every beat index stays within the u16 range
+    // used by the pathfinding graph. `take` short-circuits, so an enormous paste is not
+    // fully scanned. A real transcription is far below this bound. The cap is its own
+    // variant rather than a Parse error because no single line is at fault.
+    if input.lines().take(MAX_INPUT_LINES + 1).count() > MAX_INPUT_LINES {
+        return Err(crate::error::TabError::InputTooManyLines {
+            max: MAX_INPUT_LINES as u32,
+        });
+    }
+
     let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
         .case_insensitive(true)
         .build()
         .expect("BUG: Regex pattern should be valid");
 
-    let (parsed_lines, errors): (Vec<Line<BeatVec<Pitch>>>, Vec<String>) = input
+    let (parsed_lines, errors): (
+        Vec<Line<BeatVec<Pitch>>>,
+        Vec<Vec<crate::error::ParseError>>,
+    ) = input
         .lines()
         .enumerate()
         .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
         .partition_map(|result| match result {
             Ok(line) => itertools::Either::Left(line),
-            Err(err) => itertools::Either::Right(format!("{err}")),
+            Err(errs) => itertools::Either::Right(errs),
         });
 
-    if !errors.is_empty() {
-        return Err(anyhow!(errors.join("\n")).into());
+    let flat_errors: Vec<crate::error::ParseError> = errors.into_iter().flatten().collect();
+    if !flat_errors.is_empty() {
+        return Err(crate::error::TabError::Parse {
+            errors: flat_errors,
+        });
     }
 
     Ok(parsed_lines)
@@ -229,17 +274,44 @@ mod test_parse_lines {
     fn reports_line_and_content_for_unparseable_input() {
         let input = "A3xyz\nE2\n\nG4BB.2\n-\nE4".to_owned();
 
-        let error = parse_lines(input).unwrap_err();
-        let error_msg = format!("{error}");
-
+        let err = parse_lines(input).unwrap_err();
         assert_eq!(
-            error_msg,
-            "Input 'xyz' on line 1 could not be parsed into a pitch.\nInput 'BB.2' on line 4 could not be parsed into a pitch."
+            err,
+            crate::error::TabError::Parse {
+                errors: vec![
+                    crate::error::ParseError {
+                        line: 1,
+                        text: "xyz".to_owned()
+                    },
+                    crate::error::ParseError {
+                        line: 4,
+                        text: "BB.2".to_owned()
+                    },
+                ],
+            },
+        );
+    }
+    #[test]
+    fn rejects_input_beyond_max_lines() {
+        // One line past the cap fails fast as InputTooManyLines, instead of letting the beat
+        // count overflow the u16 pathfinding index.
+        let input = "A2\n".repeat(MAX_INPUT_LINES + 1);
+
+        let err = parse_lines(input).unwrap_err();
+        assert_eq!(
+            err,
+            crate::error::TabError::InputTooManyLines {
+                max: MAX_INPUT_LINES as u32,
+            }
         );
     }
 }
 
-fn parse_line(regex: &Regex, input_index: usize, mut input_line: &str) -> Result<Line<Vec<Pitch>>> {
+fn parse_line(
+    regex: &Regex,
+    input_index: usize,
+    mut input_line: &str,
+) -> Result<Line<Vec<Pitch>>, Vec<crate::error::ParseError>> {
     input_line = remove_comments(input_line);
     let line_content: String = remove_whitespace(input_line);
 
@@ -291,13 +363,10 @@ mod test_parse_line {
     }
     #[test]
     fn reports_error_for_unparseable_text() {
-        let error = parse_line(&test_pitch_regex(), 4, "  Invalid Text  ").unwrap_err();
-        let error_msg = format!("{error}");
-
-        assert_eq!(
-            error_msg,
-            "Input 'InvalidText' on line 5 could not be parsed into a pitch."
-        );
+        let errors = parse_line(&test_pitch_regex(), 4, "  Invalid Text  ").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 5);
+        assert_eq!(errors[0].text, "InvalidText");
     }
 }
 
@@ -409,9 +478,13 @@ mod test_parse_measure_break {
     }
 }
 
-/// Parses input line to extract valid musical pitches, returning an error if any part of the
-/// input line cannot be parsed into a pitch.
-fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Line<Vec<Pitch>>> {
+/// Parses input line to extract valid musical pitches, returning structured errors for any
+/// substring that cannot be parsed.
+fn parse_pitch(
+    regex: &Regex,
+    input_index: usize,
+    input_line: &str,
+) -> Result<Line<Vec<Pitch>>, Vec<crate::error::ParseError>> {
     let mut matched_mask = vec![false; input_line.len()];
     let mut matched_pitches: Vec<Pitch> = Vec::new();
 
@@ -435,22 +508,32 @@ fn parse_pitch(regex: &Regex, input_index: usize, input_line: &str) -> Result<Li
         .collect();
 
     if !unmatched_indices.is_empty() {
-        let line_number = input_index + 1;
+        let line_number = (input_index + 1) as u32;
         let consecutive_indices = consecutive_slices(&unmatched_indices);
-        let error_msg = consecutive_indices
+        let errors: Vec<crate::error::ParseError> = consecutive_indices
             .into_iter()
             .map(|unmatched_input_indices| {
-                let first_idx = *unmatched_input_indices.first().unwrap();
-                let last_idx = *unmatched_input_indices.last().unwrap();
-                let unmatched_input = &input_line[first_idx..=last_idx];
-                format!(
-                    "Input '{unmatched_input}' on line {line_number} could not be parsed into a pitch."
-                )
+                let first_idx = *unmatched_input_indices
+                    .first()
+                    .expect("BUG: consecutive_slices never yields an empty group");
+                let last_idx = *unmatched_input_indices
+                    .last()
+                    .expect("BUG: consecutive_slices never yields an empty group");
+                // Collect by char so the unmatched run can never slice across a UTF-8
+                // boundary: `matched_mask` is byte-indexed, so `input_line[first..=last]`
+                // could panic on a non-boundary index.
+                let unmatched_input: String = input_line
+                    .char_indices()
+                    .filter(|(byte_idx, _)| (first_idx..=last_idx).contains(byte_idx))
+                    .map(|(_, ch)| ch)
+                    .collect();
+                crate::error::ParseError {
+                    line: line_number,
+                    text: unmatched_input,
+                }
             })
-            .collect::<Vec<_>>()
-            .join("\n");
-
-        return Err(anyhow!(error_msg));
+            .collect();
+        return Err(errors);
     }
 
     Ok(Line::Playable(matched_pitches))
@@ -460,16 +543,15 @@ mod test_parse_pitch {
     use super::*;
 
     #[test]
-    fn single_natural_pitch() -> Result<()> {
+    fn single_natural_pitch() {
         assert_eq!(
-            parse_pitch(&test_pitch_regex(), 0, "A0")?,
+            parse_pitch(&test_pitch_regex(), 0, "A0").unwrap(),
             Line::Playable(vec![Pitch::A0])
         );
         assert_eq!(
-            parse_pitch(&test_pitch_regex(), 0, "E6")?,
+            parse_pitch(&test_pitch_regex(), 0, "E6").unwrap(),
             Line::Playable(vec![Pitch::E6])
         );
-        Ok(())
     }
     #[test]
     fn single_sharp_pitch() {
@@ -488,6 +570,15 @@ mod test_parse_pitch {
             parse_pitch(&test_pitch_regex(), 0, "Bb2").unwrap(),
             Line::Playable(vec![Pitch::ASharpBFlat2])
         );
+    }
+    #[test]
+    fn multibyte_unmatched_char_reports_full_char() {
+        // A multibyte character that matches no pitch surfaces intact in the error text,
+        // never sliced across a UTF-8 boundary.
+        let errors = parse_pitch(&test_pitch_regex(), 0, "A2🎸").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].text, "🎸");
+        assert_eq!(errors[0].line, 1);
     }
     #[test]
     fn case_insensitivity() {
@@ -521,35 +612,30 @@ mod test_parse_pitch {
     }
     #[test]
     fn invalid_typo() {
-        let error_msg = format!(
-            "{}",
-            parse_pitch(&test_pitch_regex(), 12, "ZA2G#444B3").unwrap_err()
-        );
-        let expected_error_msg = "Input 'Z' on line 13 could not be parsed into a pitch.\nInput '44' on line 13 could not be parsed into a pitch.";
-        assert_eq!(error_msg, expected_error_msg);
+        let errors = parse_pitch(&test_pitch_regex(), 12, "ZA2G#444B3").unwrap_err();
+        assert_eq!(errors.len(), 2);
+        assert_eq!(errors[0].line, 13);
+        assert_eq!(errors[0].text, "Z");
+        assert_eq!(errors[1].line, 13);
+        assert_eq!(errors[1].text, "44");
     }
     #[test]
     fn invalid_pitch() {
-        let error_msg = format!("{}", parse_pitch(&test_pitch_regex(), 28, "Fb3").unwrap_err());
-        let expected_error_msg = "Input 'Fb3' on line 29 could not be parsed into a pitch.";
-        assert_eq!(error_msg, expected_error_msg);
+        let errors = parse_pitch(&test_pitch_regex(), 28, "Fb3").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 29);
+        assert_eq!(errors[0].text, "Fb3");
     }
     #[test]
     fn invalid_random() {
-        let error_msg = format!(
-            "{}",
-            parse_pitch(&test_pitch_regex(), 0, "baS3Q-hNr").unwrap_err()
-        );
-        let expected_error_msg = "Input 'baS3Q-hNr' on line 1 could not be parsed into a pitch.";
-        assert_eq!(error_msg, expected_error_msg);
+        let errors = parse_pitch(&test_pitch_regex(), 0, "baS3Q-hNr").unwrap_err();
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 1);
+        assert_eq!(errors[0].text, "baS3Q-hNr");
     }
 }
 
-/// Returns a vector of consecutive slices of the input numbers.
-///
-/// This function does not sort the input vector and the consecutive slices are grouped together based
-/// on the order of the input numbers as received.
-/// Each returned slice is a reference to a subarray of `usize` elements from the original data array.
+/// Splits `numbers` into runs of consecutive values, preserving input order (no sorting).
 fn consecutive_slices(numbers: &[usize]) -> Vec<&[usize]> {
     let mut slice_start = 0;
     let mut result = Vec::with_capacity(numbers.len());
@@ -597,5 +683,31 @@ mod test_consecutive_slices {
         ];
 
         assert_eq!(consecutive_slices(&flat_nums), consecutive_nums);
+    }
+}
+
+#[cfg(test)]
+mod test_get_tuning_names {
+    use super::*;
+
+    #[test]
+    fn returns_non_empty_set() {
+        assert!(!get_tuning_names().is_empty());
+    }
+}
+
+#[cfg(test)]
+mod test_pitch_pattern {
+    use super::*;
+
+    #[test]
+    fn accidentals_match_but_literal_pipe_does_not() {
+        let re = test_pitch_regex();
+        assert!(re.is_match("C#1"));
+        assert!(re.is_match("Cb1"));
+        assert!(re.is_match("C\u{266f}1")); // C sharp
+        assert!(re.is_match("C\u{266d}1")); // C flat
+        // A pipe is not an accidental; the character class must not accept it.
+        assert!(!re.is_match("C|1"));
     }
 }

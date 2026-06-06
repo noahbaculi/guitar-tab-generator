@@ -1,133 +1,710 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WASM Example</title>
+    <title>Guitar Tab Generator -- v2.0.0 example</title>
+    <style>
+        :root {
+            --bg: #fafafa;
+            --panel: #ffffff;
+            --ink: #1a1a1a;
+            --muted: #666;
+            --border: #ddd;
+            --accent: #2c6fbb;
+            --err: #b00020;
+            --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 16px;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+        h1 {
+            margin: 0 0 16px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 360px) 1fr;
+            gap: 16px;
+        }
+        @media (max-width: 720px) {
+            .grid { grid-template-columns: 1fr; }
+        }
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .panel > h2 {
+            margin: 0 0 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .control { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+        .control label { width: 110px; color: var(--muted); }
+        .control input[type="number"] { width: 60px; }
+        .control input[type="range"] { flex: 1; }
+        .control .value { width: 32px; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+        .field-error { color: var(--err); font-size: 12px; margin-left: 118px; }
+        .input-row { display: grid; grid-template-columns: 28px 1fr; gap: 4px; }
+        .input-row ol {
+            list-style: none;
+            margin: 0;
+            padding: 6px 0;
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+            text-align: right;
+            line-height: 1.5;
+        }
+        .input-row ol li.bad { color: var(--err); font-weight: bold; }
+        textarea#input {
+            width: 100%;
+            min-height: 240px;
+            font-family: var(--mono);
+            font-size: 12px;
+            line-height: 1.5;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            resize: vertical;
+        }
+        #parse-errors {
+            color: var(--err);
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 8px;
+            min-height: 1.5em;
+        }
+        #tab-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+        #tab-header strong { color: var(--ink); }
+        #tab-header button {
+            border: 1px solid var(--border);
+            background: var(--panel);
+            border-radius: 4px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        #tab-header button:disabled { opacity: 0.4; cursor: default; }
+        pre#tab {
+            font-family: var(--mono);
+            font-size: 12px;
+            white-space: pre;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 8px;
+            margin: 0;
+            min-height: 200px;
+            overflow-x: auto;
+        }
+        #tab.error { color: var(--err); }
+        details { margin-top: 12px; }
+        details summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+        details pre {
+            font-family: var(--mono);
+            font-size: 11px;
+            background: #f4f4f4;
+            border-radius: 4px;
+            padding: 8px;
+            margin-top: 8px;
+            max-height: 240px;
+            overflow: auto;
+            white-space: pre-wrap;
+        }
+    </style>
 </head>
 
 <body>
-    <button id="generateButton">Generate Arrangement</button>
+    <h1>Guitar Tab Generator -- v2.0.0 example</h1>
+
+    <div class="grid">
+        <section class="panel" aria-label="Input">
+            <h2>Input</h2>
+
+            <div class="control">
+                <label for="preset">Preset</label>
+                <select id="preset"></select>
+            </div>
+
+            <div class="input-row">
+                <ol id="line-markers" aria-hidden="true"></ol>
+                <textarea id="input" spellcheck="false" aria-label="Raw pitch input"></textarea>
+            </div>
+
+            <div id="parse-errors" role="alert"></div>
+
+            <h2 style="margin-top: 16px">Pathfinding controls</h2>
+
+            <div class="control">
+                <label for="tuning">Tuning</label>
+                <select id="tuning"></select>
+            </div>
+            <div id="tuningName-error" class="field-error"></div>
+            <div id="guitar-error" class="field-error"></div>
+
+            <div class="control">
+                <label for="capo">Capo</label>
+                <input id="capo" type="number" min="0" max="24" value="0">
+            </div>
+
+            <div class="control">
+                <label for="frets">Frets</label>
+                <input id="frets" type="number" min="1" max="36" value="18">
+            </div>
+
+            <div class="control">
+                <label for="num-arrangements">Arrangements</label>
+                <!-- No min/max attributes: the WASM boundary owns the 1..=20 range and
+                     should be the only enforcement point. Step 9 of the smoke test below
+                     relies on a typed value of 21 reaching the boundary. -->
+                <input id="num-arrangements" type="number" value="1">
+            </div>
+            <div id="num-arrangements-error" class="field-error"></div>
+
+            <div class="control">
+                <label for="filter-on">Filter span</label>
+                <input id="filter-on" type="checkbox">
+                <input id="filter-value" type="number" min="0" max="24" value="4" disabled>
+            </div>
+        </section>
+
+        <section class="panel" aria-label="Output">
+            <h2>Tab</h2>
+
+            <div id="tab-header">
+                <button id="prev" type="button" aria-label="Previous arrangement" disabled>&lt;</button>
+                <button id="next" type="button" aria-label="Next arrangement" disabled>&gt;</button>
+                <span id="tab-meta"></span>
+            </div>
+
+            <div id="field-error-default" class="field-error" role="alert"></div>
+
+            <pre id="tab"></pre>
+
+            <h2 style="margin-top: 16px">Render controls</h2>
+
+            <div class="control">
+                <label for="width">Width</label>
+                <input id="width" type="range" min="20" max="120" value="40">
+                <span class="value" id="width-value">40</span>
+            </div>
+
+            <div class="control">
+                <label for="padding">Padding</label>
+                <input id="padding" type="range" min="0" max="4" value="1">
+                <span class="value" id="padding-value">1</span>
+            </div>
+
+            <div class="control">
+                <label for="playback-on">Playback</label>
+                <input id="playback-on" type="checkbox">
+                <input id="playback" type="range" min="0" max="0" value="0" disabled>
+                <span class="value" id="playback-value">off</span>
+            </div>
+
+            <details id="debug">
+                <summary>Debug: normalizedInput</summary>
+                <pre id="debug-content"></pre>
+            </details>
+        </section>
+    </div>
 
     <script type="module">
-        import init, { wasm_create_guitar_compositions, get_tuning_names } from '../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js';
-        async function run() {
-            await init();
-        }
-        run();
+        import init, { generateArrangements, getTuningNames } from "../pkg/wasm_guitar_tab_generator/guitar_tab_generator.js";
+        await init();
 
-        let input_string = `E4
-            Eb4
-            E4
-            Eb4
-            E4
-            B3
-            D4
-            C4
+        // Manual smoke-test checklist (run after any change to this file):
+        //
+        //  1. Page loads; default "Melody" preset renders a tab.
+        //  2. Type garbage on line 2 of the textarea; within ~150ms the parse-error pane
+        //     lists `line 2: "<text>"`, the line-marker `<ol>` shows line 2 in red, and
+        //     the tab pane clears. Fix the input: gutter returns to grey, tab renders.
+        //  3. Slide `width` from 40 to 100; the tab re-flows on every input event with
+        //     no perceptible lag.
+        //  4. Change `Tuning` to `dropD`; the tab regenerates and differs.
+        //  5. Set `Arrangements` to 3; header reads `Arrangement 1 / 3`; `[>]` walks to
+        //     arrangement 2 with different (difficulty, span).
+        //  6. Set `Filter span` to 0, then enable the checkbox; the tab pane reads "No
+        //     arrangements match the current filter." (Default value is 4; arrangements
+        //     remain visible when the checkbox is toggled with the default.)
+        //  7. Enable `Playback`; move the slider; the rendered tab shows v / ^ indicators
+        //     walking through beats.
+        //  8. Open `Debug: normalizedInput`; JSON pretty-prints the current beat sequence.
+        //  9. Type `21` into `Arrangements` and Tab away; the num-arrangements-error slot
+        //     reads "Arrangements must be between 1 and 20 inclusive (got 21)." built from
+        //     the typed `numArrangementsOutOfRange` payload (value/max), not a `.message` field.
+        // 10. Reload the page; no console error about a leaked handle.
+        //
+        // The library uses tsify-next typed bindings; if you're editing in an editor with
+        // TypeScript awareness, prefer reading
+        // `pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts` for the exact wire
+        // shape over inferring from this file.
 
-            A2A3
-            E3
-            A3
-            C3
-            E3
-            A3
+        const PRESETS = {
+            melody: `E4
+Eb4
+E4
+Eb4
+E4
+B3
+D4
+C4
 
-            E3B3
-            E3
-            Ab3
-            E3
-            Ab3
-            B3
+A2A3
+E3
+A3
+C3
+E3
+A3
 
-            A2C4
-            E3
-            A3
-            E3
+E3B3
+E3
+Ab3
+E3
+Ab3
+B3
 
-            E4
-            Eb4
-            E4
-            Eb4
-            E4
-            B3
-            D4
-            C4
+A2C4
+E3
+A3
+E3
 
-            A2A3
-            E3
-            A3
-            C3
-            E3
-            A3
+E4
+Eb4
+E4
+Eb4
+E4
+B3
+D4
+C4
 
-            E3B3
-            E3
-            Ab3
-            E3
-            C4
-            B3
-            A3
-
-            C4
-            C4
-            C4
-            C4
-            F4
-            E4
-            E4
-            D4
-
-            Bb4
-            A4
-            A4
-            G4
-            F4
-            E4
-            D4
-            C4
-
-            Bb3
-            Bb3
-            A3
-            G3
-            A3
-            Bb3
-            C4
-
-            D4
-            Eb4
-            Eb4
-            E4
-            F4
-            A3
-            C4
-
-            D4
-            B3
-            C4`;
-        let input = {
-            pitches: input_string,
-            tuning_name: "standard",
-            guitar_num_frets: 18,
-            guitar_capo: 0,
-            num_arrangements: 1,
-            width: 40,
-            padding: 1,
-            playback_index: 3
+A2A3
+E3
+A3
+C3`,
+            chords: `C3E3G3C4
+-
+G2D3G3B3D4
+-
+A2E3A3C4E4
+-
+F2C3F3A3C4`,
+            fingerpicking: `E2
+B3
+G3
+D4
+G3
+B3
+E2
+B3
+A2
+C4
+E3
+A3
+E3
+C4
+A2
+C4`,
         };
 
-        document.getElementById("generateButton").addEventListener("click", () => {
-            let startTime = performance.now();
-            let compositions = wasm_create_guitar_compositions(input);
-            let endTime = performance.now();
-            let duration = (endTime - startTime).toFixed(1);
-            console.log(`Arrangement generated in ${duration} milliseconds:`, compositions[0]);
-            console.log(`Tab:\n${compositions[0].tab}`);
+        // Preset select
+        const presetSelect = document.getElementById("preset");
+        for (const [key, label] of [["melody", "Melody"], ["chords", "Chord progression"], ["fingerpicking", "Fingerpicking"]]) {
+            const opt = document.createElement("option");
+            opt.value = key;
+            opt.textContent = label;
+            presetSelect.appendChild(opt);
+        }
+        presetSelect.addEventListener("change", () => {
+            const text = PRESETS[presetSelect.value];
+            if (text !== undefined) {
+                document.getElementById("input").value = text;
+            }
+            regenerate();
+        });
 
-            // console.log(get_tuning_names());
+        // Tuning select. "standard" is not part of the TuningName enum but is accepted
+        // case-insensitively by the parser; we prepend it as the default. Prepending
+        // intentionally widens the option value type from `TuningName` to `string`; a
+        // future TS-strict pass should keep this widening rather than narrow back.
+        const tuningSelect = document.getElementById("tuning");
+        for (const name of ["standard", ...getTuningNames()]) {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            tuningSelect.appendChild(opt);
+        }
+
+        // Apply the default preset on load.
+        document.getElementById("input").value = PRESETS.melody;
+
+        const state = {
+            currentSet: null,    // ArrangementSet handle (opaque)
+            arrangementIndex: 0,
+        };
+
+        function readPathfindingInputs() {
+            return {
+                input: document.getElementById("input").value,
+                tuningName: document.getElementById("tuning").value,
+                guitarCapo: Number(document.getElementById("capo").value),
+                guitarNumFrets: Number(document.getElementById("frets").value),
+                numArrangements: Number(document.getElementById("num-arrangements").value),
+                // Tsify generates `number | undefined` for `Option<u8>` fields.
+                // Pass `undefined` (not `null`) when the filter is off so strict TS
+                // consumers of the generated `.d.ts` see a matching type.
+                maxFretSpanFilter: document.getElementById("filter-on").checked
+                    ? Number(document.getElementById("filter-value").value)
+                    : undefined,
+            };
+        }
+
+        function readRenderInputs() {
+            const playbackOn = document.getElementById("playback-on").checked;
+            return {
+                width: Number(document.getElementById("width").value),
+                padding: Number(document.getElementById("padding").value),
+                playback: playbackOn ? Number(document.getElementById("playback").value) : null,
+            };
+        }
+
+        function regenerate() {
+            if (state.currentSet) {
+                state.currentSet.free();
+                state.currentSet = null;
+            }
+            const tabInput = readPathfindingInputs();
+            let set;
+            try {
+                set = generateArrangements(tabInput);
+            } catch (err) {
+                renderTabError(err);
+                refreshNavButtons();
+                return;
+            }
+            state.currentSet = set;
+            clearErrorPanes();
+            document.getElementById("tab").classList.remove("error");
+            state.arrangementIndex = Math.min(state.arrangementIndex, Math.max(0, set.len - 1));
+            // Configure the playback slider to span the beat count (Playable + Rest only).
+            const beats = set.normalizedInput;
+            const playbackBeats = beats.filter((b) => b.kind !== "measureBreak").length;
+            const slider = document.getElementById("playback");
+            slider.max = Math.max(0, playbackBeats - 1);
+            if (Number(slider.value) > slider.max) slider.value = slider.max;
+            // Cache the normalized input on the regenerate closure for Task 7.
+            state.normalizedInput = beats;
+            refreshDebugPane();
+            rerender();
+        }
+
+        function rerender() {
+            const set = state.currentSet;
+            const tabEl = document.getElementById("tab");
+            const metaEl = document.getElementById("tab-meta");
+            if (!set) {
+                tabEl.textContent = "";
+                metaEl.textContent = "";
+                refreshNavButtons();
+                return;
+            }
+            if (set.isEmpty) {
+                tabEl.textContent = "No arrangements match the current filter.";
+                tabEl.classList.remove("error");
+                metaEl.textContent = "";
+                refreshNavButtons();
+                return;
+            }
+            const { width, padding, playback } = readRenderInputs();
+            const i = state.arrangementIndex;
+            try {
+                const tab = set.render(i, width, padding, playback);
+                const diff = set.difficulty(i);
+                const span = set.maxFretSpan(i);
+                tabEl.textContent = tab;
+                tabEl.classList.remove("error");
+                metaEl.innerHTML = `Arrangement <strong>${i + 1}</strong> / ${set.len}  (difficulty ${diff}, span ${span})`;
+            } catch (err) {
+                console.error("Render error:", err);
+                const detail =
+                    err?.kind === "indexOutOfBounds"
+                        ? `index ${err.index} is out of bounds for a set of length ${err.len}`
+                        : (err?.kind ?? "unknown");
+                tabEl.textContent = `Render error: ${detail}`;
+                tabEl.classList.add("error");
+            }
+            refreshNavButtons();
+        }
+
+        // Debounced regenerate for the textarea, so we don't hammer the WASM boundary on
+        // every keystroke. The library's keystroke-rate memoize already covers repeats,
+        // but a debounce reduces work when characters are typed fast.
+        const DEBOUNCE_MS = 150;
+        let debounceHandle = null;
+        function debouncedRegenerate() {
+            if (debounceHandle !== null) clearTimeout(debounceHandle);
+            debounceHandle = setTimeout(() => {
+                debounceHandle = null;
+                regenerate();
+            }, DEBOUNCE_MS);
+        }
+
+        // Slider value labels (updated on input even when the slider is for rendering).
+        // The playback slider has its own label updater because its label has an "off"
+        // sentinel when the playback checkbox is unchecked.
+        function bindSliderValueLabel(sliderId, valueId) {
+            const slider = document.getElementById(sliderId);
+            const value = document.getElementById(valueId);
+            const update = () => {
+                value.textContent = slider.value;
+            };
+            slider.addEventListener("input", update);
+            update();
+        }
+        bindSliderValueLabel("width", "width-value");
+        bindSliderValueLabel("padding", "padding-value");
+
+        // Event wiring.
+        //
+        // Pathfinding-tier inputs -> regenerate (re-run the WASM pipeline).
+        document.getElementById("input").addEventListener("input", debouncedRegenerate);
+        document.getElementById("tuning").addEventListener("change", regenerate);
+        document.getElementById("capo").addEventListener("change", regenerate);
+        document.getElementById("frets").addEventListener("change", regenerate);
+        document.getElementById("num-arrangements").addEventListener("change", regenerate);
+        // Preset select is wired in one combined listener above (set textarea, then regenerate).
+
+        // Render-tier inputs -> rerender (cheap; no re-pathfinding).
+        document.getElementById("width").addEventListener("input", rerender);
+        document.getElementById("padding").addEventListener("input", rerender);
+
+        function refreshNavButtons() {
+            const set = state.currentSet;
+            const hasSet = set !== null && !set.isEmpty;
+            document.getElementById("prev").disabled = !hasSet || state.arrangementIndex <= 0;
+            document.getElementById("next").disabled = !hasSet || state.arrangementIndex >= (set?.len ?? 0) - 1;
+        }
+
+        function clearErrorPanes() {
+            document.getElementById("parse-errors").textContent = "";
+            document.getElementById("guitar-error").textContent = "";
+            document.getElementById("num-arrangements-error").textContent = "";
+            document.getElementById("tuningName-error").textContent = "";
+            document.getElementById("field-error-default").textContent = "";
+            // Repaints the line-marker gutter to its all-grey baseline; the gutter is
+            // part of the layout regardless of error state.
+            renderLineMarkers([], document.getElementById("input").value);
+        }
+
+        function renderLineMarkers(errors, inputText) {
+            const bad = new Set(errors.map((e) => e.line));
+            const ol = document.getElementById("line-markers");
+            ol.innerHTML = "";
+            const lineCount = inputText.split("\n").length;
+            for (let i = 1; i <= lineCount; i++) {
+                const li = document.createElement("li");
+                li.textContent = i;
+                if (bad.has(i)) li.className = "bad";
+                ol.appendChild(li);
+            }
+        }
+
+        function refreshDebugPane() {
+            const el = document.getElementById("debug-content");
+            if (!state.normalizedInput) {
+                el.textContent = "";
+                return;
+            }
+            el.textContent = JSON.stringify(state.normalizedInput, null, 2);
+        }
+
+        function renderTabError(err) {
+            const tabEl = document.getElementById("tab");
+            const metaEl = document.getElementById("tab-meta");
+            state.normalizedInput = null;
+            refreshDebugPane();
+            // Reset every error slot first so a previous error of a different kind cannot
+            // linger in its pane next to the current one.
+            clearErrorPanes();
+
+            const inputText = document.getElementById("input").value;
+            const clearTab = () => {
+                tabEl.textContent = "";
+                tabEl.classList.remove("error");
+                metaEl.textContent = "";
+            };
+
+            switch (err?.kind) {
+                case "parse": {
+                    document.getElementById("parse-errors").textContent =
+                        err.errors.map((e) => `line ${e.line}: "${e.text}"`).join("\n");
+                    renderLineMarkers(err.errors, inputText);
+                    clearTab();
+                    return;
+                }
+                case "unplayablePitches": {
+                    document.getElementById("parse-errors").textContent = err.pitches
+                        .map((p) => `line ${p.line}: ${p.value} cannot be played on the configured guitar`)
+                        .join("\n");
+                    renderLineMarkers(err.pitches, inputText);
+                    clearTab();
+                    return;
+                }
+                case "tuningNameUnknown": {
+                    document.getElementById("tuningName-error").textContent =
+                        `Unknown tuning "${err.value}". Choose a listed tuning or "standard".`;
+                    clearTab();
+                    return;
+                }
+                case "numFretsTooHigh": {
+                    document.getElementById("guitar-error").textContent =
+                        `Too many frets (${err.numFrets}). The maximum is ${err.max}.`;
+                    clearTab();
+                    return;
+                }
+                case "capoTooHigh": {
+                    document.getElementById("guitar-error").textContent =
+                        `The capo fret (${err.capo}) is too high. The maximum is ${err.max}.`;
+                    clearTab();
+                    return;
+                }
+                case "capoExceedsFrets": {
+                    document.getElementById("guitar-error").textContent =
+                        `The capo fret (${err.capo}) cannot exceed the number of frets (${err.numFrets}).`;
+                    clearTab();
+                    return;
+                }
+                case "numArrangementsOutOfRange": {
+                    document.getElementById("num-arrangements-error").textContent =
+                        `Arrangements must be between 1 and ${err.max} inclusive (got ${err.value}).`;
+                    clearTab();
+                    return;
+                }
+                case "noArrangementsFound": {
+                    tabEl.textContent = "No arrangements could be calculated.";
+                    tabEl.classList.remove("error");
+                    metaEl.textContent = "";
+                    return;
+                }
+                case "indexOutOfBounds": {
+                    document.getElementById("field-error-default").textContent =
+                        `Index ${err.index} is out of bounds for a set of length ${err.len}.`;
+                    clearTab();
+                    return;
+                }
+                case "inputTooManyLines": {
+                    document.getElementById("parse-errors").textContent =
+                        `The input is too large. The maximum is ${err.max} lines.`;
+                    clearTab();
+                    return;
+                }
+                // These three lower-level variants are part of the TabError enum but are not
+                // reachable from generateArrangements with preset tunings and 1..6 string numbers;
+                // they fire only on the lower-level Rust API. Handled here so a future boundary that
+                // emits them shows a message instead of nothing. (renderWidthTooSmall is also
+                // unreachable here -- the width slider's min keeps it valid -- so it falls to the
+                // default arm below.)
+                case "stringNumberOutOfRange": {
+                    document.getElementById("field-error-default").textContent =
+                        `String number ${err.value} is out of range (maximum ${err.max}).`;
+                    clearTab();
+                    return;
+                }
+                case "openPitchOutOfRange": {
+                    document.getElementById("field-error-default").textContent =
+                        `A capo offset of ${err.semitones} semitones on string ${err.string} exceeds the supported pitch range.`;
+                    clearTab();
+                    return;
+                }
+                case "fretRangeExceedsPitchRange": {
+                    document.getElementById("field-error-default").textContent =
+                        `Too many frets (${err.playableFrets}) for a string starting at ${err.openPitch}; the highest playable pitch is B9.`;
+                    clearTab();
+                    return;
+                }
+                default: {
+                    // #[non_exhaustive]: a future 2.x release may add a variant this build predates.
+                    console.error("Unhandled TabError kind:", err);
+                    document.getElementById("field-error-default").textContent =
+                        `Unexpected error kind: ${err?.kind ?? "unknown"}`;
+                    clearTab();
+                }
+            }
+        }
+
+        document.getElementById("prev").addEventListener("click", () => {
+            if (state.arrangementIndex > 0) {
+                state.arrangementIndex -= 1;
+                rerender();
+            }
+        });
+        document.getElementById("next").addEventListener("click", () => {
+            const set = state.currentSet;
+            if (set && state.arrangementIndex < set.len - 1) {
+                state.arrangementIndex += 1;
+                rerender();
+            }
+        });
+
+        function updatePlaybackLabel() {
+            const on = document.getElementById("playback-on").checked;
+            const slider = document.getElementById("playback");
+            document.getElementById("playback-value").textContent = on ? slider.value : "off";
+            slider.disabled = !on;
+        }
+        document.getElementById("playback-on").addEventListener("change", () => {
+            updatePlaybackLabel();
+            rerender();
+        });
+        document.getElementById("playback").addEventListener("input", () => {
+            updatePlaybackLabel();
+            rerender();
+        });
+        updatePlaybackLabel();
+
+        // Filter wiring.
+        document.getElementById("filter-on").addEventListener("change", () => {
+            document.getElementById("filter-value").disabled = !document.getElementById("filter-on").checked;
+            regenerate();
+        });
+        document.getElementById("filter-value").addEventListener("change", () => {
+            if (document.getElementById("filter-on").checked) regenerate();
+        });
+
+        // Initial gutter paint so the line numbers are visible before the first
+        // regenerate completes (the regenerate call will overwrite if needed).
+        renderLineMarkers([], document.getElementById("input").value);
+        // Initial render with the default preset and defaults.
+        regenerate();
+
+        window.addEventListener("beforeunload", () => {
+            if (state.currentSet) {
+                state.currentSet.free();
+                state.currentSet = null;
+            }
         });
     </script>
 </body>
-
 </html>

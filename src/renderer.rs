@@ -6,6 +6,26 @@ use itertools::Itertools;
 use std::collections::VecDeque;
 use std::fmt::Write;
 
+/// Widest fret column the renderer lays down (two-digit frets such as `12`).
+///
+/// Assumes `Guitar::MAX_NUM_FRETS` keeps fret renders to two digits; a three-digit fret
+/// would break the `min_render_width` slack below.
+pub(crate) const MAX_FRET_RENDER_WIDTH: usize = 2;
+
+/// Holds the two-digit assumption above to a compile-time check: a `MAX_NUM_FRETS` of 100 or
+/// more would render three-digit frets and silently misalign the `min_render_width` slack.
+const _: () = assert!(Guitar::MAX_NUM_FRETS < 100);
+
+/// Minimum `width` [`render_tab`] needs to lay out one beat at the given `padding`.
+///
+/// A row carries a `padding`-wide dash margin on each side plus `MAX_FRET_RENDER_WIDTH`
+/// for the fret, plus one column of slack so the wrap loop admits exactly one beat at the
+/// minimum (`2 * padding + MAX_FRET_RENDER_WIDTH + 1`). `ArrangementSet::render` rejects
+/// smaller widths with `TabError::RenderWidthTooSmall`.
+pub(crate) const fn min_render_width(padding: u8) -> u16 {
+    2 * padding as u16 + MAX_FRET_RENDER_WIDTH as u16 + 1
+}
+
 /// Renders an `Arrangement`'s lines as an ASCII guitar tab.
 ///
 /// The `width` parameter controls the character width of each row group (rows wrap to a
@@ -14,7 +34,7 @@ use std::fmt::Write;
 /// beat column corresponding to the 0-indexed beat (counting `Playable` and `Rest` lines,
 /// skipping `MeasureBreak`s).
 ///
-/// Returns an empty string if `arrangement_lines` is empty.
+/// Returns an empty string if `arrangement_lines` is empty or the guitar has no strings.
 #[must_use]
 pub fn render_tab(
     arrangement_lines: &[Line<BeatVec<PitchFingering>>],
@@ -27,6 +47,9 @@ pub fn render_tab(
         return String::new();
     }
     let num_strings = guitar.string_ranges.len();
+    if num_strings == 0 {
+        return String::new();
+    }
 
     let line_index_of_playback: Option<usize> = match playback {
         None => None,
@@ -42,10 +65,10 @@ pub fn render_tab(
 
     let beat_column_renders = transpose(columns);
 
-    let (strings_rows, playback_indicator_position) =
+    let (rows_by_string, playback_indicator_position) =
         render_string_groups(beat_column_renders, width, padding, line_index_of_playback);
 
-    render_string_output(&strings_rows, playback_indicator_position)
+    render_string_output(&rows_by_string, playback_indicator_position)
 }
 #[cfg(test)]
 mod test_render_tab {
@@ -155,6 +178,58 @@ mod test_render_tab {
 
         assert_eq!(output, expected_output);
     }
+
+    #[test]
+    fn width_below_minimum_does_not_panic() {
+        // Regression: a width smaller than `min_render_width(padding)` must neither underflow
+        // the column math nor stall the wrap loop. `ArrangementSet::render` rejects such widths
+        // up front; `render_tab` itself stays total via the saturating floor plus the
+        // one-beat-per-row progress floor (`content_cap`).
+        let arrangement_lines = get_arrangement_lines();
+        let output = render_tab(&arrangement_lines, &Guitar::default(), 1, 0, None);
+        assert!(!output.is_empty());
+    }
+
+    #[test]
+    fn zero_string_guitar_does_not_panic() {
+        // A guitar with no strings is constructible via the low-level API. Rendering any
+        // non-empty line sequence against it must return an empty string, not panic in
+        // `render_string_output`.
+        let no_pitches: [Pitch; 0] = [];
+        let guitar = Guitar::new(
+            crate::guitar::create_string_tuning(&no_pitches).unwrap(),
+            0,
+            0,
+        )
+        .unwrap();
+        let lines = vec![Line::Rest, Line::MeasureBreak];
+        assert_eq!(render_tab(&lines, &guitar, 20, 1, None), "");
+    }
+
+    #[test]
+    fn mismatched_guitar_string_count_does_not_panic() {
+        // An arrangement built on a wider guitar, rendered against a narrower one, must drop the
+        // out-of-range fingerings instead of panicking on the per-string slice index.
+        // `get_arrangement_lines` places notes on strings 1 and 2; a 1-string render guitar keeps
+        // string 1 and skips string 2.
+        let arrangement_lines = get_arrangement_lines();
+        let one_string = Guitar::new(
+            crate::guitar::create_string_tuning(&[Pitch::E4]).unwrap(),
+            12,
+            0,
+        )
+        .unwrap();
+        let output = render_tab(&arrangement_lines, &one_string, 20, 1, None);
+        // The render guitar has one string, so string 2's fingering is out of range and dropped:
+        // exactly one string row is laid out, carrying string 1's frets (0, _, 0, |, 4, 12).
+        // `playback` is None, so the indicator rows are blank; filtering blanks leaves the string
+        // rows only. A regression that kept string 2 would yield two rows and fail this.
+        let string_rows: Vec<&str> = output
+            .lines()
+            .filter(|row| !row.trim().is_empty())
+            .collect();
+        assert_eq!(string_rows, vec!["-0---0---|-4-12-----"]);
+    }
 }
 
 fn line_index_of_beat_index(
@@ -239,21 +314,32 @@ mod test_line_index_of_beat_index {
 }
 
 /// Renders Line as a vector of strings representing the fret positions on a guitar.
+///
+/// Stays total when the line and the render guitar disagree: an empty `Playable` beat renders as
+/// a rest, and a fingering whose string number exceeds `num_strings` is skipped. Both require a
+/// hand-built line/guitar mismatch (the parser and `create_arrangements` never produce them), but
+/// `render_tab` is public, so it must not panic on them.
 fn render_line(line: &Line<BeatVec<PitchFingering>>, num_strings: usize) -> Vec<String> {
     let pitch_fingerings = match line {
         Line::MeasureBreak => return vec!["|".to_owned(); num_strings],
         Line::Rest => return vec!["-".to_owned(); num_strings],
         Line::Playable(pitch_fingerings) => pitch_fingerings.iter().sorted().collect_vec(),
     };
+    if pitch_fingerings.is_empty() {
+        return vec!["-".to_owned(); num_strings];
+    }
     let fret_width_max = calc_fret_width_max(&pitch_fingerings);
 
     // Instantiate vec with rest dashes for all strings with the max fret width
     let mut playable_render = vec!["-".repeat(fret_width_max); num_strings];
 
-    // Add the rendered frets for the strings that are played
+    // Add the rendered frets for the strings that are played. Skip a fingering whose string number
+    // is beyond the render guitar: the arrangement was built on a guitar with more strings.
     for fingering in pitch_fingerings {
-        playable_render[fingering.string_number.get() as usize - 1] =
-            render_fret(fingering.fret, fret_width_max)
+        let string_index = fingering.string_number.get() as usize - 1;
+        if let Some(slot) = playable_render.get_mut(string_index) {
+            *slot = render_fret(fingering.fret, fret_width_max);
+        }
     }
 
     playable_render
@@ -347,8 +433,9 @@ mod test_render_line {
         );
     }
     #[test]
-    #[should_panic]
-    fn playable_more_fingerings_than_strings() {
+    fn playable_string_number_beyond_render_guitar_is_skipped() {
+        // String 2 is beyond a 1-string render guitar. The in-range fingering renders; the
+        // out-of-range one is dropped instead of panicking on the slice index.
         let pitch_fingerings = vec![
             PitchFingering {
                 string_number: StringNumber::new(1).unwrap(),
@@ -361,11 +448,25 @@ mod test_render_line {
                 pitch: Pitch::G4,
             },
         ];
-        render_line(&Line::Playable(pitch_fingerings), 1);
+        assert_eq!(render_line(&Line::Playable(pitch_fingerings), 1), vec!["9"]);
+    }
+    #[test]
+    fn playable_empty_beat_renders_as_rest() {
+        // A hand-built empty `Playable` beat has no fingerings, so it renders as a rest row
+        // rather than reaching `calc_fret_width_max`'s non-empty contract.
+        assert_eq!(
+            render_line(&Line::Playable(vec![]), 4),
+            vec!["-".to_owned(); 4]
+        );
     }
 }
 
 /// Creates a string with the fret number padded with dashes to match the maximum width.
+///
+/// Through the public render path `fret <= Guitar::MAX_NUM_FRETS`, which the file-level
+/// `assert!(Guitar::MAX_NUM_FRETS < 100)` keeps under 100, so the three-digit branch and the
+/// panic below are unreachable there. The function stays total for any `u8`, so direct callers
+/// and the unit tests can still exercise wider inputs.
 ///
 /// # Panics
 ///
@@ -497,7 +598,10 @@ fn transpose<T>(v: Vec<Vec<T>>) -> Vec<Vec<T>> {
         .map(|_| {
             iters
                 .iter_mut()
-                .map(|n| n.next().expect("BUG: all inner vecs must have equal length for transpose"))
+                .map(|n| {
+                    n.next()
+                        .expect("BUG: all inner vecs must have equal length for transpose")
+                })
                 .collect::<Vec<T>>()
         })
         .collect()
@@ -545,21 +649,24 @@ fn render_string_groups(
     playback_column_index: Option<usize>,
 ) -> (Vec<Vec<String>>, Option<PlaybackIndicatorPosition>) {
     let padding_render = "-".repeat(padding as usize);
+    let content_cap = (width as usize)
+        .saturating_sub(padding as usize)
+        .saturating_sub(MAX_FRET_RENDER_WIDTH)
+        .max(padding as usize + 1);
 
-    const MAX_FRET_RENDER_WIDTH: usize = 2;
-    let mut strings_rows: Vec<Vec<String>> = vec![];
+    let mut rows_by_string: Vec<Vec<String>> = vec![];
 
     let mut playback_indicator_position: Option<PlaybackIndicatorPosition> = None;
 
     for string_beat_columns in beat_column_renders {
         let num_render_columns = string_beat_columns.len();
         let mut remaining_string_beat_columns = VecDeque::from(string_beat_columns);
-        let mut string_rows: Vec<String> = vec![];
+        let mut single_string_rows: Vec<String> = vec![];
 
         while !remaining_string_beat_columns.is_empty() {
-            let mut string_row = String::with_capacity(width as usize);
-            string_row.push_str(&padding_render);
-            while string_row.len() < (width as usize - padding as usize - MAX_FRET_RENDER_WIDTH) {
+            let mut row = String::with_capacity(width as usize);
+            row.push_str(&padding_render);
+            while row.len() < content_cap {
                 let next_string_item = remaining_string_beat_columns.pop_front();
                 match next_string_item {
                     None => {
@@ -567,41 +674,40 @@ fn render_string_groups(
                     }
                     Some(string_item) => {
                         match playback_column_index {
-                            None => {}
-                            Some(idx) => {
+                            Some(idx)
                                 if num_render_columns - remaining_string_beat_columns.len() - 1
-                                    == idx
-                                {
-                                    // Offset the playback indicator by one
-                                    // character if the frets are two characters wide
-                                    let wide_fret_playback_offset = match string_item.len() {
-                                        2 => 1,
-                                        _ => 0,
-                                    };
+                                    == idx =>
+                            {
+                                // Offset the playback indicator by one
+                                // character if the frets are two characters wide
+                                let wide_fret_playback_offset = match string_item.len() {
+                                    2 => 1,
+                                    _ => 0,
+                                };
 
-                                    playback_indicator_position = Some(PlaybackIndicatorPosition {
-                                        row_group_index: string_rows.len(),
-                                        column_index: string_row.len() + wide_fret_playback_offset,
-                                    });
-                                }
+                                playback_indicator_position = Some(PlaybackIndicatorPosition {
+                                    row_group_index: single_string_rows.len(),
+                                    column_index: row.len() + wide_fret_playback_offset,
+                                });
                             }
+                            _ => {}
                         }
-                        string_row.push_str(&string_item)
+                        row.push_str(&string_item)
                     }
                 }
 
-                string_row.push_str(&padding_render);
+                row.push_str(&padding_render);
             }
-            let remaining_characters = width as usize - string_row.len();
-            string_row.push_str(&"-".repeat(remaining_characters));
+            let remaining_characters = (width as usize).saturating_sub(row.len());
+            row.push_str(&"-".repeat(remaining_characters));
 
-            string_rows.push(string_row);
+            single_string_rows.push(row);
         }
 
-        strings_rows.push(string_rows);
+        rows_by_string.push(single_string_rows);
     }
 
-    (strings_rows, playback_indicator_position)
+    (rows_by_string, playback_indicator_position)
 }
 #[cfg(test)]
 mod test_render_string_groups {
@@ -746,14 +852,17 @@ mod test_render_string_groups {
 }
 
 fn render_string_output(
-    strings_rows: &[Vec<String>],
+    rows_by_string: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
 ) -> String {
-    let num_strings = strings_rows.len();
-    let num_row_groups = strings_rows[0].len();
+    let num_strings = rows_by_string.len();
+    let first_string_rows = rows_by_string
+        .first()
+        .expect("BUG: every arrangement has at least one string");
+    let num_row_groups = first_string_rows.len();
     let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
-    for (row_group_index, _) in strings_rows[0].iter().enumerate() {
+    for (row_group_index, _) in first_string_rows.iter().enumerate() {
         let playback_line = |symbol: &str| -> String {
             match playback_indicator_position {
                 Some(ref pos) if row_group_index == pos.row_group_index => {
@@ -765,12 +874,12 @@ fn render_string_output(
 
         output_lines.push(playback_line("▼"));
 
-        for string_rows in strings_rows {
+        for single_string_rows in rows_by_string {
             output_lines.push(
-                string_rows
+                single_string_rows
                     .get(row_group_index)
                     .map(String::as_str)
-                    .unwrap_or("???")
+                    .expect("BUG: every string has the same row-group count")
                     .to_string(),
             );
         }

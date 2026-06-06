@@ -1,12 +1,28 @@
 #![allow(unused)]
 
-use anyhow::{anyhow, Result};
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use guitar_tab_generator::{
-    create_arrangements, create_string_tuning, memoized_original_create_arrangements,
-    memoized_original_parse_lines, parse_lines, render_tab, BeatVec, Guitar, Line, Pitch,
-    StringNumber, STD_6_STRING_TUNING_OPEN_PITCHES,
+    BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput, create_arrangements,
+    create_string_tuning, generate_arrangements, parse_lines, render_tab,
 };
+// `__bench_internals` exposes the memoize escape hatches plus the now-private
+// tuning offset helpers so criterion benches can still measure them; see the
+// module docstring in src/lib.rs for the stability caveat.
+use guitar_tab_generator::__bench_internals::{
+    create_string_tuning_offset, memoized_original_create_arrangements,
+    memoized_original_parse_lines, parse_tuning,
+};
+
+fn std_tuning() -> [Pitch; 6] {
+    [
+        Pitch::E4,
+        Pitch::B3,
+        Pitch::G3,
+        Pitch::D3,
+        Pitch::A2,
+        Pitch::E2,
+    ]
+}
 use itertools::Itertools;
 use std::{collections::BTreeMap, hint::black_box, time::Duration};
 
@@ -109,22 +125,22 @@ fn bench_parse_lines(c: &mut Criterion) {
     let fur_elise_input = fur_elise_input();
 
     c.bench_function("parse_lines", |b| {
-        b.iter(|| memoized_original_parse_lines(fur_elise_input.to_owned()))
+        b.iter(|| memoized_original_parse_lines(black_box(fur_elise_input).to_owned()))
     });
 }
 
 fn bench_create_string_tuning_offset(c: &mut Criterion) {
     c.bench_function("create_string_tuning_offset", |b| {
         b.iter(|| {
-            guitar_tab_generator::create_string_tuning_offset(
-                guitar_tab_generator::parse_tuning(black_box("random")),
+            create_string_tuning_offset(
+                parse_tuning(black_box("openG")).expect("valid tuning name"),
             )
         })
     });
 }
 
 fn guitar_creation(c: &mut Criterion) {
-    let six_string_tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+    let six_string_tuning = create_string_tuning(&std_tuning()).unwrap();
 
     let three_string_tuning = create_string_tuning(&[Pitch::E4, Pitch::B3, Pitch::G3]).unwrap();
     let twelve_string_tuning = create_string_tuning(&[
@@ -175,14 +191,15 @@ fn guitar_creation(c: &mut Criterion) {
 }
 
 fn bench_arrangement_creation(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+    let tuning = create_string_tuning(&std_tuning()).unwrap();
 
     c.bench_function("fur_elise_1_arrangement", |b| {
         b.iter(|| {
             memoized_original_create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
-                black_box(1),
+                black_box(NumArrangements::try_new(1).unwrap()),
+                black_box(None),
             )
         })
     });
@@ -191,7 +208,8 @@ fn bench_arrangement_creation(c: &mut Criterion) {
             memoized_original_create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
-                black_box(3),
+                black_box(NumArrangements::try_new(3).unwrap()),
+                black_box(None),
             )
         })
     });
@@ -200,26 +218,31 @@ fn bench_arrangement_creation(c: &mut Criterion) {
             memoized_original_create_arrangements(
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
-                black_box(5),
+                black_box(NumArrangements::try_new(5).unwrap()),
+                black_box(None),
             )
         })
     });
 }
 
 fn bench_arrangement_scaling(c: &mut Criterion) {
-    let tuning = create_string_tuning(&STD_6_STRING_TUNING_OPEN_PITCHES).unwrap();
+    let tuning = create_string_tuning(&std_tuning()).unwrap();
 
     let mut group = c.benchmark_group("bench_arrangement_scaling");
-    for num in (0..=22) {
+    // 1..=MAX: NumArrangements rejects 0 and >MAX at construction, so the validation-error
+    // timings the prior 0..=22 loop produced are unreachable.
+    for num in 1u8..=NumArrangements::MAX {
         group
             .sample_size(15)
             .warm_up_time(Duration::from_secs_f32(2.0));
-        group.bench_with_input(BenchmarkId::from_parameter(num), &num, |b, &num| {
+        let num_arrangements = NumArrangements::try_new(num).unwrap();
+        group.bench_with_input(BenchmarkId::from_parameter(num), &num, |b, _| {
             b.iter(|| {
                 memoized_original_create_arrangements(
                     black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                     black_box(fur_elise_lines()),
-                    black_box(num),
+                    black_box(num_arrangements),
+                    black_box(None),
                 )
             });
         });
@@ -233,26 +256,24 @@ fn bench_render_tab(c: &mut Criterion) {
     let arrangements = create_arrangements(
         Guitar::default(),
         parse_lines(fur_elise_input().to_owned()).unwrap(),
-        1,
+        NumArrangements::try_new(1).unwrap(),
+        None,
     )
     .unwrap();
 
     for playback_index in (0..=30).step_by(10) {
-        // group
-        //     .sample_size(20)
-        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(playback_index),
             &playback_index,
             |b, &playback_index| {
                 b.iter(|| {
-                    render_tab(
-                        black_box(&arrangements[0].lines),
+                    black_box(render_tab(
+                        black_box(arrangements[0].lines()),
                         black_box(&Guitar::default()),
                         black_box(20),
                         black_box(2),
                         black_box(Some(playback_index)),
-                    );
+                    ));
                 });
             },
         );
@@ -263,26 +284,23 @@ fn bench_render_tab(c: &mut Criterion) {
 fn bench_create_single_composition_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_create_single_composition_scaling");
     for input_lines_num in (5..=85).step_by(10) {
-        let input = guitar_tab_generator::CompositionInput {
-            pitches: fur_elise_input().lines().take(input_lines_num).join("\n"),
-            tuning_name: "standard".to_owned(),
-            guitar_num_frets: 18,
-            guitar_capo: 0,
-            num_arrangements: 1,
-            width: 40,
-            padding: 2,
-            playback_index: Some(12),
-        };
+        let input = guitar_tab_generator::TabInput::new(
+            fur_elise_input().lines().take(input_lines_num).join("\n"),
+            "standard",
+            18,
+            0,
+            1,
+        );
 
-        // group
-        //     .sample_size(20)
-        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(input_lines_num),
             &input_lines_num,
             |b, _| {
                 b.iter(|| {
-                    guitar_tab_generator::wrapper_create_arrangements(black_box(input.clone()));
+                    let set = guitar_tab_generator::generate_arrangements(black_box(input.clone()));
+                    if let Ok(set) = set {
+                        let _ = black_box(set.render(0, 40, 2, Some(12)));
+                    }
                 });
             },
         );
@@ -293,26 +311,23 @@ fn bench_create_single_composition_scaling(c: &mut Criterion) {
 fn bench_create_single_composition_large_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("bench_create_single_composition_large_scaling");
     for fur_elise_repetitions in (1..=10).step_by(1) {
-        let input = guitar_tab_generator::CompositionInput {
-            pitches: fur_elise_input().repeat(fur_elise_repetitions),
-            tuning_name: "standard".to_owned(),
-            guitar_num_frets: 18,
-            guitar_capo: 0,
-            num_arrangements: 1,
-            width: 40,
-            padding: 2,
-            playback_index: Some(12),
-        };
+        let input = guitar_tab_generator::TabInput::new(
+            fur_elise_input().repeat(fur_elise_repetitions),
+            "standard",
+            18,
+            0,
+            1,
+        );
 
-        // group
-        //     .sample_size(20)
-        //     .warm_up_time(Duration::from_secs_f32(3.0));
         group.bench_with_input(
             BenchmarkId::from_parameter(fur_elise_repetitions),
             &fur_elise_repetitions,
             |b, _| {
                 b.iter(|| {
-                    guitar_tab_generator::wrapper_create_arrangements(black_box(input.clone()));
+                    let set = guitar_tab_generator::generate_arrangements(black_box(input.clone()));
+                    if let Ok(set) = set {
+                        let _ = black_box(set.render(0, 40, 2, Some(12)));
+                    }
                 });
             },
         );

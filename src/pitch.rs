@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use std::fmt;
 use strum_macros::{EnumIter, EnumString, FromRepr};
 
@@ -7,6 +6,9 @@ use strum_macros::{EnumIter, EnumString, FromRepr};
 /// Each variant is one semitone. Accidentals carry both the sharp and flat spellings
 /// in the variant name (e.g. `CSharpDFlat1` is both C♯1 and D♭1), and the `EnumString`
 /// impl accepts either spelling. Both `"C#1"` and `"Db1"` parse to `CSharpDFlat1`.
+///
+/// Deliberately not `#[non_exhaustive]`: the C0–B9 range is fixed, so the variant set is
+/// closed and external exhaustive matches are sound.
 #[derive(
     Debug, Clone, Copy, Hash, Eq, PartialEq, Ord, PartialOrd, EnumIter, FromRepr, EnumString,
 )]
@@ -326,12 +328,12 @@ mod test_pitch_display {
 impl Pitch {
     #[inline]
     #[must_use]
-    pub fn index(&self) -> u8 {
+    pub(crate) fn index(&self) -> u8 {
         *self as u8
     }
 
     #[must_use]
-    pub fn plain_text(&self) -> &'static str {
+    pub(crate) fn plain_text(&self) -> &'static str {
         match self {
             Pitch::C0 => "C0",
             Pitch::CSharpDFlat0 => "Db0",
@@ -456,16 +458,15 @@ impl Pitch {
         }
     }
 
-    pub fn plus_offset(&self, offset: i16) -> Result<Pitch> {
-        let new_index = self.index() as i16 + offset;
+    /// Returns the pitch `offset` semitones above (or below, for negative `offset`) this pitch,
+    /// or `None` if the result would fall outside the supported `Pitch` range.
+    #[must_use]
+    pub fn plus_offset(&self, offset: i16) -> Option<Pitch> {
+        let new_index = i32::from(self.index()) + i32::from(offset);
         if new_index < 0 {
-            return Err(anyhow!(
-                "Pitch {self} offset by {offset} pitches results in a pitch out of range."
-            ));
+            return None;
         }
-        Pitch::from_repr(new_index as usize).ok_or_else(|| {
-            anyhow!("Pitch {self} offset by {offset} pitches results in a pitch out of range.")
-        })
+        Pitch::from_repr(new_index as usize)
     }
 }
 #[cfg(test)]
@@ -487,23 +488,62 @@ mod test_pitch_plus_offset {
 
     #[test]
     fn valid_positive() {
-        assert_eq!(Pitch::FSharpGFlat3.plus_offset(3).unwrap(), Pitch::A3);
+        assert_eq!(Pitch::FSharpGFlat3.plus_offset(3), Some(Pitch::A3));
     }
     #[test]
     fn valid_negative() {
         assert_eq!(
-            Pitch::FSharpGFlat3.plus_offset(-3).unwrap(),
-            Pitch::DSharpEFlat3
+            Pitch::FSharpGFlat3.plus_offset(-3),
+            Some(Pitch::DSharpEFlat3)
         );
     }
     #[test]
-    fn test_plus_offset_exceeds_range() {
-        let error = Pitch::ASharpBFlat9.plus_offset(2).unwrap_err();
-        let error_msg = format!("{error}");
+    fn within_range_returns_some() {
+        assert_eq!(Pitch::C0.plus_offset(2), Some(Pitch::D0));
+        assert_eq!(Pitch::E4.plus_offset(0), Some(Pitch::E4));
+    }
 
-        assert_eq!(
-            error_msg,
-            "Pitch A♯B♭9 offset by 2 pitches results in a pitch out of range."
-        );
+    #[test]
+    fn negative_overflow_returns_none() {
+        assert_eq!(Pitch::C0.plus_offset(-1), None);
+    }
+
+    #[test]
+    fn positive_overflow_returns_none() {
+        assert_eq!(Pitch::B9.plus_offset(1), None);
+        assert_eq!(Pitch::ASharpBFlat9.plus_offset(2), None);
+    }
+
+    #[test]
+    fn extreme_offset_returns_none_without_overflow() {
+        // The intermediate index must not overflow before the range check. A near-`i16::MAX`
+        // positive offset previously overflowed the `i16` addition (debug panic) instead of
+        // returning `None`.
+        assert_eq!(Pitch::B9.plus_offset(i16::MAX), None);
+        assert_eq!(Pitch::C0.plus_offset(i16::MIN), None);
+    }
+}
+
+#[cfg(test)]
+mod test_display_plain_text_agreement {
+    use super::*;
+    use strum::IntoEnumIterator;
+
+    #[test]
+    fn display_and_plain_text_share_octave_and_naturals_match() {
+        for pitch in Pitch::iter() {
+            let display = pitch.to_string();
+            let plain = pitch.plain_text();
+            // Every spelling ends with the same single octave digit.
+            assert_eq!(
+                display.chars().last(),
+                plain.chars().last(),
+                "octave digit drift for {pitch:?}: display {display:?} vs plain_text {plain:?}"
+            );
+            // Natural pitches (two-char plain text like "E2") spell identically in both.
+            if plain.chars().count() == 2 {
+                assert_eq!(display, plain, "natural pitch drift for {pitch:?}");
+            }
+        }
     }
 }

@@ -1,12 +1,12 @@
-use anyhow::Result;
 use guitar_tab_generator::{
-    create_arrangements, create_string_tuning, parse_lines, render_tab, Guitar, Line, Pitch,
+    Guitar, Line, NumArrangements, Pitch, TabError, create_arrangements, create_string_tuning,
+    parse_lines, render_tab,
 };
 
 extern crate guitar_tab_generator;
 
 /// Advanced usage example using the individual component functions.
-fn main() -> Result<()> {
+fn main() -> Result<(), TabError> {
     let input = "E4
         Eb4
 
@@ -25,10 +25,9 @@ fn main() -> Result<()> {
         A3"
     .to_string();
 
-    let lines: Vec<Line<Vec<Pitch>>> = match parse_lines(input) {
-        Ok(input_lines) => input_lines,
-        Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
-    };
+    // `parse_lines` returns the typed `TabError` (a `Parse` error per unparseable substring,
+    // or `InputTooManyLines` when the input is too large), so it propagates with `?`.
+    let lines: Vec<Line<Vec<Pitch>>> = parse_lines(input)?;
 
     let tuning = create_string_tuning(&[
         Pitch::E4,
@@ -37,19 +36,14 @@ fn main() -> Result<()> {
         Pitch::D3,
         Pitch::A2,
         Pitch::E2,
-    ])
-    .unwrap();
+    ])?;
 
     let guitar_num_frets = 18;
     let guitar_capo = 0;
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
-    // dbg!(&guitar);
 
-    let num_arrangements = 1;
-    let arrangements = match create_arrangements(guitar.clone(), lines, num_arrangements) {
-        Ok(arrangements) => arrangements,
-        Err(e) => return Err(std::sync::Arc::try_unwrap(e).unwrap()),
-    };
+    let num_arrangements = NumArrangements::try_new(1)?;
+    let arrangements = create_arrangements(guitar.clone(), lines, num_arrangements, None)?;
 
     // dbg!(&arrangements);
 
@@ -57,7 +51,7 @@ fn main() -> Result<()> {
     let padding = 1;
     let playback_index = Some(2);
     let tab = render_tab(
-        &arrangements[0].lines,
+        arrangements[0].lines(),
         &guitar,
         tab_width,
         padding,

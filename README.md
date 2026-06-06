@@ -22,6 +22,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
   - [Table of Contents](#table-of-contents)
   - [Demo](#demo)
   - [Features](#features)
+  - [Quick start (2.0.0)](#quick-start-200)
   - [Previous versions](#previous-versions)
   - [Pathfinding Algorithm Visualization](#pathfinding-algorithm-visualization)
     - [Pitch Fingerings](#pitch-fingerings)
@@ -36,6 +37,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
   - [Contributing and Installation](#contributing-and-installation)
     - [Build from source](#build-from-source)
     - [Run examples](#run-examples)
+    - [Run WASM demo](#run-wasm-demo)
     - [Background code runner](#background-code-runner)
     - [Calculate code coverage](#calculate-code-coverage)
     - [Screen for potentially unused feature flags](#screen-for-potentially-unused-feature-flags)
@@ -57,7 +59,46 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 - Configurable number of frets
 - Tab width and padding formatting
 - Playback indicator for playback applications
-- Pathfinding algorithm leverage Dijkstra's algorithm to calculate the arrangement with the least difficulty.
+- Pathfinding via Yen's k-shortest-paths algorithm (built on Dijkstra) to rank arrangements from least to most difficult.
+
+## Quick start (2.0.0)
+
+Rust:
+
+```rust
+use guitar_tab_generator::{generate_arrangements, TabInput};
+
+// Newline-separated pitches. Blank lines are rests; a line like "D4G4" is a chord.
+let input = TabInput::new("E2\nA2\nD3", "standard", 18, 0, 1);
+
+// Arrangements are ranked by difficulty, easiest first.
+let set = generate_arrangements(input).expect("input is valid");
+println!("{}", set.render(0, 30, 2, None).expect("arrangement 0 exists"));
+```
+
+TypeScript (after `wasm-pack build`):
+
+```ts
+import init, { generateArrangements } from "./pkg/wasm_guitar_tab_generator/guitar_tab_generator.js";
+
+await init();
+const set = generateArrangements({
+    input: "E2\nA2\nD3",
+    tuningName: "standard",
+    guitarNumFrets: 18,
+    guitarCapo: 0,
+    numArrangements: 1,
+    maxFretSpanFilter: undefined,
+});
+for (let i = 0; i < set.len; i++) {
+    console.log(set.render(i, 30, 2, null));
+}
+set.free(); // or `using set = generateArrangements(...)` in TS 5.2+
+```
+
+`ArrangementSet` is a wasm-bindgen opaque handle. Call `set.free()` when done (or use `using` in runtimes with explicit resource management). Without that, the underlying allocation only releases when `FinalizationRegistry` runs, which is not prompt on every runtime.
+
+See `MIGRATION.md` for the 2.0.0 migration guide, `CHANGELOG.md` for the full change list, and `types.md` for the typed surface.
 
 ## Previous versions
 
@@ -68,7 +109,7 @@ This project has been attempted numerous times with varying levels of success. T
 
 ## Pathfinding Algorithm Visualization
 
-The pathfinding calculation is initiated by the `Arrangement::create_arrangements()` function.
+The pathfinding calculation is initiated by `generate_arrangements()` (which calls `create_arrangements()` internally).
 
 Let's look at an example with a standard guitar where we want to find the optimal arrangement to play a G3, then a rest, then a B3, then a D4 and G4 simultaneously. The pitch input for this example could look like this:
 
@@ -245,7 +286,7 @@ flowchart TB
 
 ### Algorithm choice
 
-The number of fingering combinations grows exponentially with more beats and pitches so the choice of [shortest path algorithm](https://en.wikipedia.org/wiki/Shortest_path_problem) is critical. The [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm) pathfinding algorithm was chosen for this application of the "shortest path exercise" for the following reasons:
+The number of fingering combinations grows exponentially with more beats and pitches so the choice of [shortest path algorithm](https://en.wikipedia.org/wiki/Shortest_path_problem) is critical. [Yen's k-shortest-paths algorithm](https://en.wikipedia.org/wiki/Yen%27s_algorithm), built on [Dijkstra](https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm), was chosen so the search returns several ranked arrangements rather than a single path, for the following reasons:
 
 - The sequential nature of the musical arrangement problem results in a _directed_ graph where only nodes representing consecutive beat fingering combinations have edges from one to the next.
 - The edges between nodes are _weighted_ with the difficulty of moving from one fingering combination to another so the graph above is already constructed with the only possible next nodes connected.
@@ -269,6 +310,13 @@ cd guitar-tab-generator
 ```shell
 cargo run --example basic
 cargo run --example advanced
+```
+
+### Run WASM demo
+
+```shell
+wasm-pack build --target web --out-dir pkg/wasm_guitar_tab_generator
+python3 -m http.server  # then open http://localhost:8000/examples/wasm.html
 ```
 
 ### Background code runner
@@ -301,11 +349,9 @@ ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
 
 ## Future Improvements
 
-- [ ] Borrowed types vs box vs RC
-- [ ] Parallelism with [Rayon](https://docs.rs/rayon/latest/rayon/#how-to-use-rayon)
-- [ ] Add filter for max_fret_span in `arrangements`
-- [ ] Audit namespace of functions (object functions vs standalone) (public vs private)
-- [ ] Property testing with [Proptest](https://altsysrq.github.io/proptest-book/)
+- [ ] Custom tuning support over the WASM boundary (today only the preset list crosses)
+- [x] Per-arrangement fingering inspector (read access without re-pathfinding) -- `PitchFingering::{string_number, fret, pitch}` getters
+- [ ] Arrangement export / import (serialize a set for offline replay)
 
 [rust_site]: https://rust-lang.org/tools/install
 [wasm_site]: https://webassembly.org/
