@@ -8,6 +8,7 @@ use itertools::Itertools;
 use memoize::memoize;
 use regex::{Regex, RegexBuilder};
 use serde::Serialize;
+use std::sync::LazyLock;
 use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
 use strum::IntoEnumIterator;
@@ -18,12 +19,16 @@ use wasm_bindgen::prelude::*;
 const PITCH_PATTERN: &str =
     r"(?P<three_char_pitch>[A-G][#♯b♭][0-9])|(?P<two_char_pitch>[A-G][0-9])";
 
-#[cfg(test)]
-fn test_pitch_regex() -> Regex {
+static PITCH_REGEX: LazyLock<Regex> = LazyLock::new(|| {
     RegexBuilder::new(PITCH_PATTERN)
         .case_insensitive(true)
         .build()
-        .expect("Regex pattern should be valid")
+        .expect("BUG: Regex pattern should be valid")
+});
+
+#[cfg(test)]
+fn test_pitch_regex() -> Regex {
+    PITCH_REGEX.clone()
 }
 
 /// Named tuning presets. Parsed case-insensitively from strings.
@@ -227,18 +232,13 @@ pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, crate::er
         });
     }
 
-    let pitch_regex = RegexBuilder::new(PITCH_PATTERN)
-        .case_insensitive(true)
-        .build()
-        .expect("BUG: Regex pattern should be valid");
-
     let (parsed_lines, errors): (
         Vec<Line<BeatVec<Pitch>>>,
         Vec<Vec<crate::error::ParseError>>,
     ) = input
         .lines()
         .enumerate()
-        .map(|(input_index, input_line)| parse_line(&pitch_regex, input_index, input_line))
+        .map(|(input_index, input_line)| parse_line(&PITCH_REGEX, input_index, input_line))
         .partition_map(|result| match result {
             Ok(line) => itertools::Either::Left(line),
             Err(errs) => itertools::Either::Right(errs),
