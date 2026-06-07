@@ -3,7 +3,6 @@ use crate::{
     guitar::{Guitar, PitchFingering, generate_pitch_fingerings},
     pitch::Pitch,
 };
-use average::Mean;
 use itertools::Itertools;
 use memoize::memoize;
 use ordered_float::OrderedFloat;
@@ -147,17 +146,14 @@ mod test_create_scored_beat_fingering {
 fn calc_avg_non_zero_fret(
     beat_fingering_candidate: &[PitchFingering],
 ) -> Option<OrderedFloat<f64>> {
-    let non_zero_fingerings = beat_fingering_candidate
+    let (sum, count) = beat_fingering_candidate
         .iter()
         .filter(|fingering| fingering.fret != 0)
-        .map(|fingering| fingering.fret as f64)
-        .collect::<Mean>();
+        .fold((0u32, 0u32), |(sum, count), fingering| {
+            (sum + u32::from(fingering.fret), count + 1)
+        });
 
-    if non_zero_fingerings.is_empty() {
-        None
-    } else {
-        Some(OrderedFloat(non_zero_fingerings.mean()))
-    }
+    (count > 0).then(|| OrderedFloat(f64::from(sum) / f64::from(count)))
 }
 #[cfg(test)]
 mod test_calc_avg_non_zero_fret {
