@@ -699,7 +699,9 @@ fn render_string_groups(
                 row.push_str(&padding_render);
             }
             let remaining_characters = (width as usize).saturating_sub(row.len());
-            row.push_str(&"-".repeat(remaining_characters));
+            for _ in 0..remaining_characters {
+                row.push('-');
+            }
 
             single_string_rows.push(row);
         }

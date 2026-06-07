@@ -7,6 +7,7 @@
 - Index `yen()` successors by node group instead of re-scanning the full node list. `calc_next_nodes` now looks up the one contiguous beat group through `path_node_groups` rather than filtering a flattened `Vec<Node>`, which drops the adjacency term from roughly O(k * N^2) toward O(group size) on multi-arrangement and long inputs. Arrangement output is byte-for-byte unchanged.
 - Dropped the `average` dependency and compute the non-zero-fret mean inline. This removes eight crates from the non-dev dependency graph (`average`, `rayon`, `rayon-core`, the three `crossbeam-*` crates, `easy-cast`, `float-ord`), so Rayon no longer compiles into the production or WASM build. That restores [ADR-0009](docs/adr/0009-pipeline-stays-single-threaded.md)'s no-Rayon state and slightly shrinks the size-optimized WASM artifact. The mean is arithmetically identical, pinned by the existing `calc_avg_non_zero_fret` tests.
 - Compile the pitch regex once into a process-lifetime `LazyLock<Regex>` static instead of rebuilding it on every cache-missing `parse_lines` call. Behavior is unchanged.
+- Pad a rendered row's trailing dashes in place with `push` instead of building and copying a throwaway `"-".repeat(..)` `String`. The row buffer already reserves the full width, so the bytes have a home. Render output is unchanged, pinned by the render snapshot tests.
 
 ## 2.0.0 -- 2026-06-05
 
