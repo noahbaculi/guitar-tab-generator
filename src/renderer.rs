@@ -518,7 +518,16 @@ mod test_render_fret {
 fn calc_fret_width_max(pitch_fingerings: &[&PitchFingering]) -> usize {
     pitch_fingerings
         .iter()
-        .map(|fingering| fingering.fret.to_string().len())
+        .map(|fingering| {
+            let fret = fingering.fret;
+            if fret < 10 {
+                1
+            } else if fret < 100 {
+                2
+            } else {
+                3
+            }
+        })
         .max()
         .expect("BUG: Playable line pitch fingerings should not be empty")
 }
