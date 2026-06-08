@@ -862,6 +862,28 @@ mod test_render_string_groups {
     }
 }
 
+/// Writes one playback-indicator line into `out`, terminated by `'\n'`.
+///
+/// Emits `column_index` spaces followed by `symbol` when the indicator falls on
+/// `row_group_index`, and nothing (just the newline) otherwise. Writing in place
+/// avoids the `" ".repeat(..)` temp string the indent used to allocate.
+fn push_playback_line(
+    out: &mut String,
+    symbol: &str,
+    row_group_index: usize,
+    playback_indicator_position: Option<&PlaybackIndicatorPosition>,
+) {
+    if let Some(pos) =
+        playback_indicator_position.filter(|pos| pos.row_group_index == row_group_index)
+    {
+        for _ in 0..pos.column_index {
+            out.push(' ');
+        }
+        out.push_str(symbol);
+    }
+    out.push('\n');
+}
+
 fn render_string_output(
     rows_by_string: &[Vec<String>],
     playback_indicator_position: Option<PlaybackIndicatorPosition>,
@@ -871,35 +893,33 @@ fn render_string_output(
         .first()
         .expect("BUG: every arrangement has at least one string");
     let num_row_groups = first_string_rows.len();
-    let mut output_lines: Vec<String> = Vec::with_capacity(num_row_groups * (num_strings + 3));
 
-    for (row_group_index, _) in first_string_rows.iter().enumerate() {
-        let playback_line = |symbol: &str| -> String {
-            match playback_indicator_position {
-                Some(ref pos) if row_group_index == pos.row_group_index => {
-                    " ".repeat(pos.column_index) + symbol
-                }
-                _ => String::new(),
-            }
-        };
+    // Rows are ASCII (dashes, digits, pipes), so byte length is the visible width.
+    let row_width = first_string_rows.first().map_or(0, String::len);
+    let mut out = String::with_capacity(num_row_groups * (num_strings + 3) * (row_width + 1));
+    let pos = playback_indicator_position.as_ref();
 
-        output_lines.push(playback_line("▼"));
+    for row_group_index in 0..num_row_groups {
+        push_playback_line(&mut out, "▼", row_group_index, pos);
 
         for single_string_rows in rows_by_string {
-            output_lines.push(
+            out.push_str(
                 single_string_rows
                     .get(row_group_index)
                     .map(String::as_str)
-                    .expect("BUG: every string has the same row-group count")
-                    .to_string(),
+                    .expect("BUG: every string has the same row-group count"),
             );
+            out.push('\n');
         }
 
-        output_lines.push(playback_line("▲"));
-        output_lines.push(String::new());
+        push_playback_line(&mut out, "▲", row_group_index, pos);
+        out.push('\n'); // blank line between row groups
     }
 
-    output_lines.join("\n")
+    // Each line above was written with a trailing '\n'; join("\n") separates
+    // lines without a trailing newline, so drop the final one to match.
+    out.pop();
+    out
 }
 
 #[cfg(test)]
