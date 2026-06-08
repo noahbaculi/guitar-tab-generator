@@ -996,4 +996,13 @@ mod test_render_string_output {
 
         assert_eq!(output, expected_output);
     }
+    #[test]
+    fn empty_row_groups_returns_empty_string() {
+        // One string with zero row groups: the loop body never runs, so the
+        // trailing-newline pop() must leave an empty string, matching join over
+        // an empty Vec.
+        let string_rows: Vec<Vec<String>> = vec![vec![]];
+
+        assert_eq!(render_string_output(&string_rows, None), "");
+    }
 }
