@@ -7,7 +7,7 @@ use strum_macros::{EnumIter, EnumString, FromRepr};
 /// in the variant name (e.g. `CSharpDFlat1` is both C♯1 and D♭1), and the `EnumString`
 /// impl accepts either spelling. Both `"C#1"` and `"Db1"` parse to `CSharpDFlat1`.
 ///
-/// Deliberately not `#[non_exhaustive]`: the C0–B9 range is fixed, so the variant set is
+/// Deliberately not `#[non_exhaustive]`: the C0-B9 range is fixed, so the variant set is
 /// closed and external exhaustive matches are sound.
 #[derive(
     Debug, Clone, Copy, Hash, Eq, PartialEq, Ord, PartialOrd, EnumIter, FromRepr, EnumString,
