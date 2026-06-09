@@ -14,7 +14,7 @@ export interface UnplayablePitch {
 /**
  * Configuration bundle for one tab-generation request.
  *
- * Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
+ * Crosses the WASM boundary via `tsify`; JS sees a camelCase interface generated
  * alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
  * at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
  */

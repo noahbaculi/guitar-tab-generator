@@ -9,7 +9,7 @@ In 2.0.0, the `TuningName` enum (`OpenG`, `DropD`, `C6`, etc.) crosses the WASM 
 
 - **Serde-default PascalCase (`"OpenG"`, `"DropD"`).** Matches the Rust enum variant names verbatim. Rejected: PascalCase string literals are out-of-step with the JS/TS ecosystem, where camelCase is the idiom for member-like identifiers.
 - **Raw lowercase strings without type safety.** The 1.x shape; `get_tuning_names()` returned `string[]`. Rejected: nothing in the type system stops a JS caller from passing `"openg"` or `"OpenG"` and getting a silent parse fallback to standard.
-- **camelCase typed enum (`"openG"`, `"dropD"`).** Picked. `tsify-next` emits the union type; `parse_tuning`'s case-insensitivity preserves 1.x call sites.
+- **camelCase typed enum (`"openG"`, `"dropD"`).** Picked. `tsify` emits the union type; `parse_tuning`'s case-insensitivity preserves 1.x call sites.
 
 ## Consequences
 

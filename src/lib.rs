@@ -84,7 +84,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU8;
-use tsify_next::Tsify;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod arrangement;
@@ -128,7 +128,7 @@ pub mod __bench_internals {
 
 /// Configuration bundle for one tab-generation request.
 ///
-/// Crosses the WASM boundary via `tsify_next`; JS sees a camelCase interface generated
+/// Crosses the WASM boundary via `tsify`; JS sees a camelCase interface generated
 /// alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
 /// at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
 #[derive(Debug, Clone, Deserialize, Tsify)]

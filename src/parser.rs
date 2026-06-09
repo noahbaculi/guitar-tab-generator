@@ -13,7 +13,7 @@ use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
 use strum::IntoEnumIterator;
 use strum_macros::{EnumIter, EnumString};
-use tsify_next::Tsify;
+use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 const PITCH_PATTERN: &str =

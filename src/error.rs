@@ -4,12 +4,12 @@
 //! `TabError` is the tagged enum the WASM boundary throws on failure.
 //!
 //! `Display` and `Error` are hand-rolled rather than derived via `thiserror`. The wire
-//! format is owned by `tsify-next` (which JS code matches on by `kind`), so the Rust
+//! format is owned by `tsify` (which JS code matches on by `kind`), so the Rust
 //! `Display` form is a developer-facing fallback only and doesn't justify an extra
 //! transitive dependency.
 
 use serde::Serialize;
-use tsify_next::Tsify;
+use tsify::Tsify;
 
 /// One unparseable substring in the input, with its 1-indexed line number.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
