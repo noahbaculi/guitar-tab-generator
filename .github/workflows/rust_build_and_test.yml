@@ -57,13 +57,13 @@ jobs:
       - run: cargo fmt --all -- --check
 
   msrv:
-    name: MSRV 1.86
+    name: MSRV 1.87
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.86"
+          toolchain: "1.87"
       - run: cargo check --all-targets
 
   wasm-test:

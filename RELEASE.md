@@ -19,7 +19,7 @@ cargo build --examples --benches
 cargo test
 cargo clippy --all-targets --all-features -- -D warnings
 cargo fmt --all -- --check
-cargo +1.86 check --all-targets          # MSRV from Cargo.toml
+cargo +1.87 check --all-targets          # MSRV from Cargo.toml
 wasm-pack test --node -- --test wasm_boundary
 wasm-pack build --target web --out-dir pkg/wasm_guitar_tab_generator
 ```

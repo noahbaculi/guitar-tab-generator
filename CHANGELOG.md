@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- Raised the minimum supported Rust version to 1.87, up from 1.86 (`rust-version` in `Cargo.toml`). This follows `pathfinding` 4.15.0, which moved to Rust edition 2024 and so requires 1.87. The bump carries no functional change for this crate. The only `yen`-related fix in 4.15.0 is a panic when `k == 0`, which is unreachable here because `num_arrangements` is a validated `NonZeroU8`, so the `k` passed to `yen` is always at least 1. Consumers on a toolchain below 1.87 need to run `rustup update`.
+
 ### Internal
 
 - Moved the TypeScript-surface derive from `tsify-next` back to `tsify`. RUSTSEC-2025-0048 flags `tsify-next` as unmaintained, and its own final 0.5.6 release carries a deprecation notice pointing to `tsify`. Both crates sit at 0.5.6 with the same `js` feature and `#[derive(Tsify)]` attributes, so the change is the crate name in `Cargo.toml` plus three `use` statements. The generated `.d.ts` public surface is unchanged except for one doc comment that named the old crate, pinned by the `tests/snapshots/wasm.d.ts` snapshot. See [ADR-0010](docs/adr/0010-tsify-bindings.md).
