@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.1.0 -- 2026-06-10
 
-### Breaking changes
+### Changed
 
 - Raised the minimum supported Rust version to 1.87, up from 1.86 (`rust-version` in `Cargo.toml`). This follows `pathfinding` 4.15.0, which moved to Rust edition 2024 and so requires 1.87. The bump carries no functional change for this crate. The only `yen`-related fix in 4.15.0 is a panic when `k == 0`, which is unreachable here because `num_arrangements` is a validated `NonZeroU8`, so the `k` passed to `yen` is always at least 1. Consumers on a toolchain below 1.87 need to run `rustup update`.
 

@@ -1,6 +1,6 @@
 [package]
 name = "guitar-tab-generator"
-version = "2.0.0"
+version = "2.1.0"
 edition = "2024"
 rust-version = "1.87"
 authors = ["Noah Baculi <noahbaculi@gmail.com>"]
@@ -11,6 +11,14 @@ license = "GPL-3.0-only"
 keywords = ["guitar", "tab", "music", "fingering", "wasm"]
 categories = ["multimedia::audio", "wasm"]
 documentation = "https://docs.rs/guitar-tab-generator"
+exclude = [
+    ".scratch/",
+    "docs/superpowers/",
+    "docs/agents/",
+    "dev/",
+    "CLAUDE.md",
+    ".vscode/",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]

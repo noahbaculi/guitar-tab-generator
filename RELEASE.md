@@ -81,10 +81,6 @@ The deployed app vendors the `wasm-pack` output under `assets/wasm_guitar_tab_ge
 - Port `assets/js/guitartab.js` if the API changed. A major bump is a rewrite, not a file swap. Map it through `CHANGELOG.md` and `MIGRATION.md`.
 - Smoke-test locally (checklist in `examples/wasm.html`), then open a PR into `staging`.
 
-## First Release
-
-`Cargo.toml` already reads `2.0.0`, but nothing is tagged or published, so the first run skips the bump in step 2. Cut straight from `2.0.0`: run the pre-flight checks, `cargo publish`, tag `v2.0.0`, create the Release from the existing 2.0.0 changelog entry.
-
 ## Note on npm
 
 The wasm package isn't published. Both consumers build or vendor from source (the demo in `examples/wasm.html` and the live website both import the `wasm-pack --target web` output by relative path), so neither needs a registry. A static GitHub Pages site with no bundler can't `npm install` anyway.
