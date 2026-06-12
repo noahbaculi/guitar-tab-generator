@@ -223,6 +223,138 @@ impl From<NumArrangements> for u8 {
     }
 }
 
+/// The three coefficients that combine a beat's difficulty features into a
+/// transition difficulty. Larger values penalize that factor more heavily.
+///
+/// Validated at construction: each is finite, non-negative, and at most
+/// [`DifficultyWeights::MAX`]. `DifficultyWeights::standard` reproduces the
+/// values baked into the algorithm before they were configurable.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DifficultyWeights {
+    movement: f64,
+    span: f64,
+    position: f64,
+}
+
+impl DifficultyWeights {
+    /// Upper bound on each coefficient. Far below the overflow ceiling
+    /// (`i32::MAX / (3 * Guitar::MAX_NUM_FRETS)`), kept conservative so the
+    /// `i32` difficulty cast in `calculate_node_difficulty` cannot overflow.
+    pub const MAX: f64 = 10_000.0;
+
+    /// The weights baked into the algorithm before they were configurable.
+    #[must_use]
+    pub const fn standard() -> Self {
+        Self {
+            movement: 100.0,
+            span: 10.0,
+            position: 1.0,
+        }
+    }
+
+    /// Validates each coefficient is finite, non-negative, and `<= MAX`.
+    ///
+    /// Zero is allowed and means "ignore this factor".
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TabError::DifficultyWeightOutOfRange`] naming the first
+    /// coefficient that is negative, non-finite, or above [`Self::MAX`].
+    pub fn try_new(movement: f64, span: f64, position: f64) -> Result<Self, TabError> {
+        for (field, value) in [
+            ("movement", movement),
+            ("span", span),
+            ("position", position),
+        ] {
+            if !value.is_finite() || value < 0.0 || value > Self::MAX {
+                return Err(TabError::DifficultyWeightOutOfRange { field });
+            }
+        }
+        Ok(Self {
+            movement,
+            span,
+            position,
+        })
+    }
+
+    #[must_use]
+    pub fn movement(self) -> f64 {
+        self.movement
+    }
+
+    #[must_use]
+    pub fn span(self) -> f64 {
+        self.span
+    }
+
+    #[must_use]
+    pub fn position(self) -> f64 {
+        self.position
+    }
+}
+
+impl Default for DifficultyWeights {
+    fn default() -> Self {
+        Self::standard()
+    }
+}
+
+#[cfg(test)]
+mod test_difficulty_weights {
+    use super::*;
+
+    #[test]
+    fn standard_matches_baked_in_values() {
+        let w = DifficultyWeights::standard();
+        assert_eq!(w.movement(), 100.0);
+        assert_eq!(w.span(), 10.0);
+        assert_eq!(w.position(), 1.0);
+    }
+
+    #[test]
+    fn try_new_accepts_zero_and_positive() {
+        let w = DifficultyWeights::try_new(0.0, 5.5, 1.0).unwrap();
+        assert_eq!(w.movement(), 0.0);
+        assert_eq!(w.span(), 5.5);
+    }
+
+    #[test]
+    fn try_new_rejects_negative() {
+        let err = DifficultyWeights::try_new(-1.0, 10.0, 1.0).unwrap_err();
+        assert_eq!(
+            err,
+            TabError::DifficultyWeightOutOfRange { field: "movement" }
+        );
+    }
+
+    #[test]
+    fn try_new_rejects_non_finite() {
+        let err = DifficultyWeights::try_new(100.0, f64::NAN, 1.0).unwrap_err();
+        assert_eq!(err, TabError::DifficultyWeightOutOfRange { field: "span" });
+
+        let err = DifficultyWeights::try_new(100.0, 10.0, f64::INFINITY).unwrap_err();
+        assert_eq!(
+            err,
+            TabError::DifficultyWeightOutOfRange { field: "position" }
+        );
+    }
+
+    #[test]
+    fn try_new_rejects_above_max() {
+        let err = DifficultyWeights::try_new(DifficultyWeights::MAX + 1.0, 10.0, 1.0)
+            .unwrap_err();
+        assert_eq!(
+            err,
+            TabError::DifficultyWeightOutOfRange { field: "movement" }
+        );
+    }
+
+    #[test]
+    fn default_is_standard() {
+        assert_eq!(DifficultyWeights::default(), DifficultyWeights::standard());
+    }
+}
+
 /// One beat in the normalized input echoed back from `ArrangementSet::normalized_input`.
 ///
 /// Serialized as a discriminated union tagged by `kind`, so JS code can `switch (b.kind)`
