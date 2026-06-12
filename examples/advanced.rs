@@ -1,6 +1,6 @@
 use guitar_tab_generator::{
-    Guitar, Line, NumArrangements, Pitch, TabError, create_arrangements, create_string_tuning,
-    parse_lines, render_tab,
+    DifficultyWeights, Guitar, Line, NumArrangements, Pitch, TabError, create_arrangements,
+    create_string_tuning, parse_lines, render_tab,
 };
 
 extern crate guitar_tab_generator;
@@ -43,7 +43,13 @@ fn main() -> Result<(), TabError> {
     let guitar = Guitar::new(tuning, guitar_num_frets, guitar_capo)?;
 
     let num_arrangements = NumArrangements::try_new(1)?;
-    let arrangements = create_arrangements(guitar.clone(), lines, num_arrangements, None)?;
+    let arrangements = create_arrangements(
+        guitar.clone(),
+        lines,
+        num_arrangements,
+        DifficultyWeights::standard(),
+        None,
+    )?;
 
     // dbg!(&arrangements);
 

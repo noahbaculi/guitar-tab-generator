@@ -1,4 +1,5 @@
 use crate::{
+    DifficultyWeights,
     error::{TabError, UnplayablePitch},
     guitar::{Guitar, PitchFingering, generate_pitch_fingerings},
     pitch::Pitch,
@@ -300,6 +301,7 @@ pub fn create_arrangements(
     guitar: Guitar,
     input_lines: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: crate::NumArrangements,
+    difficulty_weights: crate::DifficultyWeights,
     max_fret_span_filter: Option<u8>,
 ) -> Result<Vec<Arrangement>, TabError> {
     // Reject input past the cap up front: each beat's line index is cast to `u16` below, so a
@@ -374,7 +376,7 @@ pub fn create_arrangements(
 
     let path_results: Vec<(Vec<Node>, i32)> = yen(
         &Node::Start,
-        |current_node| calc_next_nodes(current_node, &path_node_groups),
+        |current_node| calc_next_nodes(current_node, &path_node_groups, difficulty_weights),
         |current_node| match current_node {
             Node::Start => false,
             Node::Rest { line_index } | Node::Playable { line_index, .. } => {
@@ -410,7 +412,14 @@ mod test_create_arrangements {
     fn unreachable_pitch_returns_unplayable_pitches_variant() {
         let lines = parse_lines("A1".to_owned()).unwrap();
         let n = NumArrangements::try_new(1).unwrap();
-        let err = create_arrangements(Guitar::default(), lines, n, None).unwrap_err();
+        let err = create_arrangements(
+            Guitar::default(),
+            lines,
+            n,
+            DifficultyWeights::standard(),
+            None,
+        )
+        .unwrap_err();
         match err {
             TabError::UnplayablePitches { pitches } => {
                 assert_eq!(pitches.len(), 1);
@@ -432,6 +441,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(1).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap_err();
@@ -456,6 +466,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(1).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -508,6 +519,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(10).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -539,6 +551,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(1).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -556,6 +569,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(1).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap_err();
@@ -573,6 +587,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(1).unwrap(),
+            DifficultyWeights::standard(),
             None,
         );
 
@@ -591,6 +606,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(2).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -620,6 +636,7 @@ mod test_create_arrangements {
             Guitar::default(),
             input_pitches,
             NumArrangements::try_new(1).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -654,6 +671,7 @@ mod test_create_arrangements {
             guitar.clone(),
             lines.clone(),
             NumArrangements::try_new(5).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -664,6 +682,7 @@ mod test_create_arrangements {
             guitar.clone(),
             lines,
             NumArrangements::try_new(5).unwrap(),
+            DifficultyWeights::standard(),
             Some(0),
         )
         .unwrap();
@@ -680,9 +699,14 @@ mod test_create_arrangements {
         // standard tuning), so every candidate arrangement has a non-zero fret span.
         let lines = crate::parser::parse_lines("C3E3".to_owned()).unwrap();
 
-        let filtered =
-            create_arrangements(guitar, lines, NumArrangements::try_new(5).unwrap(), Some(0))
-                .expect("filter dropping every candidate is not an error");
+        let filtered = create_arrangements(
+            guitar,
+            lines,
+            NumArrangements::try_new(5).unwrap(),
+            DifficultyWeights::standard(),
+            Some(0),
+        )
+        .expect("filter dropping every candidate is not an error");
         assert!(
             filtered.is_empty(),
             "max_fret_span_filter=Some(0) on an all-fretted chord must drop every candidate",
@@ -704,6 +728,7 @@ mod test_create_arrangements {
             guitar.clone(),
             lines.clone(),
             NumArrangements::try_new(5).unwrap(),
+            DifficultyWeights::standard(),
             None,
         )
         .unwrap();
@@ -717,9 +742,14 @@ mod test_create_arrangements {
             "expected at least one span>0 arrangement so the filter does real work"
         );
 
-        let filtered =
-            create_arrangements(guitar, lines, NumArrangements::try_new(5).unwrap(), Some(0))
-                .unwrap();
+        let filtered = create_arrangements(
+            guitar,
+            lines,
+            NumArrangements::try_new(5).unwrap(),
+            DifficultyWeights::standard(),
+            Some(0),
+        )
+        .unwrap();
         // Exactly the two span-0 arrangements survive: 0 < 2 < 5, exercising the
         // "return what we have" fallback (fewer than num_arrangements, no error).
         assert_eq!(filtered.len(), 2);
@@ -1161,6 +1191,7 @@ type NodeDifficulty = i32;
 fn calc_next_nodes(
     current_node: &Node,
     path_node_groups: &[BeatVec<Node>],
+    weights: DifficultyWeights,
 ) -> Vec<(Node, NodeDifficulty)> {
     let next_node_index = match current_node {
         Node::Start => 0,
@@ -1181,7 +1212,7 @@ fn calc_next_nodes(
                 .map(|next_node| {
                     (
                         next_node.clone(),
-                        calculate_node_difficulty(current_node, next_node),
+                        calculate_node_difficulty(current_node, next_node, weights),
                     )
                 })
                 .collect_vec()
@@ -1266,11 +1297,20 @@ mod test_calc_next_nodes {
             },
         ]
         .iter()
-        .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
+        .map(|node| {
+            (
+                node.clone(),
+                calculate_node_difficulty(&current_node, node, DifficultyWeights::standard()),
+            )
+        })
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_node_groups()),
+            calc_next_nodes(
+                &current_node,
+                &create_test_path_node_groups(),
+                DifficultyWeights::standard()
+            ),
             expected_nodes_and_costs
         );
     }
@@ -1294,11 +1334,20 @@ mod test_calc_next_nodes {
             }),
         }]
         .iter()
-        .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
+        .map(|node| {
+            (
+                node.clone(),
+                calculate_node_difficulty(&current_node, node, DifficultyWeights::standard()),
+            )
+        })
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_node_groups()),
+            calc_next_nodes(
+                &current_node,
+                &create_test_path_node_groups(),
+                DifficultyWeights::standard()
+            ),
             expected_nodes_and_costs
         );
     }
@@ -1315,11 +1364,20 @@ mod test_calc_next_nodes {
 
         let expected_nodes_and_costs = [Node::Rest { line_index: 2 }]
             .iter()
-            .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
+            .map(|node| {
+                (
+                    node.clone(),
+                    calculate_node_difficulty(&current_node, node, DifficultyWeights::standard()),
+                )
+            })
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_node_groups()),
+            calc_next_nodes(
+                &current_node,
+                &create_test_path_node_groups(),
+                DifficultyWeights::standard()
+            ),
             expected_nodes_and_costs
         );
     }
@@ -1329,11 +1387,20 @@ mod test_calc_next_nodes {
 
         let expected_nodes_and_costs = [Node::Rest { line_index: 3 }]
             .iter()
-            .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
+            .map(|node| {
+                (
+                    node.clone(),
+                    calculate_node_difficulty(&current_node, node, DifficultyWeights::standard()),
+                )
+            })
             .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_node_groups()),
+            calc_next_nodes(
+                &current_node,
+                &create_test_path_node_groups(),
+                DifficultyWeights::standard()
+            ),
             expected_nodes_and_costs
         );
     }
@@ -1360,11 +1427,20 @@ mod test_calc_next_nodes {
             },
         ]
         .iter()
-        .map(|node| (node.clone(), calculate_node_difficulty(&current_node, node)))
+        .map(|node| {
+            (
+                node.clone(),
+                calculate_node_difficulty(&current_node, node, DifficultyWeights::standard()),
+            )
+        })
         .collect_vec();
 
         assert_eq!(
-            calc_next_nodes(&current_node, &create_test_path_node_groups()),
+            calc_next_nodes(
+                &current_node,
+                &create_test_path_node_groups(),
+                DifficultyWeights::standard()
+            ),
             expected_nodes_and_costs
         );
     }
@@ -1372,7 +1448,11 @@ mod test_calc_next_nodes {
 
 /// Calculates the transition difficulty from one node to another based on the
 /// average fret difference and fret span.
-fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDifficulty {
+fn calculate_node_difficulty(
+    current_node: &Node,
+    next_node: &Node,
+    weights: DifficultyWeights,
+) -> NodeDifficulty {
     let current_avg_fret = match current_node {
         Node::Playable {
             scored_beat_fingering,
@@ -1401,11 +1481,13 @@ fn calculate_node_difficulty(current_node: &Node, next_node: &Node) -> NodeDiffi
     };
 
     // The cast to i32 (NodeDifficulty) cannot overflow: every fret term is bounded by
-    // Guitar::MAX_NUM_FRETS (30), so the weighted sum stays far inside i32, and the inputs are
-    // finite because calc_avg_non_zero_fret yields None (scored as 0.0) for an all-open beat.
-    ((avg_fret_difference * 100.0)
-        + (next_fret_span * 10.0)
-        + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner()) as NodeDifficulty
+    // Guitar::MAX_NUM_FRETS (30) and every weight by DifficultyWeights::MAX, so the weighted
+    // sum (<= 3 * 30 * MAX) stays far inside i32. Inputs are finite because try_new rejects
+    // non-finite weights and calc_avg_non_zero_fret yields None (scored as 0.0) for an all-open beat.
+    ((avg_fret_difference * weights.movement())
+        + (next_fret_span * weights.span())
+        + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner() * weights.position())
+        as NodeDifficulty
 }
 #[cfg(test)]
 mod test_calculate_node_difficulty {
@@ -1430,7 +1512,10 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 3);
+        assert_eq!(
+            calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
+            3
+        );
     }
     #[test]
     fn simple_from_start() {
@@ -1443,7 +1528,10 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(calculate_node_difficulty(&Node::Start, &next_node), 3);
+        assert_eq!(
+            calculate_node_difficulty(&Node::Start, &next_node, DifficultyWeights::standard()),
+            3
+        );
     }
     #[test]
     fn simple_from_rest() {
@@ -1457,7 +1545,11 @@ mod test_calculate_node_difficulty {
         };
 
         assert_eq!(
-            calculate_node_difficulty(&Node::Rest { line_index: 0 }, &next_node),
+            calculate_node_difficulty(
+                &Node::Rest { line_index: 0 },
+                &next_node,
+                DifficultyWeights::standard()
+            ),
             3
         );
     }
@@ -1473,7 +1565,11 @@ mod test_calculate_node_difficulty {
         };
 
         assert_eq!(
-            calculate_node_difficulty(&current_node, &Node::Rest { line_index: 1 }),
+            calculate_node_difficulty(
+                &current_node,
+                &Node::Rest { line_index: 1 },
+                DifficultyWeights::standard()
+            ),
             0
         );
     }
@@ -1496,7 +1592,10 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 141);
+        assert_eq!(
+            calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
+            141
+        );
     }
     #[test]
     fn simple_fret_span() {
@@ -1517,7 +1616,10 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 34);
+        assert_eq!(
+            calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
+            34
+        );
     }
     #[test]
     fn compound() {
@@ -1538,7 +1640,10 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 352);
+        assert_eq!(
+            calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
+            352
+        );
     }
     #[test]
     fn complex() {
@@ -1559,7 +1664,10 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(calculate_node_difficulty(&current_node, &next_node), 410);
+        assert_eq!(
+            calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
+            410
+        );
     }
 
     #[test]
@@ -1568,7 +1676,42 @@ mod test_calculate_node_difficulty {
         // `Node::Start` is only ever the pathfinding source, never a successor. The guard
         // used to also live in `calc_next_nodes`; after the group-indexing rewrite this is
         // the only copy, so it is pinned here.
-        calculate_node_difficulty(&Node::Rest { line_index: 0 }, &Node::Start);
+        calculate_node_difficulty(
+            &Node::Rest { line_index: 0 },
+            &Node::Start,
+            DifficultyWeights::standard(),
+        );
+    }
+
+    #[test]
+    fn custom_weights_rescale_score() {
+        use crate::DifficultyWeights;
+        let current = Node::Playable {
+            line_index: 0,
+            scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                beat_fingering: vec![],
+                avg_non_zero_fret: Some(OrderedFloat(3.0)),
+                non_zero_fret_span: 0,
+            }),
+        };
+        let next = Node::Playable {
+            line_index: 1,
+            scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                beat_fingering: vec![],
+                avg_non_zero_fret: Some(OrderedFloat(5.0)),
+                non_zero_fret_span: 2,
+            }),
+        };
+        // avg_fret_difference = 2, next_fret_span = 2, next_avg_fret = 5
+        // standard: 2*100 + 2*10 + 5*1 = 225
+        let standard = DifficultyWeights::standard();
+        assert_eq!(calculate_node_difficulty(&current, &next, standard), 225);
+        // movement only: 2*10 + 2*0 + 5*0 = 20
+        let movement_only = DifficultyWeights::try_new(10.0, 0.0, 0.0).unwrap();
+        assert_eq!(
+            calculate_node_difficulty(&current, &next, movement_only),
+            20
+        );
     }
 }
 
@@ -1807,7 +1950,7 @@ mod proptest_invariants {
         fn invariant_input_pitches_represented(case in arb_case()) {
             let guitar = std_guitar();
             let arrangements = create_arrangements(
-                guitar.clone(), case.input_lines.clone(), case.num_arrangements, None,
+                guitar.clone(), case.input_lines.clone(), case.num_arrangements, DifficultyWeights::standard(), None,
             ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             // Map input line_index (skipping leading non-playable lines) to expected pitches.
@@ -1852,7 +1995,7 @@ mod proptest_invariants {
         fn invariant_no_duplicate_strings(case in arb_case()) {
             let guitar = std_guitar();
             let arrangements = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements, None,
+                guitar, case.input_lines, case.num_arrangements, DifficultyWeights::standard(), None,
             ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             for arrangement in &arrangements {
@@ -1876,7 +2019,7 @@ mod proptest_invariants {
             let guitar = std_guitar();
             let playable_frets = guitar.playable_frets;
             let arrangements = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements, None,
+                guitar, case.input_lines, case.num_arrangements, DifficultyWeights::standard(), None,
             ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             for arrangement in &arrangements {
@@ -1895,7 +2038,7 @@ mod proptest_invariants {
         fn invariant_sorted_by_difficulty(case in arb_case()) {
             let guitar = std_guitar();
             let arrangements = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements, None,
+                guitar, case.input_lines, case.num_arrangements, DifficultyWeights::standard(), None,
             ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             for pair in arrangements.windows(2) {
@@ -1908,7 +2051,7 @@ mod proptest_invariants {
         fn invariant_count_bounded(case in arb_case()) {
             let guitar = std_guitar();
             let arrangements = create_arrangements(
-                guitar, case.input_lines, case.num_arrangements, None,
+                guitar, case.input_lines, case.num_arrangements, DifficultyWeights::standard(), None,
             ).map_err(|e| TestCaseError::reject(format!("create_arrangements rejected input: {e}")))?;
 
             prop_assert!(arrangements.len() <= case.num_arrangements.get() as usize);
@@ -1923,10 +2066,10 @@ mod proptest_invariants {
             let guitar1 = std_guitar();
             let guitar2 = std_guitar();
             let first = memoized_original_create_arrangements(
-                guitar1, case.input_lines.clone(), case.num_arrangements, None,
+                guitar1, case.input_lines.clone(), case.num_arrangements, DifficultyWeights::standard(), None,
             );
             let second = memoized_original_create_arrangements(
-                guitar2, case.input_lines, case.num_arrangements, None,
+                guitar2, case.input_lines, case.num_arrangements, DifficultyWeights::standard(), None,
             );
             match (first, second) {
                 (Ok(a), Ok(b)) => prop_assert_eq!(a, b),

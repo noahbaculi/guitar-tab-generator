@@ -14,9 +14,9 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use guitar_tab_generator::{
-    Arrangement, ArrangementSet, BeatVec, Guitar, Line, NormalizedBeat, NumArrangements,
-    ParseError, Pitch, PitchFingering, StringNumber, TabError, TabInput, TuningName,
-    UnplayablePitch, create_arrangements, create_string_tuning, generate_arrangements,
+    Arrangement, ArrangementSet, BeatVec, DifficultyWeights, Guitar, Line, NormalizedBeat,
+    NumArrangements, ParseError, Pitch, PitchFingering, StringNumber, TabError, TabInput,
+    TuningName, UnplayablePitch, create_arrangements, create_string_tuning, generate_arrangements,
     get_tuning_names, parse_lines, render_tab,
 };
 
@@ -222,8 +222,14 @@ fn lower_level_pipeline_is_publicly_callable() {
     let guitar = Guitar::new(tuning, 18, 0).expect("standard configuration");
 
     let n = NumArrangements::try_new(1).unwrap();
-    let arrangements: Vec<Arrangement> =
-        create_arrangements(guitar.clone(), lines, n, None).expect("playable input");
+    let arrangements: Vec<Arrangement> = create_arrangements(
+        guitar.clone(),
+        lines,
+        n,
+        DifficultyWeights::standard(),
+        None,
+    )
+    .expect("playable input");
     assert_eq!(arrangements.len(), 1);
 
     let arrangement = arrangements.first().expect("at least one arrangement");
@@ -269,7 +275,8 @@ fn pitch_fingering_is_publicly_named() {
     let guitar = Guitar::new(create_string_tuning(&open_pitches).unwrap(), 18, 0).unwrap();
     let lines = parse_lines("E2".to_owned()).unwrap();
     let n = NumArrangements::try_new(1).unwrap();
-    let arrangements = create_arrangements(guitar, lines, n, None).unwrap();
+    let arrangements =
+        create_arrangements(guitar, lines, n, DifficultyWeights::standard(), None).unwrap();
     let first_beat = arrangements[0]
         .lines()
         .iter()

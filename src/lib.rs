@@ -47,7 +47,7 @@
 //!
 //! ```
 //! use guitar_tab_generator::{
-//!     create_arrangements, render_tab, Guitar, Line, NumArrangements, Pitch,
+//!     create_arrangements, render_tab, DifficultyWeights, Guitar, Line, NumArrangements, Pitch,
 //! };
 //!
 //! // A standard 18-fret 6-string guitar.
@@ -65,6 +65,7 @@
 //!     guitar.clone(),
 //!     lines,
 //!     NumArrangements::try_new(1).expect("1 is in range"),
+//!     DifficultyWeights::standard(),
 //!     None,
 //! )
 //! .expect("input is playable");
@@ -82,6 +83,7 @@
 //!
 //! [readme]: https://github.com/noahbaculi/guitar-tab-generator#readme
 
+use ordered_float::OrderedFloat;
 use serde::{Deserialize, Serialize};
 use std::num::NonZeroU8;
 use tsify::Tsify;
@@ -253,11 +255,16 @@ impl From<NumArrangements> for u8 {
 /// Validated at construction: each is finite, non-negative, and at most
 /// [`DifficultyWeights::MAX`]. `DifficultyWeights::standard` reproduces the
 /// values baked into the algorithm before they were configurable.
-#[derive(Debug, Clone, Copy, PartialEq)]
+///
+/// Fields are stored as [`OrderedFloat`] so the type can derive `Hash`/`Eq`
+/// and serve as part of the `create_arrangements` memoize key; the public
+/// surface (`try_new`, the accessors) stays plain `f64`. `try_new` rejects
+/// non-finite inputs, so the `Eq`/`Hash` derives never observe a `NaN`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct DifficultyWeights {
-    movement: f64,
-    span: f64,
-    position: f64,
+    movement: OrderedFloat<f64>,
+    span: OrderedFloat<f64>,
+    position: OrderedFloat<f64>,
 }
 
 impl DifficultyWeights {
@@ -270,9 +277,9 @@ impl DifficultyWeights {
     #[must_use]
     pub const fn standard() -> Self {
         Self {
-            movement: 100.0,
-            span: 10.0,
-            position: 1.0,
+            movement: OrderedFloat(100.0),
+            span: OrderedFloat(10.0),
+            position: OrderedFloat(1.0),
         }
     }
 
@@ -295,25 +302,25 @@ impl DifficultyWeights {
             }
         }
         Ok(Self {
-            movement,
-            span,
-            position,
+            movement: OrderedFloat(movement),
+            span: OrderedFloat(span),
+            position: OrderedFloat(position),
         })
     }
 
     #[must_use]
     pub fn movement(self) -> f64 {
-        self.movement
+        self.movement.into_inner()
     }
 
     #[must_use]
     pub fn span(self) -> f64 {
-        self.span
+        self.span.into_inner()
     }
 
     #[must_use]
     pub fn position(self) -> f64 {
-        self.position
+        self.position.into_inner()
     }
 }
 
@@ -365,8 +372,7 @@ mod test_difficulty_weights {
 
     #[test]
     fn try_new_rejects_above_max() {
-        let err = DifficultyWeights::try_new(DifficultyWeights::MAX + 1.0, 10.0, 1.0)
-            .unwrap_err();
+        let err = DifficultyWeights::try_new(DifficultyWeights::MAX + 1.0, 10.0, 1.0).unwrap_err();
         assert_eq!(
             err,
             TabError::DifficultyWeightOutOfRange { field: "movement" }
@@ -385,12 +391,13 @@ mod test_difficulty_weights_input {
 
     #[test]
     fn builder_sets_difficulty_weights() {
-        let input = TabInput::new("E2", "standard", 18, 0, 1)
-            .with_difficulty_weights(DifficultyWeightsInput {
+        let input = TabInput::new("E2", "standard", 18, 0, 1).with_difficulty_weights(
+            DifficultyWeightsInput {
                 movement: 50.0,
                 span: 5.0,
                 position: 0.5,
-            });
+            },
+        );
         let w = input.difficulty_weights.unwrap();
         assert_eq!(w.movement, 50.0);
         assert_eq!(w.span, 5.0);
@@ -591,6 +598,10 @@ impl ArrangementSet {
 #[wasm_bindgen(js_name = "generateArrangements")]
 pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
+    let difficulty_weights = match tab_input.difficulty_weights {
+        Some(raw) => DifficultyWeights::try_new(raw.movement, raw.span, raw.position)?,
+        None => DifficultyWeights::standard(),
+    };
 
     let input_lines = parser::parse_lines(tab_input.input.clone())?;
 
@@ -619,6 +630,7 @@ pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabE
         guitar.clone(),
         input_lines,
         num_arrangements,
+        difficulty_weights,
         tab_input.max_fret_span_filter,
     )?;
 

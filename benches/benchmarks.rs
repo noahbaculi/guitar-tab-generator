@@ -2,8 +2,8 @@
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use guitar_tab_generator::{
-    BeatVec, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput, create_arrangements,
-    create_string_tuning, generate_arrangements, parse_lines, render_tab,
+    BeatVec, DifficultyWeights, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
+    create_arrangements, create_string_tuning, generate_arrangements, parse_lines, render_tab,
 };
 // `__bench_internals` exposes the memoize escape hatches plus the now-private
 // tuning offset helpers so criterion benches can still measure them; see the
@@ -199,6 +199,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
                 black_box(NumArrangements::try_new(1).unwrap()),
+                black_box(DifficultyWeights::standard()),
                 black_box(None),
             )
         })
@@ -209,6 +210,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
                 black_box(NumArrangements::try_new(3).unwrap()),
+                black_box(DifficultyWeights::standard()),
                 black_box(None),
             )
         })
@@ -219,6 +221,7 @@ fn bench_arrangement_creation(c: &mut Criterion) {
                 black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                 black_box(fur_elise_lines()),
                 black_box(NumArrangements::try_new(5).unwrap()),
+                black_box(DifficultyWeights::standard()),
                 black_box(None),
             )
         })
@@ -242,6 +245,7 @@ fn bench_arrangement_scaling(c: &mut Criterion) {
                     black_box(Guitar::new(tuning.clone(), 18, 0).unwrap()),
                     black_box(fur_elise_lines()),
                     black_box(num_arrangements),
+                    black_box(DifficultyWeights::standard()),
                     black_box(None),
                 )
             });
@@ -257,6 +261,7 @@ fn bench_render_tab(c: &mut Criterion) {
         Guitar::default(),
         parse_lines(fur_elise_input().to_owned()).unwrap(),
         NumArrangements::try_new(1).unwrap(),
+        DifficultyWeights::standard(),
         None,
     )
     .unwrap();
