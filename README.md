@@ -24,7 +24,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
   - [Table of Contents](#table-of-contents)
   - [Demo](#demo)
   - [Features](#features)
-  - [Quick start (2.0.0)](#quick-start-200)
+  - [Quick start (3.0.0)](#quick-start-300)
   - [Previous versions](#previous-versions)
   - [Pathfinding Algorithm Visualization](#pathfinding-algorithm-visualization)
     - [Pitch Fingerings](#pitch-fingerings)
@@ -63,7 +63,7 @@ src="https://github.com/noahbaculi/noahbaculi/assets/49008873/6cfa66fd-b63e-4e0c
 - Playback indicator for playback applications
 - Pathfinding via Yen's k-shortest-paths algorithm (built on Dijkstra) to rank arrangements from least to most difficult.
 
-## Quick start (2.0.0)
+## Quick start (3.0.0)
 
 Rust:
 
@@ -100,7 +100,9 @@ set.free(); // or `using set = generateArrangements(...)` in TS 5.2+
 
 `ArrangementSet` is a wasm-bindgen opaque handle. Call `set.free()` when done (or use `using` in runtimes with explicit resource management). Without that, the underlying allocation only releases when `FinalizationRegistry` runs, which is not prompt on every runtime.
 
-See `MIGRATION.md` for the 2.0.0 migration guide, `CHANGELOG.md` for the full change list, and `types.md` for the typed surface.
+To bias the ranking, pass the optional `difficultyWeights` (`movement`, `span`, `position`) on the input. Omitting it uses the standard weights. See [ADR-0011](docs/adr/0011-difficulty-weights.md).
+
+See `MIGRATION.md` for the migration guide, `CHANGELOG.md` for the full change list, and `types.md` for the typed surface.
 
 ## Previous versions
 

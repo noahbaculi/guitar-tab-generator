@@ -1,6 +1,6 @@
-# Migration: 1.x to 2.0
+# Migration guide
 
-Guitar Tab Generator 2.0.0 reworks the WASM surface for typed boundaries, structured errors, and cheap re-renders. This guide walks 1.x callers through every breaking change with before / after snippets.
+Guitar Tab Generator 2.0.0 reworked the WASM surface for typed boundaries, structured errors, and cheap re-renders. Most of this guide walks 1.x callers through those breaking changes with before / after snippets. The [2.x to 3.0](#2x-to-30) section at the end covers the 3.0.0 floating-point difficulty change.
 
 For a flat list of changes, see [`CHANGELOG.md`](CHANGELOG.md). For the architectural decisions behind each change, see [`docs/adr/`](docs/adr/).
 
@@ -430,10 +430,61 @@ As of the additional 2.0.0 changes it is also re-exported from the crate root, s
 
 Input longer than 65,535 lines now returns `TabError::InputTooManyLines { max }` (where `max` is the inclusive limit, 65,535), instead of overflowing the internal `u16` beat index. This is a new `kind` (`inputTooManyLines` on the wire), so a `switch (err.kind)` without that case falls through to its default arm. A real transcription stays far below this bound; only pathological input is rejected.
 
+## 2.x to 3.0
+
+3.0.0 makes the difficulty score floating-point and adds optional per-call control over the difficulty weights. The WASM/TypeScript surface keeps the same shape, so the only required change is on the Rust side.
+
+### Difficulty is now `f64`
+
+`ArrangementSet::difficulty(i)` returns `Result<f64, TabError>` and `Arrangement::difficulty()` returns `f64`, both previously `i32`. The internal pathfinding cost is now `f64`, so a reported difficulty can carry a fractional part rather than the old truncated integer.
+
+Rust callers update the binding type:
+
+```rust
+// Before (2.x):
+let d: i32 = set.difficulty(0)?;
+
+// After (3.0):
+let d: f64 = set.difficulty(0)?;
+```
+
+JS/TypeScript callers need no type change (`difficulty(index: number): number` on both sides), but a value that used to read as a whole number can now be fractional. Format it before display:
+
+```ts
+const diff = set.difficulty(i); // e.g. 12.34 rather than 12
+metaEl.textContent = `difficulty ${diff.toFixed(2)}`;
+```
+
+### Optional `difficultyWeights`
+
+`TabInput.difficultyWeights` is new and optional. Omitting it (or passing `undefined` / `null`) reproduces 2.x ranking exactly, so existing callers need no change. To tune the ranking, pass the three coefficients:
+
+```ts
+generateArrangements({
+  input: "E2\nA2\nD3",
+  tuningName: "standard",
+  guitarNumFrets: 18,
+  guitarCapo: 0,
+  numArrangements: 3,
+  difficultyWeights: { movement: 100, span: 10, position: 1 }, // the standard weights
+});
+```
+
+Weights must be finite and non-negative, otherwise `generateArrangements` throws `TabError` with `kind: "difficultyWeightOutOfRange"` naming the offending field. Only the ratios between the coefficients affect ranking, not their absolute magnitude. Rust callers set the weights through the builder:
+
+```rust
+use guitar_tab_generator::{DifficultyWeightsInput, TabInput};
+
+let input = TabInput::new("E2\nA2\nD3", "standard", 18, 0, 3)
+    .with_difficulty_weights(DifficultyWeightsInput { movement: 100.0, span: 10.0, position: 1.0 });
+```
+
+`generate_arrangements` validates the weights and returns `TabError::DifficultyWeightOutOfRange` for a negative or non-finite coefficient. See [ADR-0011](docs/adr/0011-difficulty-weights.md).
+
 ## See also
 
 - [`CHANGELOG.md`](CHANGELOG.md) -- flat list of every breaking change.
 - [`CONTEXT.md`](CONTEXT.md) -- domain glossary for 2.x terminology.
 - [`docs/adr/`](docs/adr/) -- architectural decision records.
 - [`types.md`](types.md) -- typed surface reference.
-- [`examples/wasm.html`](examples/wasm.html) -- single-file reference demo exercising the full 2.0.0 WASM surface.
+- [`examples/wasm.html`](examples/wasm.html) -- single-file reference demo exercising the full 3.0.0 WASM surface.
