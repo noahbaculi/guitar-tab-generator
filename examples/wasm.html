@@ -445,7 +445,7 @@ C4`,
                 const span = set.maxFretSpan(i);
                 tabEl.textContent = tab;
                 tabEl.classList.remove("error");
-                metaEl.innerHTML = `Arrangement <strong>${i + 1}</strong> / ${set.len}  (difficulty ${diff}, span ${span})`;
+                metaEl.innerHTML = `Arrangement <strong>${i + 1}</strong> / ${set.len}  (difficulty ${diff.toFixed(2)}, span ${span})`;
             } catch (err) {
                 console.error("Render error:", err);
                 const detail =
