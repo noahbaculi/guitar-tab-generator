@@ -40,7 +40,7 @@ Vec<Line<BeatVec<Pitch>>>             │              difficulty_weights: Optio
                 Vec<Arrangement>
                 ─────────────────────────────────────────────────
                  lines        : Vec<Line<BeatVec<PitchFingering>>>
-                 difficulty   : i32
+                 difficulty   : f64
                  max_fret_span: u8
                          │
                          ▼
@@ -52,7 +52,7 @@ Vec<Line<BeatVec<Pitch>>>             │              difficulty_weights: Optio
 
   per-arrangement reach: set.render(i, width, padding, playback) -> String
                          set.max_fret_span(i) -> u8
-                         set.difficulty(i) -> i32
+                         set.difficulty(i) -> f64
 ```
 
 > `parse_lines` is a public re-export from the crate root. `parse_tuning` and
