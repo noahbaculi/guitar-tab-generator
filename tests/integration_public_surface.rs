@@ -508,3 +508,76 @@ mod boundary_variant_smoke {
         }
     }
 }
+
+#[test]
+fn difficulty_weights_none_matches_standard() {
+    use guitar_tab_generator::{
+        DifficultyWeights, DifficultyWeightsInput, TabInput, generate_arrangements,
+    };
+
+    // A short melody that spans the neck, so movement vs. position pull differently.
+    let text = "E2\nA3\nE2\nA3";
+
+    let default_set = generate_arrangements(TabInput::new(text, "standard", 18, 0, 3)).unwrap();
+    let std = DifficultyWeights::standard();
+    let explicit_set = generate_arrangements(
+        TabInput::new(text, "standard", 18, 0, 3).with_difficulty_weights(DifficultyWeightsInput {
+            movement: std.movement(),
+            span: std.span(),
+            position: std.position(),
+        }),
+    )
+    .unwrap();
+
+    assert_eq!(default_set.len(), explicit_set.len());
+    for i in 0..default_set.len() {
+        assert_eq!(
+            default_set.difficulty(i).unwrap(),
+            explicit_set.difficulty(i).unwrap(),
+            "explicit standard weights must match the default at index {i}"
+        );
+    }
+}
+
+#[test]
+fn difficulty_weights_change_top_difficulty() {
+    use guitar_tab_generator::{DifficultyWeightsInput, TabInput, generate_arrangements};
+
+    let text = "E2\nA3\nE2\nA3";
+
+    let default_set = generate_arrangements(TabInput::new(text, "standard", 18, 0, 1)).unwrap();
+    // Heavily favor low neck position over movement: a different best arrangement / score.
+    let reweighted_set = generate_arrangements(
+        TabInput::new(text, "standard", 18, 0, 1).with_difficulty_weights(DifficultyWeightsInput {
+            movement: 1.0,
+            span: 1.0,
+            position: 1000.0,
+        }),
+    )
+    .unwrap();
+
+    assert_ne!(
+        default_set.difficulty(0).unwrap(),
+        reweighted_set.difficulty(0).unwrap(),
+        "re-weighting position should change the best arrangement's difficulty"
+    );
+}
+
+#[test]
+fn invalid_difficulty_weight_is_rejected() {
+    use guitar_tab_generator::{DifficultyWeightsInput, TabError, TabInput, generate_arrangements};
+
+    let err = generate_arrangements(
+        TabInput::new("E2", "standard", 18, 0, 1).with_difficulty_weights(DifficultyWeightsInput {
+            movement: -1.0,
+            span: 10.0,
+            position: 1.0,
+        }),
+    )
+    .unwrap_err();
+
+    assert_eq!(
+        err,
+        TabError::DifficultyWeightOutOfRange { field: "movement" }
+    );
+}
