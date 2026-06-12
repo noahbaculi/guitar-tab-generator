@@ -241,7 +241,7 @@ mod test_calc_avg_non_zero_fret {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Arrangement {
     pub(crate) lines: Vec<Line<BeatVec<PitchFingering>>>,
-    difficulty: i32,
+    difficulty: OrderedFloat<f64>,
     max_fret_span: u8,
 }
 impl Arrangement {
@@ -262,8 +262,8 @@ impl Arrangement {
     /// The difficulty score of this arrangement. Lower is easier. Equal to the sum of
     /// transition difficulties along the chosen path through the fingering graph.
     #[must_use]
-    pub fn difficulty(&self) -> i32 {
-        self.difficulty
+    pub fn difficulty(&self) -> f64 {
+        self.difficulty.into_inner()
     }
 }
 #[cfg(test)]
@@ -274,7 +274,7 @@ mod test_max_fret_span {
     fn test_max_fret_span() {
         let arrangement = Arrangement {
             lines: vec![],
-            difficulty: 4,
+            difficulty: OrderedFloat(4.0),
             max_fret_span: 5,
         };
         assert_eq!(arrangement.max_fret_span(), 5);
@@ -321,7 +321,7 @@ pub fn create_arrangements(
         let empty_arrangements = vec![
             Arrangement {
                 lines: vec![],
-                difficulty: 0,
+                difficulty: OrderedFloat(0.0),
                 max_fret_span: 0,
             };
             num_arrangements.get() as usize
@@ -374,7 +374,7 @@ pub fn create_arrangements(
 
     let num_path_node_groups = path_node_groups.len();
 
-    let path_results: Vec<(Vec<Node>, i32)> = yen(
+    let path_results: Vec<(Vec<Node>, NodeDifficulty)> = yen(
         &Node::Start,
         |current_node| calc_next_nodes(current_node, &path_node_groups, difficulty_weights),
         |current_node| match current_node {
@@ -458,7 +458,7 @@ mod test_create_arrangements {
                 string_number: StringNumber::new(1).unwrap(),
                 fret: 0,
             }])],
-            difficulty: 0,
+            difficulty: OrderedFloat(0.0),
             max_fret_span: 0,
         }];
 
@@ -483,7 +483,7 @@ mod test_create_arrangements {
                     string_number: StringNumber::new(1).unwrap(),
                     fret: 0,
                 }])],
-                difficulty: 0,
+                difficulty: OrderedFloat(0.0),
                 max_fret_span: 0,
             },
             Arrangement {
@@ -492,7 +492,7 @@ mod test_create_arrangements {
                     string_number: StringNumber::new(2).unwrap(),
                     fret: 5,
                 }])],
-                difficulty: 5,
+                difficulty: OrderedFloat(5.0),
                 max_fret_span: 0,
             },
             Arrangement {
@@ -501,7 +501,7 @@ mod test_create_arrangements {
                     string_number: StringNumber::new(3).unwrap(),
                     fret: 9,
                 }])],
-                difficulty: 9,
+                difficulty: OrderedFloat(9.0),
                 max_fret_span: 0,
             },
             Arrangement {
@@ -510,7 +510,7 @@ mod test_create_arrangements {
                     string_number: StringNumber::new(4).unwrap(),
                     fret: 14,
                 }])],
-                difficulty: 14,
+                difficulty: OrderedFloat(14.0),
                 max_fret_span: 0,
             },
         ];
@@ -543,7 +543,7 @@ mod test_create_arrangements {
                 Line::Rest,
                 Line::MeasureBreak,
             ],
-            difficulty: 0,
+            difficulty: OrderedFloat(0.0),
             max_fret_span: 0,
         }];
 
@@ -614,7 +614,7 @@ mod test_create_arrangements {
         let expected_arrangements: Vec<Arrangement> = vec![
             Arrangement {
                 lines: vec![],
-                difficulty: 0,
+                difficulty: OrderedFloat(0.0),
                 max_fret_span: 0,
             };
             2
@@ -650,7 +650,7 @@ mod test_create_arrangements {
                 }]),
                 Line::Rest,
             ],
-            difficulty: 0,
+            difficulty: OrderedFloat(0.0),
             max_fret_span: 0,
         }];
 
@@ -1181,7 +1181,7 @@ mod test_calc_fret_span {
     }
 }
 
-type NodeDifficulty = i32;
+type NodeDifficulty = OrderedFloat<f64>;
 
 /// Calculates the next nodes and their transition difficulties based on the current node
 /// and the per-beat node groups.
@@ -1480,18 +1480,24 @@ fn calculate_node_difficulty(
         _ => 0.0,
     };
 
-    // The cast to i32 (NodeDifficulty) cannot overflow: every fret term is bounded by
-    // Guitar::MAX_NUM_FRETS (30) and every weight by DifficultyWeights::MAX, so the weighted
-    // sum (<= 3 * 30 * MAX) stays far inside i32. Inputs are finite because try_new rejects
-    // non-finite weights and calc_avg_non_zero_fret yields None (scored as 0.0) for an all-open beat.
-    ((avg_fret_difference * weights.movement())
-        + (next_fret_span * weights.span())
-        + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner() * weights.position())
-        as NodeDifficulty
+    OrderedFloat(
+        (avg_fret_difference * weights.movement())
+            + (next_fret_span * weights.span())
+            + (next_avg_fret.unwrap_or(OrderedFloat(0.0))).into_inner() * weights.position(),
+    )
 }
 #[cfg(test)]
 mod test_calculate_node_difficulty {
     use super::*;
+
+    /// Difficulty is `f64` now, so compare within a tolerance: the fret literals below
+    /// (for example `4.133333`) are not bit-exact, and the old `i32` cast that hid that is gone.
+    fn assert_difficulty_eq(got: NodeDifficulty, want: f64) {
+        assert!(
+            (got.into_inner() - want).abs() < 1e-4,
+            "difficulty {got} differs from expected {want}"
+        );
+    }
 
     #[test]
     fn simple_no_diff() {
@@ -1512,9 +1518,9 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            3
+            3.5,
         );
     }
     #[test]
@@ -1528,9 +1534,9 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(&Node::Start, &next_node, DifficultyWeights::standard()),
-            3
+            3.5,
         );
     }
     #[test]
@@ -1544,13 +1550,13 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(
                 &Node::Rest { line_index: 0 },
                 &next_node,
-                DifficultyWeights::standard()
+                DifficultyWeights::standard(),
             ),
-            3
+            3.5,
         );
     }
     #[test]
@@ -1564,13 +1570,13 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(
                 &current_node,
                 &Node::Rest { line_index: 1 },
-                DifficultyWeights::standard()
+                DifficultyWeights::standard(),
             ),
-            0
+            0.0,
         );
     }
     #[test]
@@ -1592,9 +1598,9 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            141
+            141.6,
         );
     }
     #[test]
@@ -1616,9 +1622,9 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            34
+            34.1333,
         );
     }
     #[test]
@@ -1640,9 +1646,9 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            352
+            352.0,
         );
     }
     #[test]
@@ -1664,9 +1670,9 @@ mod test_calculate_node_difficulty {
             }),
         };
 
-        assert_eq!(
+        assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            410
+            410.3333,
         );
     }
 
@@ -1705,19 +1711,16 @@ mod test_calculate_node_difficulty {
         // avg_fret_difference = 2, next_fret_span = 2, next_avg_fret = 5
         // standard: 2*100 + 2*10 + 5*1 = 225
         let standard = DifficultyWeights::standard();
-        assert_eq!(calculate_node_difficulty(&current, &next, standard), 225);
+        assert_difficulty_eq(calculate_node_difficulty(&current, &next, standard), 225.0);
         // movement only: 2*10 + 2*0 + 5*0 = 20
         let movement_only = DifficultyWeights::try_new(10.0, 0.0, 0.0).unwrap();
-        assert_eq!(
-            calculate_node_difficulty(&current, &next, movement_only),
-            20
-        );
+        assert_difficulty_eq(calculate_node_difficulty(&current, &next, movement_only), 20.0);
     }
 }
 
 fn process_path(
     path_nodes: Vec<Node>,
-    path_difficulty: i32,
+    path_difficulty: NodeDifficulty,
     measure_break_indices: &[usize],
 ) -> Arrangement {
     let mut lines: Vec<Line<BeatVec<PitchFingering>>> = path_nodes
@@ -1784,11 +1787,11 @@ mod test_process_path {
             },
         ];
 
-        let arrangement = process_path(path_nodes, 123, &[]);
+        let arrangement = process_path(path_nodes, OrderedFloat(123.0), &[]);
 
         let expected_arrangement = Arrangement {
             lines: vec![Playable(placeholder_scored_beat_fingering.beat_fingering)],
-            difficulty: 123,
+            difficulty: OrderedFloat(123.0),
             max_fret_span: 0,
         };
 
@@ -1827,7 +1830,7 @@ mod test_process_path {
             },
         ];
 
-        let arrangement = process_path(path_nodes, 321, &[0, 2, 5, 7]);
+        let arrangement = process_path(path_nodes, OrderedFloat(321.0), &[0, 2, 5, 7]);
 
         let expected_arrangement = Arrangement {
             lines: vec![
@@ -1841,7 +1844,7 @@ mod test_process_path {
                 MeasureBreak,
                 Playable(placeholder_scored_beat_fingering.beat_fingering),
             ],
-            difficulty: 321,
+            difficulty: OrderedFloat(321.0),
             max_fret_span: 4,
         };
 

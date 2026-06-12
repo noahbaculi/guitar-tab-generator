@@ -509,7 +509,7 @@ impl ArrangementSet {
     /// # Errors
     ///
     /// Returns [`TabError::IndexOutOfBounds`] when `index >= self.len`.
-    pub fn difficulty(&self, index: usize) -> Result<i32, TabError> {
+    pub fn difficulty(&self, index: usize) -> Result<f64, TabError> {
         self.arrangements
             .get(index)
             .map(|a| a.difficulty())
@@ -926,7 +926,7 @@ mod test_boundary_types {
         let set = arrangement_set_fixture(1);
         // The fixture is all open strings (E2/A2/D3 in standard tuning), so the optimal
         // arrangement has difficulty 0. Pin the value, not just that the call succeeds.
-        assert_eq!(set.difficulty(0).unwrap(), 0);
+        assert_eq!(set.difficulty(0).unwrap(), 0.0);
     }
 
     #[test]

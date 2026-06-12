@@ -30,7 +30,7 @@ fn generate_arrangements_happy_path() {
     assert_eq!(set.len(), 1);
     assert_eq!(set.max_fret_span(0).unwrap(), 0);
     // All-open fixture: optimal difficulty is 0. Pin the value, not just Ok-ness.
-    assert_eq!(set.difficulty(0).unwrap(), 0);
+    assert_eq!(set.difficulty(0).unwrap(), 0.0);
 }
 
 #[test]
