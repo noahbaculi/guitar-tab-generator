@@ -1738,7 +1738,10 @@ mod test_calculate_node_difficulty {
         assert_difficulty_eq(calculate_node_difficulty(&current, &next, standard), 225.0);
         // movement only: 2*10 + 2*0 + 5*0 = 20
         let movement_only = DifficultyWeights::try_new(10.0, 0.0, 0.0).unwrap();
-        assert_difficulty_eq(calculate_node_difficulty(&current, &next, movement_only), 20.0);
+        assert_difficulty_eq(
+            calculate_node_difficulty(&current, &next, movement_only),
+            20.0,
+        );
     }
 
     #[test]
