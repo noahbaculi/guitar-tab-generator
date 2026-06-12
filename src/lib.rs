@@ -126,6 +126,17 @@ pub mod __bench_internals {
     };
 }
 
+/// Raw difficulty weights as they cross the WASM boundary. Validated into
+/// [`DifficultyWeights`] by [`generate_arrangements`]. Omitting it (or `null`)
+/// uses [`DifficultyWeights::standard`].
+#[derive(Debug, Clone, Copy, Deserialize, Tsify)]
+#[serde(rename_all = "camelCase")]
+pub struct DifficultyWeightsInput {
+    pub movement: f64,
+    pub span: f64,
+    pub position: f64,
+}
+
 /// Configuration bundle for one tab-generation request.
 ///
 /// Crosses the WASM boundary via `tsify`; JS sees a camelCase interface generated
@@ -149,6 +160,11 @@ pub struct TabInput {
     /// arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
     #[tsify(optional)]
     pub max_fret_span_filter: Option<u8>,
+    /// Per-call override of the difficulty-scoring coefficients. Omitted (or
+    /// `None`) means [`DifficultyWeights::standard`], reproducing the built-in
+    /// ranking. Validated at the boundary by [`generate_arrangements`].
+    #[tsify(optional)]
+    pub difficulty_weights: Option<DifficultyWeightsInput>,
 }
 
 impl TabInput {
@@ -171,6 +187,7 @@ impl TabInput {
             guitar_capo,
             num_arrangements,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         }
     }
 
@@ -178,6 +195,13 @@ impl TabInput {
     #[must_use]
     pub fn with_max_fret_span_filter(mut self, filter: u8) -> Self {
         self.max_fret_span_filter = Some(filter);
+        self
+    }
+
+    /// Sets `difficulty_weights` to `Some(weights)`.
+    #[must_use]
+    pub fn with_difficulty_weights(mut self, weights: DifficultyWeightsInput) -> Self {
+        self.difficulty_weights = Some(weights);
         self
     }
 }
@@ -352,6 +376,46 @@ mod test_difficulty_weights {
     #[test]
     fn default_is_standard() {
         assert_eq!(DifficultyWeights::default(), DifficultyWeights::standard());
+    }
+}
+
+#[cfg(test)]
+mod test_difficulty_weights_input {
+    use super::*;
+
+    #[test]
+    fn builder_sets_difficulty_weights() {
+        let input = TabInput::new("E2", "standard", 18, 0, 1)
+            .with_difficulty_weights(DifficultyWeightsInput {
+                movement: 50.0,
+                span: 5.0,
+                position: 0.5,
+            });
+        let w = input.difficulty_weights.unwrap();
+        assert_eq!(w.movement, 50.0);
+        assert_eq!(w.span, 5.0);
+        assert_eq!(w.position, 0.5);
+    }
+
+    #[test]
+    fn new_defaults_difficulty_weights_to_none() {
+        let input = TabInput::new("E2", "standard", 18, 0, 1);
+        assert!(input.difficulty_weights.is_none());
+    }
+
+    #[test]
+    fn deserializes_camel_case_from_json() {
+        let json = r#"{
+            "input": "E2",
+            "tuningName": "standard",
+            "guitarNumFrets": 18,
+            "guitarCapo": 0,
+            "numArrangements": 1,
+            "difficultyWeights": { "movement": 50.0, "span": 5.0, "position": 0.5 }
+        }"#;
+        let input: TabInput = serde_json::from_str(json).unwrap();
+        let w = input.difficulty_weights.unwrap();
+        assert_eq!(w.movement, 50.0);
     }
 }
 
@@ -578,6 +642,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let set = generate_arrangements(tab_input).unwrap();
 
@@ -608,6 +673,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 2,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let set = generate_arrangements(tab_input).unwrap();
         assert_eq!(set.len(), 2);
@@ -641,6 +707,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
@@ -662,6 +729,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 0,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
@@ -682,6 +750,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 21,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
@@ -702,6 +771,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
@@ -722,6 +792,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
@@ -746,6 +817,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let err = generate_arrangements(tab_input).unwrap_err();
         match err {
@@ -767,6 +839,7 @@ mod test_generate_arrangements_and_render {
             guitar_capo: 0,
             num_arrangements: 1,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         let set = generate_arrangements(tab_input).unwrap();
         let narrow = set.render(0, 12, 1, None).unwrap();
@@ -872,6 +945,7 @@ mod test_boundary_types {
             guitar_capo: 0,
             num_arrangements: 5,
             max_fret_span_filter: Some(0),
+            difficulty_weights: None,
         };
         let set = generate_arrangements(tab_input).unwrap();
         assert!(set.is_empty());
@@ -890,6 +964,7 @@ mod test_boundary_types {
             guitar_capo: 0,
             num_arrangements: 5,
             max_fret_span_filter: Some(0),
+            difficulty_weights: None,
         };
         let set = generate_arrangements(tab_input).unwrap();
         assert!(set.is_empty());
@@ -908,6 +983,7 @@ mod test_boundary_types {
             guitar_capo: 0,
             num_arrangements,
             max_fret_span_filter: None,
+            difficulty_weights: None,
         };
         generate_arrangements(tab_input).unwrap()
     }
