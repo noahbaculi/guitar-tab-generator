@@ -297,7 +297,9 @@ impl DifficultyWeights {
             ("span", span),
             ("position", position),
         ] {
-            if !value.is_finite() || value < 0.0 || value > Self::MAX {
+            // The range check also rejects NaN and infinity: neither is contained in
+            // `0.0..=MAX`, so no separate `is_finite` guard is needed.
+            if !(0.0..=Self::MAX).contains(&value) {
                 return Err(TabError::DifficultyWeightOutOfRange { field });
             }
         }
