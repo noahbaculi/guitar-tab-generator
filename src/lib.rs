@@ -252,9 +252,10 @@ impl From<NumArrangements> for u8 {
 /// The three coefficients that combine a beat's difficulty features into a
 /// transition difficulty. Larger values penalize that factor more heavily.
 ///
-/// Validated at construction: each is finite, non-negative, and at most
-/// [`DifficultyWeights::MAX`]. `DifficultyWeights::standard` reproduces the
-/// values baked into the algorithm before they were configurable.
+/// Validated at construction: each is finite and non-negative. There is no
+/// upper bound, since only the ratio of the coefficients affects ranking.
+/// `DifficultyWeights::standard` reproduces the values baked into the
+/// algorithm before they were configurable.
 ///
 /// Fields are stored as [`OrderedFloat`] so the type can derive `Hash`/`Eq`
 /// and serve as part of the `create_arrangements` memoize key; the public
@@ -268,11 +269,6 @@ pub struct DifficultyWeights {
 }
 
 impl DifficultyWeights {
-    /// Upper bound on each coefficient. Far below the overflow ceiling
-    /// (`i32::MAX / (3 * Guitar::MAX_NUM_FRETS)`), kept conservative so the
-    /// `i32` difficulty cast in `calculate_node_difficulty` cannot overflow.
-    pub const MAX: f64 = 10_000.0;
-
     /// The weights baked into the algorithm before they were configurable.
     #[must_use]
     pub const fn standard() -> Self {
@@ -283,23 +279,24 @@ impl DifficultyWeights {
         }
     }
 
-    /// Validates each coefficient is finite, non-negative, and `<= MAX`.
+    /// Validates each coefficient is finite and non-negative.
     ///
-    /// Zero is allowed and means "ignore this factor".
+    /// Zero is allowed and means "ignore this factor". There is no upper bound: only the
+    /// ratio of the coefficients affects ranking, so a large absolute value is harmless.
     ///
     /// # Errors
     ///
-    /// Returns [`TabError::DifficultyWeightOutOfRange`] naming the first
-    /// coefficient that is negative, non-finite, or above [`Self::MAX`].
+    /// Returns [`TabError::DifficultyWeightOutOfRange`] naming the first coefficient that
+    /// is negative or non-finite (`NaN` or infinity).
     pub fn try_new(movement: f64, span: f64, position: f64) -> Result<Self, TabError> {
         for (field, value) in [
             ("movement", movement),
             ("span", span),
             ("position", position),
         ] {
-            // The range check also rejects NaN and infinity: neither is contained in
-            // `0.0..=MAX`, so no separate `is_finite` guard is needed.
-            if !(0.0..=Self::MAX).contains(&value) {
+            // `!is_finite` rejects NaN and infinity; the `< 0.0` guard rejects negatives.
+            // NaN is not `< 0.0`, so the `is_finite` check is what catches it.
+            if !value.is_finite() || value < 0.0 {
                 return Err(TabError::DifficultyWeightOutOfRange { field });
             }
         }
@@ -373,12 +370,11 @@ mod test_difficulty_weights {
     }
 
     #[test]
-    fn try_new_rejects_above_max() {
-        let err = DifficultyWeights::try_new(DifficultyWeights::MAX + 1.0, 10.0, 1.0).unwrap_err();
-        assert_eq!(
-            err,
-            TabError::DifficultyWeightOutOfRange { field: "movement" }
-        );
+    fn try_new_accepts_large_weight() {
+        // No upper bound: only the ratio of weights affects ranking, so a large absolute
+        // value is harmless. It scales every score together.
+        let w = DifficultyWeights::try_new(1_000_000.0, 10.0, 1.0).unwrap();
+        assert_eq!(w.movement(), 1_000_000.0);
     }
 
     #[test]

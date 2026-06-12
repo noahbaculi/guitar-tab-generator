@@ -123,8 +123,8 @@ pub enum TabError {
         width: u16,
         min: u16,
     },
-    /// A supplied difficulty weight was negative, non-finite, or above
-    /// `DifficultyWeights::MAX`. `field` names the offending coefficient.
+    /// A supplied difficulty weight was negative or non-finite. `field` names
+    /// the offending coefficient.
     DifficultyWeightOutOfRange {
         field: &'static str,
     },
@@ -231,8 +231,7 @@ impl std::fmt::Display for TabError {
             TabError::DifficultyWeightOutOfRange { field } => {
                 write!(
                     f,
-                    "The {field} difficulty weight must be a finite number between 0 and {}.",
-                    crate::DifficultyWeights::MAX
+                    "The {field} difficulty weight must be a finite, non-negative number."
                 )
             }
         }
