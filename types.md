@@ -29,7 +29,8 @@ Input: `TabInput`. Output: `ArrangementSet` (opaque handle).
           │                        Guitar
           │                           │
           ▼                           │              num_arrangements: u8 lifted to NumArrangements at the boundary
-Vec<Line<BeatVec<Pitch>>>             │              max_fret_span_filter: Option<u8>
+Vec<Line<BeatVec<Pitch>>>             │              difficulty_weights: Option<DifficultyWeightsInput> lifted to DifficultyWeights at the boundary
+          │                           │              max_fret_span_filter: Option<u8>
           │                           │                        │
           └──────────────┬────────────┴────────────────────────┘
                          ▼

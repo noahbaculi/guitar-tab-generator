@@ -40,6 +40,10 @@ _Avoid_: Cost, weight, score
 The per-[[Beat]] stats fed to difficulty scoring, currently `avg_non_zero_fret` and `non_zero_fret_span`. Properties of one beat's chosen fingering, not of a transition.
 _Avoid_: Difficulty inputs, stats, metrics
 
+**Difficulty weights**:
+The three coefficients that combine [[Difficulty features]] into a transition difficulty: `movement` (hand travel between beats), `span` (chord stretch), and `position` (neck position). "Weight" is used here deliberately. It is a new public concept, distinct from the difficulty features it scales, and unrelated to the `pathfinding::yen` library's internal edge "weight". Supplied per call via `TabInput.difficulty_weights`, omitting them uses the standard `100 / 10 / 1`.
+_Avoid_: Difficulty coefficients, scoring factors
+
 **UnplayablePitch**:
 A pitch that could not be placed on any string of the configured [[Guitar]], carrying its plain-text value (e.g. `"A1"`) and the 1-indexed `line` number from the input. Returned in `TabError::UnplayablePitches`. The structured replacement for the 1.x and pre-final-2.0.0 prose error string "Pitch X on line N cannot be played on any strings of the configured guitar."
 _Avoid_: Invalid pitch (ambiguous with "unparseable text"), unreachable pitch (current shorthand; `unplayable` is the canonical word at the error layer).

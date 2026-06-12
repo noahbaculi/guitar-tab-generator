@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `TabInput.difficultyWeights` (optional) exposes the three difficulty-scoring coefficients (`movement`, `span`, `position`) for per-call control of arrangement ranking. Omitting it preserves the previous behavior. Invalid weights (negative, non-finite, or above 10000) are rejected with `DifficultyWeightOutOfRange`. See [ADR-0011](docs/adr/0011-difficulty-weights.md).
+
 ## 2.1.0 -- 2026-06-10
 
 ### Changed
