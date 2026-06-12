@@ -431,6 +431,30 @@ mod test_create_arrangements {
     }
 
     #[test]
+    fn proportional_weights_produce_identical_ranking() {
+        // Only the ratio of weights affects ranking; absolute magnitude must not. The two
+        // sets below are proportional (x1000). C3/E3/G3 are fretted in standard tuning, so
+        // the scoring features are non-zero and the ranking is meaningful.
+        let arrange = |weights: DifficultyWeights| {
+            create_arrangements(
+                Guitar::default(),
+                parse_lines("C3\nE3\nG3".to_owned()).unwrap(),
+                NumArrangements::try_new(5).unwrap(),
+                weights,
+                None,
+            )
+            .unwrap()
+            .iter()
+            .map(|a| a.lines().to_vec())
+            .collect::<Vec<_>>()
+        };
+
+        let small = DifficultyWeights::try_new(1.0, 0.25, 0.1).unwrap();
+        let large = DifficultyWeights::try_new(1000.0, 250.0, 100.0).unwrap();
+        assert_eq!(arrange(small), arrange(large));
+    }
+
+    #[test]
     fn empty_playable_beat_yields_no_arrangements() {
         // A structurally valid but degenerate input: a beat with no pitches. This previously
         // tripped an `assert!` in `generate_beat_fingerings` and panicked; it now reports
@@ -1715,6 +1739,34 @@ mod test_calculate_node_difficulty {
         // movement only: 2*10 + 2*0 + 5*0 = 20
         let movement_only = DifficultyWeights::try_new(10.0, 0.0, 0.0).unwrap();
         assert_difficulty_eq(calculate_node_difficulty(&current, &next, movement_only), 20.0);
+    }
+
+    #[test]
+    fn sub_integer_difficulty_is_not_truncated_to_zero() {
+        // A weighted sum below 1 floored to 0 under the old i32 cast, erasing the beat's
+        // cost. OrderedFloat<f64> preserves it.
+        let current = Node::Playable {
+            line_index: 0,
+            scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                beat_fingering: vec![],
+                avg_non_zero_fret: Some(OrderedFloat(3.0)),
+                non_zero_fret_span: 0,
+            }),
+        };
+        let next = Node::Playable {
+            line_index: 1,
+            scored_beat_fingering: Rc::new(ScoredBeatFingering {
+                beat_fingering: vec![],
+                avg_non_zero_fret: Some(OrderedFloat(3.5)),
+                non_zero_fret_span: 0,
+            }),
+        };
+        // movement only: avg_fret_difference = 0.5, weighted = 0.5 (0 under the old cast).
+        let movement_only = DifficultyWeights::try_new(1.0, 0.0, 0.0).unwrap();
+        assert_eq!(
+            calculate_node_difficulty(&current, &next, movement_only),
+            OrderedFloat(0.5)
+        );
     }
 }
 
