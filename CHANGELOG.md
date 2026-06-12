@@ -1,11 +1,15 @@
 # Changelog
 
-## Unreleased
+## 3.0.0 -- 2026-06-12
+
+### Breaking changes
+
+- `ArrangementSet::difficulty` now returns a fractional `f64` instead of a truncated `i32`, because the internal pathfinding cost is now `f64`. `Arrangement::difficulty` changes the same way. Rust callers that bound the result to an integer must switch to `f64`. JS/TypeScript callers see `number` on both sides, but a value that used to read as a whole number can now be fractional, so format it before display. See [MIGRATION.md](MIGRATION.md#2x-to-30).
 
 ### Added
 
 - `TabInput.difficultyWeights` (optional) exposes the three difficulty-scoring coefficients (`movement`, `span`, `position`) for per-call control of arrangement ranking. Omitting it preserves the previous behavior. Invalid weights (negative or non-finite) are rejected with `DifficultyWeightOutOfRange`. See [ADR-0011](docs/adr/0011-difficulty-weights.md).
-- Arrangement ranking depends only on the ratios of the difficulty weights, not their absolute magnitude. The internal pathfinding cost is `f64` (previously a truncated `i32`), so `ArrangementSet::difficulty` now returns a fractional `f64`. The weight upper bound was removed: weights are validated only as finite and non-negative.
+- Arrangement ranking depends only on the ratios of the difficulty weights, not their absolute magnitude. Weights are validated only as finite and non-negative.
 
 ## 2.1.0 -- 2026-06-10
 

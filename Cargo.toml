@@ -1,6 +1,6 @@
 [package]
 name = "guitar-tab-generator"
-version = "2.1.0"
+version = "3.0.0"
 edition = "2024"
 rust-version = "1.87"
 authors = ["Noah Baculi <noahbaculi@gmail.com>"]
