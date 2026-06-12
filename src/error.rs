@@ -123,6 +123,11 @@ pub enum TabError {
         width: u16,
         min: u16,
     },
+    /// A supplied difficulty weight was negative, non-finite, or above
+    /// `DifficultyWeights::MAX`. `field` names the offending coefficient.
+    DifficultyWeightOutOfRange {
+        field: &'static str,
+    },
 }
 
 impl std::fmt::Display for TabError {
@@ -221,6 +226,13 @@ impl std::fmt::Display for TabError {
                 write!(
                     f,
                     "The render width ({width}) is too small. The minimum is {min}."
+                )
+            }
+            TabError::DifficultyWeightOutOfRange { field } => {
+                write!(
+                    f,
+                    "The {field} difficulty weight must be a finite number between 0 and {}.",
+                    crate::DifficultyWeights::MAX
                 )
             }
         }
