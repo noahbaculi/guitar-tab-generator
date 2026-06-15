@@ -210,7 +210,7 @@ mod test_render_tab {
     fn mismatched_guitar_string_count_does_not_panic() {
         // An arrangement built on a wider guitar, rendered against a narrower one, must drop the
         // out-of-range fingerings instead of panicking on the per-string slice index.
-        // `get_arrangement_lines` places notes on strings 1 and 2; a 1-string render guitar keeps
+        // `get_arrangement_lines` places notes on strings 1 and 2. A 1-string render guitar keeps
         // string 1 and skips string 2.
         let arrangement_lines = get_arrangement_lines();
         let one_string = Guitar::new(
