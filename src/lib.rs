@@ -116,7 +116,7 @@ pub use string_number::StringNumber;
 ///    and `parse_lines` skip the memoize cache so benchmarks measure the underlying
 ///    work, not cache lookup cost.
 /// 2. **Internal tuning-offset helpers.** `parse_tuning` and `create_string_tuning_offset`
-///    are the `[i8; 6]` offset machinery the preset-tuning path uses; benches reach for them
+///    are the `[i8; 6]` offset machinery the preset-tuning path uses. Benches reach for them
 ///    to construct fixtures without going through the full WASM boundary.
 ///
 /// Not part of the stable 2.x API. May be removed without a major version bump.
