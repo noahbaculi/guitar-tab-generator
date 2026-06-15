@@ -6,7 +6,7 @@ use guitar_tab_generator::{
     create_arrangements, create_string_tuning, generate_arrangements, parse_lines, render_tab,
 };
 // `__bench_internals` exposes the memoize escape hatches plus the now-private
-// tuning offset helpers so criterion benches can still measure them; see the
+// tuning offset helpers so criterion benches can still measure them. See the
 // module docstring in src/lib.rs for the stability caveat.
 use guitar_tab_generator::__bench_internals::{
     create_string_tuning_offset, memoized_original_create_arrangements,
