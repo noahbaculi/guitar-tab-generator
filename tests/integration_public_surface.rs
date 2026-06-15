@@ -5,12 +5,12 @@
 //! internal refactor accidentally tightens visibility.
 //!
 //! Every re-export listed in `src/lib.rs` should be touched by at least one test in
-//! this file. Behaviour coverage lives in unit tests and `examples/advanced.rs`; the
+//! this file. Behaviour coverage lives in unit tests and `examples/advanced.rs`. The
 //! tests here are deliberately shallow so a visibility tightening fails to compile
 //! rather than fails an assertion.
 //!
 //! Host-only: these use the default libtest harness. The WASM boundary lane lives in
-//! `tests/wasm_boundary.rs`; this file is empty on `wasm32` so `wasm-pack test` skips it.
+//! `tests/wasm_boundary.rs`. This file is empty on `wasm32` so `wasm-pack test` skips it.
 #![cfg(not(target_arch = "wasm32"))]
 
 use guitar_tab_generator::{
@@ -38,7 +38,7 @@ fn render_produces_non_empty_string_with_fret_markers() {
     let set = generate_arrangements(fixture(1)).unwrap();
     let rendered = set.render(0, 30, 2, None).unwrap();
     assert!(!rendered.is_empty(), "rendered tab must not be empty");
-    // The fixture uses all open strings; each beat column contains at least one '0'.
+    // The fixture uses all open strings. Each beat column contains at least one '0'.
     assert!(
         rendered.contains('0'),
         "rendered tab must include open-string fret marker"
@@ -119,7 +119,7 @@ fn parse_variant_serializes_with_kind_tag() {
 
 #[test]
 fn arrangement_set_is_empty_when_filter_drops_every_candidate() {
-    // C3E3 is an all-fretted chord in standard tuning; max_fret_span_filter=Some(0)
+    // C3E3 is an all-fretted chord in standard tuning. max_fret_span_filter=Some(0)
     // drops every candidate, yielding a non-error empty set. This is the path the
     // JS demo surfaces via `set.isEmpty` and the "No arrangements match" message.
     let input = TabInput::new("C3E3", "standard", 20, 0, 5).with_max_fret_span_filter(0);
@@ -152,8 +152,8 @@ fn arrangement_set_handle_is_publicly_named() {
 
 #[test]
 fn normalized_input_variants_are_publicly_constructible() {
-    // Matching on `NormalizedBeat` is the documented JS-side discrimination shape;
-    // the same enum is the Rust-side return value of `ArrangementSet::normalized_input`.
+    // Matching on `NormalizedBeat` is the documented JS-side discrimination shape.
+    // The same enum is the Rust-side return value of `ArrangementSet::normalized_input`.
     let set = generate_arrangements(fixture(1)).unwrap();
     let beats: Vec<NormalizedBeat> = set.normalized_input();
     assert!(
@@ -250,8 +250,8 @@ fn lower_level_pipeline_is_publicly_callable() {
 
 #[test]
 fn string_number_constructor_is_publicly_callable() {
-    // `StringNumber` is part of the boundary because `PitchFingering` carries one;
-    // direct Rust callers building custom tunings hit `StringNumber::new`.
+    // `StringNumber` is part of the boundary because `PitchFingering` carries one.
+    // Direct Rust callers building custom tunings hit `StringNumber::new`.
     let valid = StringNumber::new(1).expect("string number 1 is valid");
     assert_eq!(valid.get(), 1);
     StringNumber::new(0).expect_err("string number 0 must be rejected");
@@ -263,7 +263,7 @@ fn pitch_fingering_is_publicly_named() {
     // are crate-internal, but the three getters (`string_number`, `fret`, `pitch`) give
     // structured read access for downstream callers building per-arrangement fingering
     // inspectors without re-running pathfinding.
-    // String 1 is the highest pitch (E4); string 6 is the lowest (E2). See CONTEXT.md.
+    // String 1 is the highest pitch (E4). String 6 is the lowest (E2). See CONTEXT.md.
     let open_pitches: [Pitch; 6] = [
         Pitch::E4,
         Pitch::B3,
@@ -307,7 +307,7 @@ fn pitch_fingering_is_publicly_named() {
 
 #[test]
 fn unplayable_pitch_is_nameable_from_crate_root() {
-    // `UnplayablePitch` is the element type of `TabError::UnplayablePitches`; it must be
+    // `UnplayablePitch` is the element type of `TabError::UnplayablePitches`. It must be
     // nameable in a downstream signature, not just readable as a field value.
     let err = generate_arrangements(TabInput::new("A1", "standard", 18, 0, 1)).unwrap_err();
     let pitches = match err {
@@ -452,7 +452,7 @@ mod boundary_variant_smoke {
             matches!(err, TabError::IndexOutOfBounds { index: 99, len: 1 }),
             "got {err:?}"
         );
-        // All three indexed handle methods share the bounds guard; pin each at the boundary.
+        // All three indexed handle methods share the bounds guard. Pin each at the boundary.
         assert!(
             matches!(
                 set.max_fret_span(99).unwrap_err(),
@@ -472,7 +472,7 @@ mod boundary_variant_smoke {
     #[test]
     fn render_width_too_small() {
         let set = generate_arrangements(input(18, 0, 1, "standard", "E2")).unwrap();
-        // padding 1 -> min width = 2*1 + 2 + 1 = 5; width 3 is below it.
+        // padding 1 -> min width = 2*1 + 2 + 1 = 5. Width 3 is below it.
         let err = set.render(0, 3, 1, None).unwrap_err();
         assert!(
             matches!(err, TabError::RenderWidthTooSmall { width: 3, min: 5 }),
