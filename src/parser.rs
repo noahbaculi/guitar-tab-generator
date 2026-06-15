@@ -33,7 +33,7 @@ fn test_pitch_regex() -> Regex {
 
 /// Named tuning presets. Parsed case-insensitively from strings.
 ///
-/// Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
+/// Additional variants may be added in a non-breaking release. The `#[non_exhaustive]`
 /// attribute requires external matches to include a wildcard arm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, EnumIter, Serialize, Tsify)]
 #[strum(ascii_case_insensitive)]
@@ -189,7 +189,6 @@ mod test_create_string_tuning_offset {
     }
     #[test]
     fn random_offsets() {
-        // Test case with random offsets
         assert_eq!(
             create_string_tuning_offset([2, -1, 3, 0, -2, 1]),
             create_string_tuning(&[
@@ -707,7 +706,7 @@ mod test_pitch_pattern {
         assert!(re.is_match("Cb1"));
         assert!(re.is_match("C\u{266f}1")); // C sharp
         assert!(re.is_match("C\u{266d}1")); // C flat
-        // A pipe is not an accidental; the character class must not accept it.
+        // A pipe is not an accidental. The character class must not accept it.
         assert!(!re.is_match("C|1"));
     }
 }
