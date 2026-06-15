@@ -99,7 +99,7 @@ pub(crate) mod string_number;
 
 /// `Arrangement` is re-exported for direct Rust consumers. The canonical 2.x access path
 /// for per-arrangement metadata is `ArrangementSet::difficulty(i)` and
-/// `ArrangementSet::max_fret_span(i)`; direct construction of `Arrangement` values is internal.
+/// `ArrangementSet::max_fret_span(i)`. Direct construction of `Arrangement` values is internal.
 pub use arrangement::{Arrangement, BeatVec, Line, create_arrangements};
 pub use error::{ParseError, TabError, UnplayablePitch};
 pub use guitar::{Guitar, PitchFingering, create_string_tuning};
@@ -141,8 +141,8 @@ pub struct DifficultyWeightsInput {
 
 /// Configuration bundle for one tab-generation request.
 ///
-/// Crosses the WASM boundary via `tsify`; JS sees a camelCase interface generated
-/// alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
+/// Crosses the WASM boundary via `tsify`. JS sees a camelCase interface generated
+/// alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`. The value is validated
 /// at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
 #[derive(Debug, Clone, Deserialize, Tsify)]
 #[tsify(from_wasm_abi)]
@@ -159,7 +159,7 @@ pub struct TabInput {
     pub guitar_capo: u8,
     pub num_arrangements: u8,
     /// Upper bound on per-beat fret span. An aggressive value can drop the set to zero
-    /// arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
+    /// arrangements. Callers receive `Ok(set)` with `set.len == 0`, not `Err`.
     #[tsify(optional)]
     pub max_fret_span_filter: Option<u8>,
     /// Per-call override of the difficulty-scoring coefficients. Omitted (or
@@ -258,7 +258,7 @@ impl From<NumArrangements> for u8 {
 /// algorithm before they were configurable.
 ///
 /// Fields are stored as [`OrderedFloat`] so the type can derive `Hash`/`Eq`
-/// and serve as part of the `create_arrangements` memoize key; the public
+/// and serve as part of the `create_arrangements` memoize key. The public
 /// surface (`try_new`, the accessors) stays plain `f64`. `try_new` rejects
 /// non-finite inputs, so the `Eq`/`Hash` derives never observe a `NaN`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -294,7 +294,7 @@ impl DifficultyWeights {
             ("span", span),
             ("position", position),
         ] {
-            // `!is_finite` rejects NaN and infinity; the `< 0.0` guard rejects negatives.
+            // `!is_finite` rejects NaN and infinity. The `< 0.0` guard rejects negatives.
             // NaN is not `< 0.0`, so the `is_finite` check is what catches it.
             if !value.is_finite() || value < 0.0 {
                 return Err(TabError::DifficultyWeightOutOfRange { field });
@@ -452,7 +452,7 @@ pub struct ArrangementSet {
 
 /// `ArrangementSet` indexed accessors return [`TabError::IndexOutOfBounds`] when
 /// `index >= self.len`. This is a programmer-side bounds error (the demo clamps before
-/// calling); downstream callers can branch on the typed variant to surface it differently
+/// calling). Downstream callers can branch on the typed variant to surface it differently
 /// from user-facing errors like [`TabError::TuningNameUnknown`] or
 /// [`TabError::NumArrangementsOutOfRange`].
 #[wasm_bindgen]
@@ -473,11 +473,11 @@ impl ArrangementSet {
     }
 
     /// The per-beat input echoed back as a sequence of tagged `NormalizedBeat` variants.
-    /// Shared across all arrangements; lives once on the set.
+    /// Shared across all arrangements. Lives once on the set.
     ///
-    /// Returns a fresh `Vec` on each call; cache on the JS side if reading repeatedly.
+    /// Returns a fresh `Vec` on each call. Cache on the JS side if reading repeatedly.
     /// `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
-    /// cache in the rerender path; that pattern is the intended consumer shape.
+    /// cache in the rerender path. That pattern is the intended consumer shape.
     #[wasm_bindgen(getter, js_name = "normalizedInput")]
     #[must_use]
     pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
@@ -553,7 +553,7 @@ impl ArrangementSet {
 }
 
 /// Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
-/// and the WASM boundary; JS sees this as `generateArrangements`.
+/// and the WASM boundary. JS sees this as `generateArrangements`.
 ///
 /// # Errors
 ///
@@ -693,8 +693,8 @@ mod test_generate_arrangements_and_render {
         // Pins the current behaviour: when no `Playable` line exists, `first_playable_index`
         // falls back to 0 and `normalized_input` echoes every input line (the trailing
         // `MeasureBreak` from `---` and the leading blank rests). Empty / all-rest input
-        // returns Ok(set) by design (see docs/adr/0006-empty-input-returns-empty-set.md);
-        // interactive UIs lean on this to avoid bouncing into an error pane during edits.
+        // returns Ok(set) by design (see docs/adr/0006-empty-input-returns-empty-set.md).
+        // Interactive UIs lean on this to avoid bouncing into an error pane during edits.
         let beats = set.normalized_input();
         assert!(
             beats
@@ -796,7 +796,7 @@ mod test_generate_arrangements_and_render {
     #[test]
     fn unreachable_pitch_returns_unplayable_pitches() {
         let tab_input = TabInput {
-            input: "A1".to_owned(), // below standard tuning's low E2; unplayable on any string
+            input: "A1".to_owned(), // below standard tuning's low E2, unplayable on any string
             tuning_name: "standard".to_owned(),
             guitar_num_frets: 20,
             guitar_capo: 0,
@@ -895,7 +895,7 @@ mod test_boundary_types {
     #[test]
     fn arrangement_set_render_rejects_width_below_minimum() {
         let set = arrangement_set_fixture(1);
-        // padding 1 -> min width = 2 * 1 + 2 + 1 = 5; width 3 is below it.
+        // padding 1 -> min width = 2 * 1 + 2 + 1 = 5. Width 3 is below it.
         let err = set.render(0, 3, 1, None).unwrap_err();
         assert_eq!(err, TabError::RenderWidthTooSmall { width: 3, min: 5 });
     }
