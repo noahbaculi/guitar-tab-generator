@@ -4,7 +4,7 @@
 //! compile the boundary to `wasm32` and run it under `wasm-pack test --node`, covering the
 //! `#[wasm_bindgen]` ABI path (input deserialization, `ArrangementSet` handle construction,
 //! and drop) that the host tests cannot reach. The thrown-error wire shape is guarded
-//! separately by the `tests/snapshots/wasm.d.ts` surface diff; these tests confirm the code
+//! separately by the `tests/snapshots/wasm.d.ts` surface diff. These tests confirm the code
 //! executes correctly under the wasm target.
 //!
 //! Empty on non-wasm targets so the host `cargo test` lane skips it.
@@ -36,6 +36,6 @@ fn error_path_surfaces_typed_variant_under_wasm() {
 fn handle_drops_cleanly_under_wasm() {
     let set = generate_arrangements(TabInput::new("E2\nA2\nD3", "standard", 18, 0, 2)).unwrap();
     assert_eq!(set.len(), 2);
-    // Dropping the handle exercises the wasm-bindgen free path; it must not trap.
+    // Dropping the handle exercises the wasm-bindgen free path. It must not trap.
     drop(set);
 }
