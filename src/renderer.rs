@@ -8,7 +8,7 @@ use std::fmt::Write;
 
 /// Widest fret column the renderer lays down (two-digit frets such as `12`).
 ///
-/// Assumes `Guitar::MAX_NUM_FRETS` keeps fret renders to two digits; a three-digit fret
+/// Assumes `Guitar::MAX_NUM_FRETS` keeps fret renders to two digits. A three-digit fret
 /// would break the `min_render_width` slack below.
 pub(crate) const MAX_FRET_RENDER_WIDTH: usize = 2;
 
@@ -183,7 +183,7 @@ mod test_render_tab {
     fn width_below_minimum_does_not_panic() {
         // Regression: a width smaller than `min_render_width(padding)` must neither underflow
         // the column math nor stall the wrap loop. `ArrangementSet::render` rejects such widths
-        // up front; `render_tab` itself stays total via the saturating floor plus the
+        // up front. `render_tab` itself stays total via the saturating floor plus the
         // one-beat-per-row progress floor (`content_cap`).
         let arrangement_lines = get_arrangement_lines();
         let output = render_tab(&arrangement_lines, &Guitar::default(), 1, 0, None);
@@ -222,7 +222,7 @@ mod test_render_tab {
         let output = render_tab(&arrangement_lines, &one_string, 20, 1, None);
         // The render guitar has one string, so string 2's fingering is out of range and dropped:
         // exactly one string row is laid out, carrying string 1's frets (0, _, 0, |, 4, 12).
-        // `playback` is None, so the indicator rows are blank; filtering blanks leaves the string
+        // `playback` is None, so the indicator rows are blank. Filtering blanks leaves the string
         // rows only. A regression that kept string 2 would yield two rows and fail this.
         let string_rows: Vec<&str> = output
             .lines()
@@ -434,7 +434,7 @@ mod test_render_line {
     }
     #[test]
     fn playable_string_number_beyond_render_guitar_is_skipped() {
-        // String 2 is beyond a 1-string render guitar. The in-range fingering renders; the
+        // String 2 is beyond a 1-string render guitar. The in-range fingering renders. The
         // out-of-range one is dropped instead of panicking on the slice index.
         let pitch_fingerings = vec![
             PitchFingering {
@@ -514,7 +514,7 @@ mod test_render_fret {
     }
 }
 
-/// Calculates the maximum width of the the string representations of fret numbers in a given array of pitch fingerings.
+/// Calculates the maximum width of the string representations of fret numbers in a given array of pitch fingerings.
 fn calc_fret_width_max(pitch_fingerings: &[&PitchFingering]) -> usize {
     pitch_fingerings
         .iter()
@@ -916,7 +916,7 @@ fn render_string_output(
         out.push('\n'); // blank line between row groups
     }
 
-    // Each line above was written with a trailing '\n'; join("\n") separates
+    // Each line above was written with a trailing '\n'. join("\n") separates
     // lines without a trailing newline, so drop the final one to match.
     out.pop();
     out
