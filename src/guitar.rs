@@ -84,7 +84,7 @@ pub fn create_string_tuning(
             // `i + 1` is the 1-indexed string number. `StringNumber::new` owns the upper
             // bound and reports the offending number, so route every too-high case through
             // it. A slice longer than u8::MAX saturates to u8::MAX, which `new` still
-            // rejects; in practice the collect short-circuits at string 13 (StringNumber::MAX
+            // rejects. In practice the collect short-circuits at string 13 (StringNumber::MAX
             // is 12) long before the cast could overflow.
             let string_number = u8::try_from(i + 1).unwrap_or(u8::MAX);
             StringNumber::new(string_number).map(|sn| (sn, *p))
@@ -466,7 +466,7 @@ mod test_create_guitar {
 
     #[test]
     fn open_pitch_out_of_range_returns_typed_error() {
-        // A single string tuned to the top of the pitch range (B9); any capo offset pushes
+        // A single string tuned to the top of the pitch range (B9). Any capo offset pushes
         // the open pitch past B9, which `plus_offset` reports as `None`.
         let tuning = create_string_tuning(&[Pitch::B9]).unwrap();
         let err = Guitar::new(tuning, 8, 8).unwrap_err();
@@ -568,8 +568,7 @@ mod test_check_capo_number {
 ///
 /// Arguments:
 ///
-/// * `open_string_pitch`: The `open_string_pitch` parameter represents the pitch of the open
-///   string.
+/// * `open_string_pitch`: The pitch of the open string.
 /// * `playable_frets`: the playable fret count: the number of half steps above the open
 ///   pitch to include.
 fn create_string_range(
