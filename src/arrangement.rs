@@ -432,7 +432,7 @@ mod test_create_arrangements {
 
     #[test]
     fn proportional_weights_produce_identical_ranking() {
-        // Only the ratio of weights affects ranking; absolute magnitude must not. The two
+        // Only the ratio of weights affects ranking. Absolute magnitude must not. The two
         // sets below are proportional (x1000). C3/E3/G3 are fretted in standard tuning, so
         // the scoring features are non-zero and the ranking is meaningful.
         let arrange = |weights: DifficultyWeights| {
@@ -457,7 +457,7 @@ mod test_create_arrangements {
     #[test]
     fn empty_playable_beat_yields_no_arrangements() {
         // A structurally valid but degenerate input: a beat with no pitches. This previously
-        // tripped an `assert!` in `generate_beat_fingerings` and panicked; it now reports
+        // tripped an `assert!` in `generate_beat_fingerings` and panicked. It now reports
         // `NoArrangementsFound`, like any other beat with zero candidate fingerings.
         let input_pitches = vec![Line::Playable(vec![])];
 
@@ -945,7 +945,7 @@ fn generate_beat_fingerings(
     beat_fingerings_per_pitch: &[Vec<PitchFingering>],
 ) -> Vec<BeatVec<PitchFingering>> {
     // No pitches means no combinations. Returning early avoids relying on
-    // `multi_cartesian_product`'s ambiguous empty-input result; the empty candidate set
+    // `multi_cartesian_product`'s ambiguous empty-input result. The empty candidate set
     // then flows to `NoArrangementsFound` through pathfinding, like a beat whose fingerings
     // are all dropped by `no_duplicate_strings`.
     if beat_fingerings_per_pitch.is_empty() {
@@ -1704,7 +1704,7 @@ mod test_calculate_node_difficulty {
     #[should_panic]
     fn next_node_start_panics() {
         // `Node::Start` is only ever the pathfinding source, never a successor. The guard
-        // used to also live in `calc_next_nodes`; after the group-indexing rewrite this is
+        // used to also live in `calc_next_nodes`. After the group-indexing rewrite this is
         // the only copy, so it is pinned here.
         calculate_node_difficulty(
             &Node::Rest { line_index: 0 },
@@ -1791,7 +1791,7 @@ fn process_path(
         })
         .collect_vec();
     // Re-inject measure breaks. `measure_break_indices` is built by `enumerate().filter()`
-    // upstream, so it is already ascending; inserting low to high lands each break at its
+    // upstream, so it is already ascending. Inserting low to high lands each break at its
     // original post-skip slot without shifting an earlier one.
     for &measure_break_index in measure_break_indices {
         lines.insert(measure_break_index, Line::MeasureBreak);
