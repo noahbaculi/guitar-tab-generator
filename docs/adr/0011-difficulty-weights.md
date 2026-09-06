@@ -3,7 +3,7 @@
 Status: accepted
 Date: 2026-06-11
 
-The three difficulty-scoring coefficients (movement, span, position) were baked into `calculate_node_difficulty` as the literals `100.0`, `10.0`, and `1.0`. They are now a `DifficultyWeights` newtype that callers can override per `generate_arrangements` call. `TabInput` carries an optional `DifficultyWeightsInput` (plain `f64` fields) on the wire, and `generate_arrangements` validates and lifts it into `DifficultyWeights` at the boundary, the same shape [ADR-0005](0005-num-arrangements-newtype.md) uses for `num_arrangements`. Omitting the field reproduces the previous `100 / 10 / 1` ranking.
+The three difficulty-scoring coefficients (movement, span, position) were baked into `calculate_node_difficulty` as the literals `100.0`, `10.0`, and `1.0`. They are now a `DifficultyWeights` newtype that callers can override per `generate_arrangements` call. `TabInput` carries an optional `DifficultyWeightsInput` (plain `f64` fields) on the wire, and `generate_arrangements` validates and lifts it into `DifficultyWeights` at the boundary, the same shape [ADR-0005](0005-num-arrangements-newtype.md) uses for `num_arrangements`. Omitting the field weighs all three factors equally, via `DifficultyWeights::standard()`.
 
 ## Considered Options
 
@@ -25,7 +25,7 @@ The three difficulty-scoring coefficients (movement, span, position) were baked 
 
 ## Amendment 2026-06-12: float difficulty cost
 
-The internal pathfinding cost changed from `i32` to `OrderedFloat<f64>`, completing this ADR's "the difficulty math is already `f64`" reasoning by removing the one remaining `as i32` cast in `calculate_node_difficulty`. The cast truncated each per-beat score, which made the absolute magnitude of the weights affect ranking even though, mathematically, only their ratios should. With the cast gone, magnitude no longer matters.
+The internal pathfinding cost changed from `i32` to `OrderedFloat<f64>`, completing this ADR's "the difficulty math is already `f64`" reasoning by removing the one remaining `as i32` cast in `calculate_node_difficulty`. The cast truncated each per-beat score, which made the absolute magnitude of the weights affect ranking even though, mathematically, only their ratios should. With the cast gone, magnitude no longer matters, so `DifficultyWeights::standard()` weighs movement, span, and position equally (`1 / 1 / 1`) instead of keeping the old `100 / 10 / 1` skew.
 
 `Arrangement` stores the score as `OrderedFloat<f64>` (it derives `Eq`, which `f64` does not satisfy) and exposes plain `f64` through `Arrangement::difficulty` and `ArrangementSet::difficulty`, the same store-as-`OrderedFloat`, expose-as-`f64` shape these weights use. Across the WASM boundary the accessor stays `number`, so the `.d.ts` surface is unchanged.
 

@@ -5,10 +5,10 @@
 ### Breaking changes
 
 - `ArrangementSet::difficulty` now returns a fractional `f64` instead of a truncated `i32`, because the internal pathfinding cost is now `f64`. `Arrangement::difficulty` changes the same way. Rust callers that bound the result to an integer must switch to `f64`. JS/TypeScript callers see `number` on both sides, but a value that used to read as a whole number can now be fractional, so format it before display. See [MIGRATION.md](MIGRATION.md#2x-to-30).
+- `TabInput.difficultyWeights` (optional) exposes the three difficulty-scoring coefficients (`movement`, `span`, `position`) for per-call control of arrangement ranking. Omitting it now weighs all three equally (`1 / 1 / 1`) rather than reproducing the 2.x `100 / 10 / 1` ranking, so arrangement order can change for callers who don't pass explicit weights. Pass `{ movement: 100, span: 10, position: 1 }` to get the exact 2.x ranking. Invalid weights (negative or non-finite) are rejected with `DifficultyWeightOutOfRange`. See [ADR-0011](docs/adr/0011-difficulty-weights.md) and [MIGRATION.md](MIGRATION.md#optional-difficultyweights).
 
 ### Added
 
-- `TabInput.difficultyWeights` (optional) exposes the three difficulty-scoring coefficients (`movement`, `span`, `position`) for per-call control of arrangement ranking. Omitting it preserves the previous behavior. Invalid weights (negative or non-finite) are rejected with `DifficultyWeightOutOfRange`. See [ADR-0011](docs/adr/0011-difficulty-weights.md).
 - Arrangement ranking depends only on the ratios of the difficulty weights, not their absolute magnitude. Weights are validated only as finite and non-negative.
 
 ## 2.1.0 -- 2026-06-10

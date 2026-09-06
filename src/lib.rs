@@ -254,8 +254,7 @@ impl From<NumArrangements> for u8 {
 ///
 /// Validated at construction: each is finite and non-negative. There is no
 /// upper bound, since only the ratio of the coefficients affects ranking.
-/// `DifficultyWeights::standard` reproduces the values baked into the
-/// algorithm before they were configurable.
+/// `DifficultyWeights::standard` weighs all three factors equally.
 ///
 /// Fields are stored as [`OrderedFloat`] so the type can derive `Hash`/`Eq`
 /// and serve as part of the `create_arrangements` memoize key. The public
@@ -269,12 +268,12 @@ pub struct DifficultyWeights {
 }
 
 impl DifficultyWeights {
-    /// The weights baked into the algorithm before they were configurable.
+    /// Equal weight on movement, span, and position.
     #[must_use]
     pub const fn standard() -> Self {
         Self {
-            movement: OrderedFloat(100.0),
-            span: OrderedFloat(10.0),
+            movement: OrderedFloat(1.0),
+            span: OrderedFloat(1.0),
             position: OrderedFloat(1.0),
         }
     }
@@ -334,10 +333,10 @@ mod test_difficulty_weights {
     use super::*;
 
     #[test]
-    fn standard_matches_baked_in_values() {
+    fn standard_matches_equal_weights() {
         let w = DifficultyWeights::standard();
-        assert_eq!(w.movement(), 100.0);
-        assert_eq!(w.span(), 10.0);
+        assert_eq!(w.movement(), 1.0);
+        assert_eq!(w.span(), 1.0);
         assert_eq!(w.position(), 1.0);
     }
 

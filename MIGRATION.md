@@ -457,7 +457,7 @@ metaEl.textContent = `difficulty ${diff.toFixed(2)}`;
 
 ### Optional `difficultyWeights`
 
-`TabInput.difficultyWeights` is new and optional. Omitting it (or passing `undefined` / `null`) reproduces 2.x ranking exactly, so existing callers need no change. To tune the ranking, pass the three coefficients:
+`TabInput.difficultyWeights` is new and optional. Omitting it (or passing `undefined` / `null`) weighs movement, span, and position equally (`1 / 1 / 1`), which does not reproduce 2.x ranking. To get the exact 2.x ranking, pass the old coefficients explicitly:
 
 ```ts
 generateArrangements({
@@ -466,7 +466,7 @@ generateArrangements({
   guitarNumFrets: 18,
   guitarCapo: 0,
   numArrangements: 3,
-  difficultyWeights: { movement: 100, span: 10, position: 1 }, // the standard weights
+  difficultyWeights: { movement: 100, span: 10, position: 1 }, // reproduces 2.x ranking
 });
 ```
 
@@ -476,7 +476,7 @@ Weights must be finite and non-negative, otherwise `generateArrangements` throws
 use guitar_tab_generator::{DifficultyWeightsInput, TabInput};
 
 let input = TabInput::new("E2\nA2\nD3", "standard", 18, 0, 3)
-    .with_difficulty_weights(DifficultyWeightsInput { movement: 100.0, span: 10.0, position: 1.0 });
+    .with_difficulty_weights(DifficultyWeightsInput { movement: 100.0, span: 10.0, position: 1.0 }); // reproduces 2.x ranking
 ```
 
 `generate_arrangements` validates the weights and returns `TabError::DifficultyWeightOutOfRange` for a negative or non-finite coefficient. See [ADR-0011](docs/adr/0011-difficulty-weights.md).

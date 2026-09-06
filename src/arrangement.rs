@@ -1624,7 +1624,7 @@ mod test_calculate_node_difficulty {
 
         assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            141.6,
+            3.0,
         );
     }
     #[test]
@@ -1648,7 +1648,7 @@ mod test_calculate_node_difficulty {
 
         assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            34.1333,
+            7.1333,
         );
     }
     #[test]
@@ -1672,7 +1672,7 @@ mod test_calculate_node_difficulty {
 
         assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            352.0,
+            10.0,
         );
     }
     #[test]
@@ -1696,7 +1696,7 @@ mod test_calculate_node_difficulty {
 
         assert_difficulty_eq(
             calculate_node_difficulty(&current_node, &next_node, DifficultyWeights::standard()),
-            410.3333,
+            11.3333,
         );
     }
 
@@ -1733,9 +1733,9 @@ mod test_calculate_node_difficulty {
             }),
         };
         // avg_fret_difference = 2, next_fret_span = 2, next_avg_fret = 5
-        // standard: 2*100 + 2*10 + 5*1 = 225
+        // standard: 2*1 + 2*1 + 5*1 = 9
         let standard = DifficultyWeights::standard();
-        assert_difficulty_eq(calculate_node_difficulty(&current, &next, standard), 225.0);
+        assert_difficulty_eq(calculate_node_difficulty(&current, &next, standard), 9.0);
         // movement only: 2*10 + 2*0 + 5*0 = 20
         let movement_only = DifficultyWeights::try_new(10.0, 0.0, 0.0).unwrap();
         assert_difficulty_eq(
