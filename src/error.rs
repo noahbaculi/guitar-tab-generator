@@ -91,7 +91,7 @@ pub enum TabError {
         value: u8,
         max: u8,
     },
-    /// `semitones` is `i16` (not `u8`) to mirror the offset arithmetic in [`crate::pitch::Pitch::plus_offset`]
+    /// `semitones` is `i16` (not `u8`) to mirror the offset arithmetic in [`crate::pitch::Pitch::shift_by_semitones`]
     /// and to leave room for negative tuning offsets without a future breaking change. The
     /// 2.x emit site populates `0..=Guitar::MAX_CAPO` only.
     OpenPitchOutOfRange {

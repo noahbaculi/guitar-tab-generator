@@ -141,7 +141,7 @@ impl Guitar {
             .map(|(string_num, pitch)| -> Result<_, TabError> {
                 let adjusted =
                     pitch
-                        .plus_offset(capo as i16)
+                        .shift_by_semitones(capo as i16)
                         .ok_or(TabError::OpenPitchOutOfRange {
                             string: string_num.get(),
                             semitones: capo as i16,
@@ -467,7 +467,7 @@ mod test_create_guitar {
     #[test]
     fn open_pitch_out_of_range_returns_typed_error() {
         // A single string tuned to the top of the pitch range (B9). Any capo offset pushes
-        // the open pitch past B9, which `plus_offset` reports as `None`.
+        // the open pitch past B9, which `shift_by_semitones` reports as `None`.
         let tuning = create_string_tuning(&[Pitch::B9]).unwrap();
         let err = Guitar::new(tuning, 8, 8).unwrap_err();
         match err {

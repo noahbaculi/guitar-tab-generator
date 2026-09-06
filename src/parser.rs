@@ -153,7 +153,7 @@ pub fn create_string_tuning_offset(offsets: [i8; 6]) -> BTreeMap<StringNumber, P
         .zip(offsets)
         .map(|(std_tuning_pitch, offset)| {
             std_tuning_pitch
-                .plus_offset(offset as i16)
+                .shift_by_semitones(offset as i16)
                 .expect("BUG: Tuning pitch offset should be valid")
         })
         .collect();

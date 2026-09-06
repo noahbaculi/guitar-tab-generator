@@ -461,7 +461,7 @@ impl Pitch {
     /// Returns the pitch `offset` semitones above (or below, for negative `offset`) this pitch,
     /// or `None` if the result would fall outside the supported `Pitch` range.
     #[must_use]
-    pub fn plus_offset(&self, offset: i16) -> Option<Pitch> {
+    pub fn shift_by_semitones(&self, offset: i16) -> Option<Pitch> {
         let new_index = i32::from(self.index()) + i32::from(offset);
         if new_index < 0 {
             return None;
@@ -483,35 +483,35 @@ mod test_pitch_plain_text {
     }
 }
 #[cfg(test)]
-mod test_pitch_plus_offset {
+mod test_pitch_shift_by_semitones {
     use super::*;
 
     #[test]
     fn valid_positive() {
-        assert_eq!(Pitch::FSharpGFlat3.plus_offset(3), Some(Pitch::A3));
+        assert_eq!(Pitch::FSharpGFlat3.shift_by_semitones(3), Some(Pitch::A3));
     }
     #[test]
     fn valid_negative() {
         assert_eq!(
-            Pitch::FSharpGFlat3.plus_offset(-3),
+            Pitch::FSharpGFlat3.shift_by_semitones(-3),
             Some(Pitch::DSharpEFlat3)
         );
     }
     #[test]
     fn within_range_returns_some() {
-        assert_eq!(Pitch::C0.plus_offset(2), Some(Pitch::D0));
-        assert_eq!(Pitch::E4.plus_offset(0), Some(Pitch::E4));
+        assert_eq!(Pitch::C0.shift_by_semitones(2), Some(Pitch::D0));
+        assert_eq!(Pitch::E4.shift_by_semitones(0), Some(Pitch::E4));
     }
 
     #[test]
     fn negative_overflow_returns_none() {
-        assert_eq!(Pitch::C0.plus_offset(-1), None);
+        assert_eq!(Pitch::C0.shift_by_semitones(-1), None);
     }
 
     #[test]
     fn positive_overflow_returns_none() {
-        assert_eq!(Pitch::B9.plus_offset(1), None);
-        assert_eq!(Pitch::ASharpBFlat9.plus_offset(2), None);
+        assert_eq!(Pitch::B9.shift_by_semitones(1), None);
+        assert_eq!(Pitch::ASharpBFlat9.shift_by_semitones(2), None);
     }
 
     #[test]
@@ -519,8 +519,8 @@ mod test_pitch_plus_offset {
         // The intermediate index must not overflow before the range check. A near-`i16::MAX`
         // positive offset previously overflowed the `i16` addition (debug panic) instead of
         // returning `None`.
-        assert_eq!(Pitch::B9.plus_offset(i16::MAX), None);
-        assert_eq!(Pitch::C0.plus_offset(i16::MIN), None);
+        assert_eq!(Pitch::B9.shift_by_semitones(i16::MAX), None);
+        assert_eq!(Pitch::C0.shift_by_semitones(i16::MIN), None);
     }
 }
 
