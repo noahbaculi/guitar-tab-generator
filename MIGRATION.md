@@ -46,9 +46,7 @@ Rust-only callers: see [Direct Rust callers](#direct-rust-callers) for migration
 
 ## Toolchain
 
-2.0.0 builds on Rust edition 2024 and requires Rust 1.86 or newer.
-Later releases raise this to 1.87 (`rust-version = "1.87"` in
-`Cargo.toml`), so run `rustup update` if your toolchain is below 1.87.
+2.0.0 builds on Rust edition 2024 and requires Rust 1.86 or newer. 2.1.0 raised this to 1.87. 3.0.0 raises it again to 1.90 (`rust-version = "1.90"` in `Cargo.toml`), the floor `ordered-float` 5.5.0 requires. Run `rustup update` if your toolchain is below 1.90.
 
 ## Generating arrangements
 

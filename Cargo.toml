@@ -2,7 +2,7 @@
 name = "guitar-tab-generator"
 version = "3.0.0"
 edition = "2024"
-rust-version = "1.87"
+rust-version = "1.90"
 authors = ["Noah Baculi <noahbaculi@gmail.com>"]
 description = "Generate fingerstyle guitar tabs based on the difficulty of different finger positions"
 readme = "README.md"
@@ -24,9 +24,9 @@ exclude = [
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-itertools = "0.14.0"
+itertools = "0.15.0"
 memoize = "0.6.0"
-ordered-float = "5.1.0"
+ordered-float = "5.5.0"
 pathfinding = "4.15.0"
 regex = "1.12.2"
 serde = { version = "1.0.228", features = ["derive"] }

@@ -11,6 +11,12 @@
 
 - Arrangement ranking depends only on the ratios of the difficulty weights, not their absolute magnitude. Weights are validated only as finite and non-negative.
 
+### Changed
+
+- Raised the minimum supported Rust version to 1.90, up from 1.87 (`rust-version` in `Cargo.toml`). This follows `ordered-float` 5.5.0, which requires 1.90. The bump carries no functional change for this crate. Consumers on a toolchain below 1.90 need to run `rustup update`.
+- Upgraded `itertools` from 0.14.0 to 0.15.0. The 0.15 breaking changes restructure `Position` as a struct and canonicalize the `all_equal_value` error type, and the release deprecates `tuple_windows` and `tuple_combinations`. This crate calls none of them, so the change is the version in `Cargo.toml`. `itertools` 0.15.0 declares an MSRV of 1.63, so it does not raise the toolchain floor. Arrangement and render output are unchanged, pinned by the existing snapshot tests.
+- Upgraded `ordered-float` from 5.1.0 to 5.5.0, a semver-compatible bump held back until now only by its 1.90 MSRV.
+
 ## 2.1.0 -- 2026-06-10
 
 ### Changed
