@@ -14,16 +14,16 @@ export interface UnplayablePitch {
 /**
  * Configuration bundle for one tab-generation request.
  *
- * Crosses the WASM boundary via `tsify`; JS sees a camelCase interface generated
- * alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`; the value is validated
+ * Crosses the WASM boundary via `tsify`. JS sees a camelCase interface generated
+ * alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`. The value is validated
  * at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
  */
 export interface TabInput {
     input: string;
     /**
-     * Name of the tuning preset. Accepts the case-insensitive literal `\"standard\"` for
+     * Name of the tuning preset. Accepts the case-insensitive literal `"standard"` for
      * standard tuning, or any variant of `TuningName` (case-insensitive, camelCase on the
-     * wire: `\"openG\"`, `\"dropD\"`, etc.). Other strings (including the empty string) are
+     * wire: `"openG"`, `"dropD"`, etc.). Other strings (including the empty string) are
      * rejected with [`TabError::TuningNameUnknown`].
      */
     tuningName: string;
@@ -32,7 +32,7 @@ export interface TabInput {
     numArrangements: number;
     /**
      * Upper bound on per-beat fret span. An aggressive value can drop the set to zero
-     * arrangements; callers receive `Ok(set)` with `set.len == 0`, not `Err`.
+     * arrangements. Callers receive `Ok(set)` with `set.len == 0`, not `Err`.
      */
     maxFretSpanFilter?: number;
     /**
@@ -46,7 +46,7 @@ export interface TabInput {
 /**
  * Named tuning presets. Parsed case-insensitively from strings.
  *
- * Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
+ * Additional variants may be added in a non-breaking release. The `#[non_exhaustive]`
  * attribute requires external matches to include a wildcard arm.
  */
 export type TuningName = "openG" | "openD" | "c6" | "dsus4" | "dropD" | "dropC" | "openC" | "dropB" | "openE";
@@ -81,7 +81,7 @@ export interface DifficultyWeightsInput {
 /**
  * Top-level error variant for the WASM boundary.
  *
- * Additional variants may be added in a non-breaking release; the `#[non_exhaustive]`
+ * Additional variants may be added in a non-breaking release. The `#[non_exhaustive]`
  * attribute requires external matches to include a wildcard arm. JS consumers should keep a
  * `default` arm in any `switch (err.kind)`.
  */
@@ -138,18 +138,18 @@ export class ArrangementSet {
     readonly len: number;
     /**
      * The per-beat input echoed back as a sequence of tagged `NormalizedBeat` variants.
-     * Shared across all arrangements; lives once on the set.
+     * Shared across all arrangements. Lives once on the set.
      *
-     * Returns a fresh `Vec` on each call; cache on the JS side if reading repeatedly.
+     * Returns a fresh `Vec` on each call. Cache on the JS side if reading repeatedly.
      * `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
-     * cache in the rerender path; that pattern is the intended consumer shape.
+     * cache in the rerender path. That pattern is the intended consumer shape.
      */
     readonly normalizedInput: NormalizedBeat[];
 }
 
 /**
  * Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
- * and the WASM boundary; JS sees this as `generateArrangements`.
+ * and the WASM boundary. JS sees this as `generateArrangements`.
  *
  * # Errors
  *
