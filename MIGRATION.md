@@ -479,6 +479,33 @@ let input = TabInput::new("E2\nA2\nD3", "standard", 18, 0, 3)
 
 `generate_arrangements` validates the weights and returns `TabError::DifficultyWeightOutOfRange` for a negative or non-finite coefficient. See [ADR-0011](docs/adr/0011-difficulty-weights.md).
 
+### New `inputMalformed` error
+
+`TabError` gains one union member:
+
+```ts
+{ kind: "inputMalformed"; message: string }
+```
+
+`generateArrangements` returns it when the object you passed cannot be read as a `TabInput`. That case previously threw a raw string with no `kind` field, and leaked memory on every rejected call.
+
+Callers who already keep a `default` arm, as the `TabError` docs instruct, need no change:
+
+```ts
+switch (err.kind) {
+  case "parse":
+    // ...
+    break;
+  default:
+    // inputMalformed lands here
+    showMessage(`Couldn't generate a tab (${err.kind}).`);
+}
+```
+
+Reaching this error means the object you built has drifted from the `TabInput` interface, so `err.message` carries the deserializer's description of what it expected.
+
+Rust callers are unaffected. `generate_arrangements` still takes a real `TabInput`, which cannot be malformed. `TabError` is already `#[non_exhaustive]`, so external matches already carry a wildcard arm.
+
 ## See also
 
 - [`CHANGELOG.md`](CHANGELOG.md) -- flat list of every breaking change.

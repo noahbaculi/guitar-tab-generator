@@ -97,6 +97,8 @@ TabError                                  <- thrown by generate_arrangements (JS
     kind: "tuningNameUnknown"          + value: string
     kind: "indexOutOfBounds"           + index: number, len: number
     kind: "renderWidthTooSmall"        + width: number, min: number          (thrown by ArrangementSet.render, not generateArrangements)
+    kind: "difficultyWeightOutOfRange" + field: string
+    kind: "inputMalformed"             + message: string                     (JS only; the argument could not be read as a TabInput)
 
 ParseError
     line: number
@@ -110,7 +112,7 @@ TuningName                             <- enum returned by getTuningNames()
 The entry points are:
 
 - `generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError>` -- entry point for both Rust and WASM callers (JS name: `generateArrangements`). Validates, builds the guitar, runs the pathfinder, returns the opaque handle.
-- `getTuningNames() -> TuningName[]` -- enumerates the supported tuning presets, typed for JS via tsify.
+- `getTuningNames() -> TuningName[]` -- enumerates the supported tuning presets, typed for JS via tsify. The Rust function is `get_tuning_names`, and the JS export is a shim in `src/wasm.rs`.
 
 ## Lifecycle (JS only)
 

@@ -10,12 +10,18 @@
 ### Added
 
 - Arrangement ranking depends only on the ratios of the difficulty weights, not their absolute magnitude. Weights are validated only as finite and non-negative.
+- `TabError` gains `{ kind: "inputMalformed"; message: string }`, returned when the object passed to `generateArrangements` cannot be deserialized into a `TabInput`. Reachable only from JS, where the argument is unchecked at runtime. `TabError` is `#[non_exhaustive]` and its docs already instruct JS consumers to keep a `default` arm in any `switch (err.kind)`, so callers who follow that need no change.
+
+### Fixed
+
+- Passing a malformed object to `generateArrangements` no longer leaks memory. The deprecated `#[tsify(from_wasm_abi)]` attribute generated a `FromWasmAbi` impl that reported deserialization failure with `wasm_bindgen::throw_str`, which does not run destructors, so every rejected call leaked until the instance died with "memory access out of bounds". The conversion now runs in a `#[wasm_bindgen]` shim over `tsify::Ts<TabInput>`, where failure is a typed return. See [ADR-0012](docs/adr/0012-tsify-ts-bindings.md).
 
 ### Changed
 
 - Raised the minimum supported Rust version to 1.90, up from 1.87 (`rust-version` in `Cargo.toml`). This follows `ordered-float` 5.5.0, which requires 1.90. The bump carries no functional change for this crate. Consumers on a toolchain below 1.90 need to run `rustup update`.
 - Upgraded `itertools` from 0.14.0 to 0.15.0. The 0.15 breaking changes restructure `Position` as a struct and canonicalize the `all_equal_value` error type, and the release deprecates `tuple_windows` and `tuple_combinations`. This crate calls none of them, so the change is the version in `Cargo.toml`. `itertools` 0.15.0 declares an MSRV of 1.63, so it does not raise the toolchain floor. Arrangement and render output are unchanged, pinned by the existing snapshot tests.
 - Upgraded `ordered-float` from 5.1.0 to 5.5.0, a semver-compatible bump held back until now only by its 1.90 MSRV.
+- Moved every WASM boundary type off the deprecated `#[tsify(into_wasm_abi)]` and `#[tsify(from_wasm_abi)]` attributes. `TabInput`, `NormalizedBeat`, and `TuningName` cross the ABI as `tsify::Ts<T>` through shims in the new `src/wasm.rs`, `TabError` uses a hand-rolled `From<TabError> for JsValue`, and the attributes on `ParseError` and `UnplayablePitch` were dead and were deleted. Every TypeScript signature is unchanged, pinned by the `tests/snapshots/wasm.d.ts` snapshot. The size-optimized `.wasm` grows about 0.4% (975,862 to 979,977 bytes). See [ADR-0012](docs/adr/0012-tsify-ts-bindings.md).
 
 ## 2.1.0 -- 2026-06-10
 
