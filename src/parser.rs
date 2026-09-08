@@ -52,7 +52,7 @@ pub enum TuningName {
     OpenE,
 }
 
-/// Returns the supported `TuningName` variants, typed for JS consumption via tsify.
+/// Returns the supported `TuningName` variants.
 #[must_use]
 pub fn get_tuning_names() -> Vec<TuningName> {
     TuningName::iter().collect()

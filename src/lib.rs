@@ -571,8 +571,9 @@ impl ArrangementSet {
     }
 }
 
-/// Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
-/// and the WASM boundary. JS sees this as `generateArrangements`.
+/// Generates an `ArrangementSet` from a `TabInput`. The native entry point. The WASM boundary
+/// reaches it through [`crate::wasm::generate_arrangements_js`], exported to JS as
+/// `generateArrangements`.
 ///
 /// # Errors
 ///
