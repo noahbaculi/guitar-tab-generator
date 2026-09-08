@@ -7,10 +7,15 @@
 //! separately by the `tests/snapshots/wasm.d.ts` surface diff. These tests confirm the code
 //! executes correctly under the wasm target.
 //!
+//! The malformed-input case is covered here too, since a host test cannot build a `Ts<TabInput>`
+//! without aborting.
+//!
 //! Empty on non-wasm targets so the host `cargo test` lane skips it.
 #![cfg(target_arch = "wasm32")]
 
+use guitar_tab_generator::wasm::{Ts, generate_arrangements_js};
 use guitar_tab_generator::{TabError, TabInput, generate_arrangements};
+use wasm_bindgen::JsValue;
 use wasm_bindgen_test::wasm_bindgen_test;
 
 #[wasm_bindgen_test]
@@ -28,6 +33,18 @@ fn error_path_surfaces_typed_variant_under_wasm() {
     let err = generate_arrangements(TabInput::new("A1", "standard", 18, 0, 1)).unwrap_err();
     assert!(
         matches!(err, TabError::UnplayablePitches { .. }),
+        "got {err:?}"
+    );
+}
+
+#[wasm_bindgen_test]
+fn malformed_input_returns_typed_variant_under_wasm() {
+    // A bare string is not a `TabInput`, so the shim must return `InputMalformed`
+    // rather than throwing.
+    let bad = Ts::new_unchecked(JsValue::from_str("not a TabInput"));
+    let err = generate_arrangements_js(bad).unwrap_err();
+    assert!(
+        matches!(err, TabError::InputMalformed { .. }),
         "got {err:?}"
     );
 }
