@@ -126,6 +126,11 @@ pub enum TabError {
     DifficultyWeightOutOfRange {
         field: &'static str,
     },
+    /// The object supplied to `generateArrangements` could not be deserialized into a
+    /// [`crate::TabInput`]. Reachable only from JS, where the argument is unchecked at runtime.
+    InputMalformed {
+        message: String,
+    },
 }
 
 // wasm-bindgen's Result<T, E> needs only E: Into<JsValue>, so this replaces the deprecated
@@ -243,6 +248,9 @@ impl std::fmt::Display for TabError {
                     f,
                     "The {field} difficulty weight must be a finite, non-negative number."
                 )
+            }
+            TabError::InputMalformed { message } => {
+                write!(f, "The supplied input object could not be read: {message}")
             }
         }
     }
@@ -469,6 +477,17 @@ mod test_new_variant_display {
         assert_eq!(
             err.to_string(),
             "The render width (3) is too small. The minimum is 4."
+        );
+    }
+
+    #[test]
+    fn input_malformed() {
+        let err = TabError::InputMalformed {
+            message: "invalid type: string, expected struct TabInput".to_owned(),
+        };
+        assert_eq!(
+            err.to_string(),
+            "The supplied input object could not be read: invalid type: string, expected struct TabInput"
         );
     }
 }
