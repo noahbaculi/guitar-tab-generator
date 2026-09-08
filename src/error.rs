@@ -13,7 +13,6 @@ use tsify::Tsify;
 
 /// One unparseable substring in the input, with its 1-indexed line number.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
-#[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct ParseError {
     pub line: u32,
@@ -35,7 +34,6 @@ impl std::fmt::Display for ParseError {
 /// Public payload of [`TabError::UnplayablePitches`]. The structured `{ value, line }`
 /// record replaced the free-form prose string used before 2.0.0.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
-#[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct UnplayablePitch {
     pub value: String,
