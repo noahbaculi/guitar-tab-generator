@@ -37,7 +37,6 @@ fn test_pitch_regex() -> Regex {
 /// attribute requires external matches to include a wildcard arm.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, EnumIter, Serialize, Tsify)]
 #[strum(ascii_case_insensitive)]
-#[tsify(into_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub enum TuningName {
@@ -54,7 +53,6 @@ pub enum TuningName {
 }
 
 /// Returns the supported `TuningName` variants, typed for JS consumption via tsify.
-#[wasm_bindgen(js_name = "getTuningNames")]
 #[must_use]
 pub fn get_tuning_names() -> Vec<TuningName> {
     TuningName::iter().collect()

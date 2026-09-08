@@ -96,6 +96,10 @@ pub(crate) mod parser;
 pub(crate) mod pitch;
 pub(crate) mod renderer;
 pub(crate) mod string_number;
+// Public only so `tests/wasm_boundary.rs` can call the shims directly. Not part of the stable
+// Rust API. JS consumers reach these through the generated bindings.
+#[doc(hidden)]
+pub mod wasm;
 
 /// `Arrangement` is re-exported for direct Rust consumers. The canonical 2.x access path
 /// for per-arrangement metadata is `ArrangementSet::difficulty(i)` and
@@ -145,7 +149,6 @@ pub struct DifficultyWeightsInput {
 /// alongside the `.wasm`. `num_arrangements` must be in `1..=NumArrangements::MAX`. The value is validated
 /// at the boundary and a [`TabError::NumArrangementsOutOfRange`] is thrown when out of range.
 #[derive(Debug, Clone, Deserialize, Tsify)]
-#[tsify(from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct TabInput {
@@ -592,7 +595,6 @@ impl ArrangementSet {
 /// `String`. Memoization makes a repeat call with the same input cheap, but the clone runs
 /// on every call (including cache hits). Hot loops over `generate_arrangements` should expect
 /// one `String::clone` per invocation in addition to the boundary deserialization cost.
-#[wasm_bindgen(js_name = "generateArrangements")]
 pub fn generate_arrangements(tab_input: TabInput) -> Result<ArrangementSet, TabError> {
     let num_arrangements = NumArrangements::try_new(tab_input.num_arrangements)?;
     let difficulty_weights = match tab_input.difficulty_weights {

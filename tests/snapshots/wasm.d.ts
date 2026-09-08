@@ -148,13 +148,16 @@ export class ArrangementSet {
 }
 
 /**
- * Generates an `ArrangementSet` from a `TabInput`. Single entry point for both Rust callers
- * and the WASM boundary. JS sees this as `generateArrangements`.
+ * Generates an `ArrangementSet` from a `TabInput`.
+ *
+ * The WASM entry point. `generate_arrangements` is the equivalent native Rust function.
  *
  * # Errors
  *
  * Returns the typed [`TabError`] variant for each failure mode reachable from this entry point:
  *
+ * - Argument shape: [`TabError::InputMalformed`] when the supplied object cannot be read as a
+ *   `TabInput`. JavaScript is dynamically typed, so this is reachable with any argument.
  * - Input-shape validation: [`TabError::NumArrangementsOutOfRange`], [`TabError::TuningNameUnknown`],
  *   [`TabError::NumFretsTooHigh`], [`TabError::CapoTooHigh`], [`TabError::CapoExceedsFrets`].
  * - Parser: [`TabError::Parse`] (carries `Vec<ParseError>` with line/text per unparseable substring),
@@ -164,19 +167,20 @@ export class ArrangementSet {
  *   for example duplicate pitches in a single beat that the no-duplicate-strings constraint filters away).
  *
  * [`TabError::OpenPitchOutOfRange`], [`TabError::StringNumberOutOfRange`], and
- * [`TabError::FretRangeExceedsPitchRange`] are members of the enum and live on the [`Guitar::new`] path
+ * [`TabError::FretRangeExceedsPitchRange`] are members of the enum and live on the [`crate::Guitar::new`] path
  * this function calls, but no `TabInput` reachable today can trip them: the preset tunings and fixed
  * 1..=6 string numbering keep every open-string pitch and fret range well inside the supported `Pitch`
- * range. They fire only when constructed directly through the lower-level Rust API ([`Guitar::new`],
- * [`create_string_tuning`]) with out-of-range inputs, such as a custom tuning (deferred to a later
+ * range. They fire only when constructed directly through the lower-level Rust API ([`crate::Guitar::new`],
+ * [`crate::create_string_tuning`]) with out-of-range inputs, such as a custom tuning (deferred to a later
  * release).
  *
  * # Validation order
  *
- * Input-shape errors (currently `numArrangements` range) are reported before `parse_lines`
- * runs. The ordering is deliberate: shape checks are O(1) and unambiguous, while parse errors
- * depend on the full input. When both are present the shape error wins because the parser's
- * output would be discarded anyway.
+ * Argument-shape errors come first, because nothing else can be read until the object
+ * deserializes. Input-shape errors (currently `numArrangements` range) are then reported before
+ * `parse_lines` runs. The ordering is deliberate: shape checks are O(1) and unambiguous, while
+ * parse errors depend on the full input. When both are present the shape error wins because the
+ * parser's output would be discarded anyway.
  *
  * Guitar-configuration errors (`TuningNameUnknown`, `NumFretsTooHigh`, `CapoTooHigh`,
  * `CapoExceedsFrets`) are checked before the normalized input is built, so an invalid guitar
@@ -187,7 +191,7 @@ export class ArrangementSet {
  *
  * `tab_input.input` is cloned once per call because `parse_lines` is `#[memoize]`d on owned
  * `String`. Memoization makes a repeat call with the same input cheap, but the clone runs
- * on every call (including cache hits). Hot loops over `generate_arrangements` should expect
+ * on every call (including cache hits). Hot loops over `generateArrangements` should expect
  * one `String::clone` per invocation in addition to the boundary deserialization cost.
  */
 export function generateArrangements(tab_input: TabInput): ArrangementSet;
