@@ -431,7 +431,6 @@ mod test_difficulty_weights_input {
 /// Serialized as a discriminated union tagged by `kind`, so JS code can `switch (b.kind)`
 /// instead of comparing strings.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
-#[tsify(into_wasm_abi)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 pub enum NormalizedBeat {
     Playable { pitches: Vec<String> },
@@ -452,6 +451,19 @@ pub struct ArrangementSet {
     normalized_input: Vec<NormalizedBeat>,
 }
 
+/// Native accessors that do not cross the WASM boundary. Kept out of the `#[wasm_bindgen]`
+/// block below because `NormalizedBeat` does not implement `WasmDescribe`.
+impl ArrangementSet {
+    /// The per-beat input echoed back as a sequence of tagged [`NormalizedBeat`] variants.
+    /// Shared across all arrangements. Lives once on the set.
+    ///
+    /// Returns a fresh `Vec` on each call. Cache it if reading repeatedly.
+    #[must_use]
+    pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
+        self.normalized_input.clone()
+    }
+}
+
 /// `ArrangementSet` indexed accessors return [`TabError::IndexOutOfBounds`] when
 /// `index >= self.len`. This is a programmer-side bounds error (the demo clamps before
 /// calling). Downstream callers can branch on the typed variant to surface it differently
@@ -459,6 +471,23 @@ pub struct ArrangementSet {
 /// [`TabError::NumArrangementsOutOfRange`].
 #[wasm_bindgen]
 impl ArrangementSet {
+    /// The per-beat input echoed back as a sequence of tagged `NormalizedBeat` variants.
+    /// Shared across all arrangements. Lives once on the set.
+    ///
+    /// Returns a fresh `Vec` on each call. Cache on the JS side if reading repeatedly.
+    /// `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
+    /// cache in the rerender path. That pattern is the intended consumer shape.
+    #[wasm_bindgen(getter, js_name = "normalizedInput")]
+    #[must_use]
+    pub fn normalized_input_js(&self) -> Vec<tsify::Ts<NormalizedBeat>> {
+        self.normalized_input
+            .iter()
+            // Unreachable: `NormalizedBeat` is plain data with string keys. `panic=abort` on
+            // wasm32 kills the instance rather than leaking.
+            .map(|b| tsify::Tsify::into_ts(b).expect("BUG: NormalizedBeat should serialize"))
+            .collect()
+    }
+
     /// Number of arrangements in the set. Equal to the requested `num_arrangements`, possibly
     /// reduced by `max_fret_span_filter` when filtering would otherwise drop below the count.
     #[wasm_bindgen(getter)]
@@ -472,18 +501,6 @@ impl ArrangementSet {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.arrangements.is_empty()
-    }
-
-    /// The per-beat input echoed back as a sequence of tagged `NormalizedBeat` variants.
-    /// Shared across all arrangements. Lives once on the set.
-    ///
-    /// Returns a fresh `Vec` on each call. Cache on the JS side if reading repeatedly.
-    /// `examples/wasm.html` caches the result on `state.normalizedInput` and reads from that
-    /// cache in the rerender path. That pattern is the intended consumer shape.
-    #[wasm_bindgen(getter, js_name = "normalizedInput")]
-    #[must_use]
-    pub fn normalized_input(&self) -> Vec<NormalizedBeat> {
-        self.normalized_input.clone()
     }
 
     /// Largest non-zero fret span across any beat in the arrangement at `index`.
