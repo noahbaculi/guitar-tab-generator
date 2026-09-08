@@ -10,6 +10,7 @@
 
 use serde::Serialize;
 use tsify::Tsify;
+use wasm_bindgen::JsValue;
 
 /// One unparseable substring in the input, with its 1-indexed line number.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
@@ -56,7 +57,6 @@ impl std::fmt::Display for UnplayablePitch {
 /// attribute requires external matches to include a wildcard arm. JS consumers should keep a
 /// `default` arm in any `switch (err.kind)`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Tsify)]
-#[tsify(into_wasm_abi)]
 #[serde(
     tag = "kind",
     rename_all = "camelCase",
@@ -126,6 +126,18 @@ pub enum TabError {
     DifficultyWeightOutOfRange {
         field: &'static str,
     },
+}
+
+// wasm-bindgen's Result<T, E> needs only E: Into<JsValue>, so this replaces the deprecated
+// #[tsify(into_wasm_abi)] impl without wrapping errors in Ts<TabError>. Serialization cannot
+// fail: every variant is plain data with string keys.
+impl From<TabError> for JsValue {
+    fn from(value: TabError) -> Self {
+        match Tsify::into_js(&value) {
+            Ok(js) => js.into(),
+            Err(_) => JsValue::from_str(&value.to_string()),
+        }
+    }
 }
 
 impl std::fmt::Display for TabError {
