@@ -15,6 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cargo build --examples --benches
+      - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: wasm-pack build --target web --out-dir pkg/wasm_guitar_tab_generator && ls -l pkg/wasm_guitar_tab_generator/guitar_tab_generator_bg.wasm
       - name: Verify wasm-pack .d.ts public surface
@@ -27,7 +28,6 @@ jobs:
           sed '/^export type InitInput/,$d' pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts > generated.public.d.ts
           diff -u tests/snapshots/wasm.d.ts generated.public.d.ts \
             || { echo "::error::Public .d.ts surface differs from tests/snapshots/wasm.d.ts. Regenerate locally with: sed '/^export type InitInput/,\$d' pkg/wasm_guitar_tab_generator/guitar_tab_generator.d.ts > tests/snapshots/wasm.d.ts && git commit"; exit 1; }
-      - run: cargo clippy --all-targets --all-features -- -D warnings
 
   test:
     name: Test
