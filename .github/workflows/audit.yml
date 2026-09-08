@@ -1,0 +1,19 @@
+name: Audit
+
+# Weekly as well as on push, so an advisory against an unchanged dependency surfaces without
+# waiting for the next commit. Kept out of rust_build_and_test.yml so a transitive advisory
+# does not block an unrelated release.
+on:
+  push:
+  schedule:
+    - cron: "0 9 * * 1"
+
+jobs:
+  audit:
+    name: Cargo audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
