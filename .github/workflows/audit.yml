@@ -5,10 +5,13 @@ name: Audit
 # does not block an unrelated release.
 on:
   push:
+    paths: 
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
   schedule:
     - cron: "0 9 * * 1"
 
-jobs:
+jobs: 
   audit:
     name: Cargo audit
     runs-on: ubuntu-latest
