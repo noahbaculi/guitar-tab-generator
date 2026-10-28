@@ -5,7 +5,7 @@ use guitar_tab_generator::{
     BeatVec, DifficultyWeights, Guitar, Line, NumArrangements, Pitch, StringNumber, TabInput,
     create_arrangements, create_string_tuning, generate_arrangements, parse_lines, render_tab,
 };
-// `__bench_internals` exposes the memoize escape hatches plus the now-private
+// `__bench_internals` exposes the cache bypasses plus the now-private
 // tuning offset helpers so criterion benches can still measure them. See the
 // module docstring in src/lib.rs for the stability caveat.
 use guitar_tab_generator::__bench_internals::{

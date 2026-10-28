@@ -58,7 +58,7 @@ use wasm_bindgen::prelude::*;
 ///
 /// # Performance
 ///
-/// `tab_input.input` is cloned once per call because `parse_lines` is `#[memoize]`d on owned
+/// `tab_input.input` is cloned once per call because `parse_lines` caches results keyed on an owned
 /// `String`. Memoization makes a repeat call with the same input cheap, but the clone runs
 /// on every call (including cache hits). Hot loops over `generateArrangements` should expect
 /// one `String::clone` per invocation in addition to the boundary deserialization cost.

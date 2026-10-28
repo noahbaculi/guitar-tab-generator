@@ -1,13 +1,14 @@
 use crate::{
     arrangement::{BeatVec, Line},
+    cache::LruCache,
     guitar::{STD_6_STRING_TUNING_OPEN_PITCHES, create_string_tuning},
     pitch::Pitch,
     string_number::StringNumber,
 };
 use itertools::Itertools;
-use memoize::memoize;
 use regex::{Regex, RegexBuilder};
 use serde::Serialize;
+use std::cell::RefCell;
 use std::sync::LazyLock;
 use std::{collections::BTreeMap, result::Result::Ok};
 use std::{collections::HashSet, str::FromStr};
@@ -206,6 +207,8 @@ mod test_create_string_tuning_offset {
 /// `Node::line_index` (`u16`) can address every beat without truncating.
 pub(crate) const MAX_INPUT_LINES: usize = u16::MAX as usize;
 
+type ParseLinesResult = Result<Vec<Line<BeatVec<Pitch>>>, crate::error::TabError>;
+
 /// Parses a newline-delimited input string into a sequence of `Line` values.
 ///
 /// Each input line is classified as `Playable` (one or more pitches, e.g. `"A3"` or
@@ -217,8 +220,23 @@ pub(crate) const MAX_INPUT_LINES: usize = u16::MAX as usize;
 /// Returns [`crate::error::TabError::Parse`] listing every unparseable substring with its
 /// 1-indexed line number, or [`crate::error::TabError::InputTooManyLines`] when the input
 /// exceeds `MAX_INPUT_LINES` lines.
-#[memoize(Capacity: 10)]
 pub fn parse_lines(input: String) -> Result<Vec<Line<BeatVec<Pitch>>>, crate::error::TabError> {
+    thread_local! {
+        static CACHE: RefCell<LruCache<String, ParseLinesResult>> =
+            const { RefCell::new(LruCache::new(10)) };
+    }
+    if let Some(hit) = CACHE.with_borrow_mut(|cache| cache.get(&input)) {
+        return hit;
+    }
+    let result = memoized_original_parse_lines(input.clone());
+    CACHE.with_borrow_mut(|cache| cache.insert(input, result.clone()));
+    result
+}
+
+/// Uncached body of [`parse_lines`]
+pub fn memoized_original_parse_lines(
+    input: String,
+) -> Result<Vec<Line<BeatVec<Pitch>>>, crate::error::TabError> {
     // Reject pathological input up front so every beat index stays within the u16 range
     // used by the pathfinding graph. `take` short-circuits, so an enormous paste is not
     // fully scanned. A real transcription is far below this bound. The cap is its own

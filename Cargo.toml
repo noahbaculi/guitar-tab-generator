@@ -25,7 +25,6 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 itertools = "0.15.0"
-memoize = "0.6.0"
 ordered-float = "5.5.0"
 pathfinding = "4.16.0"
 regex = "1.12.2"

@@ -90,6 +90,7 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 pub(crate) mod arrangement;
+pub(crate) mod cache;
 pub(crate) mod error;
 pub(crate) mod guitar;
 pub(crate) mod parser;
@@ -116,8 +117,8 @@ pub use string_number::StringNumber;
 ///
 /// Two unrelated concerns share this namespace:
 ///
-/// 1. **`memoize` bypasses.** `memoized_original_*` variants of `create_arrangements`
-///    and `parse_lines` skip the memoize cache so benchmarks measure the underlying
+/// 1. **Cache bypasses.** `memoized_original_*` variants of `create_arrangements`
+///    and `parse_lines` skip the LRU cache so benchmarks measure the underlying
 ///    work, not cache lookup cost.
 /// 2. **Internal tuning-offset helpers.** `parse_tuning` and `create_string_tuning_offset`
 ///    are the `[i8; 6]` offset machinery the preset-tuning path uses. Benches reach for them
@@ -260,7 +261,7 @@ impl From<NumArrangements> for u8 {
 /// `DifficultyWeights::standard` weighs all three factors equally.
 ///
 /// Fields are stored as [`OrderedFloat`] so the type can derive `Hash`/`Eq`
-/// and serve as part of the `create_arrangements` memoize key. The public
+/// and serve as part of the `create_arrangements` cache key. The public
 /// surface (`try_new`, the accessors) stays plain `f64`. `try_new` rejects
 /// non-finite inputs, so the `Eq`/`Hash` derives never observe a `NaN`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -609,7 +610,7 @@ impl ArrangementSet {
 ///
 /// # Performance
 ///
-/// `tab_input.input` is cloned once per call because `parse_lines` is `#[memoize]`d on owned
+/// `tab_input.input` is cloned once per call because `parse_lines` caches results keyed on an owned
 /// `String`. Memoization makes a repeat call with the same input cheap, but the clone runs
 /// on every call (including cache hits). Hot loops over `generate_arrangements` should expect
 /// one `String::clone` per invocation in addition to the boundary deserialization cost.

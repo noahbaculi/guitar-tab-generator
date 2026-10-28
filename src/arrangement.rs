@@ -1,14 +1,14 @@
 use crate::{
     DifficultyWeights,
+    cache::LruCache,
     error::{TabError, UnplayablePitch},
     guitar::{Guitar, PitchFingering, generate_pitch_fingerings},
     pitch::Pitch,
 };
 use itertools::Itertools;
-use memoize::memoize;
 use ordered_float::OrderedFloat;
 use pathfinding::prelude::yen;
-use std::{collections::HashSet, rc::Rc};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 /// One logical line of a parsed or arranged composition.
 ///
@@ -296,8 +296,49 @@ mod test_max_fret_span {
 /// Panics only if an internal invariant is violated (a BUG condition, not reachable
 /// under any valid input): a `MeasureBreak` line leaking past the pathfinding filter,
 /// or a `Node::Start` appearing as a future node during path traversal.
-#[memoize(Capacity: 10)]
 pub fn create_arrangements(
+    guitar: Guitar,
+    input_lines: Vec<Line<BeatVec<Pitch>>>,
+    num_arrangements: crate::NumArrangements,
+    difficulty_weights: crate::DifficultyWeights,
+    max_fret_span_filter: Option<u8>,
+) -> Result<Vec<Arrangement>, TabError> {
+    type Key = (
+        Guitar,
+        Vec<Line<BeatVec<Pitch>>>,
+        crate::NumArrangements,
+        crate::DifficultyWeights,
+        Option<u8>,
+    );
+    thread_local! {
+        static CACHE: RefCell<LruCache<Key, Result<Vec<Arrangement>, TabError>>> =
+            const { RefCell::new(LruCache::new(10)) };
+    }
+    let key: Key = (
+        guitar,
+        input_lines,
+        num_arrangements,
+        difficulty_weights,
+        max_fret_span_filter,
+    );
+    if let Some(hit) = CACHE.with_borrow_mut(|cache| cache.get(&key)) {
+        return hit;
+    }
+    let (guitar, input_lines, num_arrangements, difficulty_weights, max_fret_span_filter) =
+        key.clone();
+    let result = memoized_original_create_arrangements(
+        guitar,
+        input_lines,
+        num_arrangements,
+        difficulty_weights,
+        max_fret_span_filter,
+    );
+    CACHE.with_borrow_mut(|cache| cache.insert(key, result.clone()));
+    result
+}
+
+/// Uncached body of [`create_arrangements`]
+pub fn memoized_original_create_arrangements(
     guitar: Guitar,
     input_lines: Vec<Line<BeatVec<Pitch>>>,
     num_arrangements: crate::NumArrangements,
